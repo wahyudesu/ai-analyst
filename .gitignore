@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+
+# Lockfiles - only root lockfile is needed in monorepo
+**/pnpm-lock.yaml
+!pnpm-lock.yaml
+
+# Build outputs
+api/dist/
+api/.mastra/
+web/.next/
+*.tsbuildinfo
+
+# Environment
+.env
+.env*.local
+api/.env
+api/.env.*
+
+# Database
+*.db
+*.db-*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.suo
+*.swp
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+.output.txt
