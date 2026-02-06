@@ -6,10 +6,11 @@ import { Observability, DefaultExporter, CloudExporter, SensitiveDataFilter } fr
 import { chatRoute } from '@mastra/ai-sdk';
 import { supabaseAgent } from './agents/supabase'; // Disabled: requires Composio connection
 import { sqlagent } from './agents/postgres';
+import { testingAgent } from './agents/testingagent';
 
 export const mastra = new Mastra({
   workflows: {},
-  agents: { sqlagent, supabaseAgent },
+  agents: { sqlagent, supabaseAgent, testingAgent },
   scorers: {},
   storage: new LibSQLStore({
     id: "mastra-storage",

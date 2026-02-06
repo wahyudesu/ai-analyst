@@ -3,17 +3,48 @@
 import { Chat } from '@/components/Chat';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useSearchParams } from 'next/navigation';
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 
-const AGENTS = [
-  { id: 'data-analyst', name: 'Data Analyst', description: 'PostgreSQL with visualizations' },
-  // { id: 'supabase-agent', name: 'Supabase Agent', description: 'Supabase/PostgreSQL via Composio' }, // Disabled: requires Composio connection
-];
+interface Agent {
+  id: string;
+  name: string;
+  description?: string;
+}
 
 function ChatPage() {
   const searchParams = useSearchParams();
   const connectionString = searchParams.get('connection') || undefined;
-  const [selectedAgent, setSelectedAgent] = useState(AGENTS[0].id);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [selectedAgent, setSelectedAgent] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch agents from Mastra
+  useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        const response = await fetch('/api/agents');
+        if (!response.ok) throw new Error('Failed to fetch agents');
+        const data = await response.json();
+        setAgents(data);
+        if (data.length > 0) {
+          setSelectedAgent(data[0].id);
+        }
+      } catch (error) {
+        console.error('Failed to fetch agents:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchAgents();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-zinc-600 dark:text-zinc-400">Loading agents...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen bg-zinc-50 dark:bg-black">
@@ -32,17 +63,19 @@ function ChatPage() {
           </div>
           <div className="flex items-center gap-3">
             {/* Agent Selector */}
-            <select
-              value={selectedAgent}
-              onChange={(e) => setSelectedAgent(e.target.value)}
-              className="text-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-0 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 cursor-pointer"
-            >
-              {AGENTS.map((agent) => (
-                <option key={agent.id} value={agent.id}>
-                  {agent.name}
-                </option>
-              ))}
-            </select>
+            {agents.length > 0 && (
+              <select
+                value={selectedAgent}
+                onChange={(e) => setSelectedAgent(e.target.value)}
+                className="text-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-0 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              >
+                {agents.map((agent) => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </option>
+                ))}
+              </select>
+            )}
             {connectionString && (
               <div className="text-xs text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-1 rounded-full">
                 Connected
@@ -56,7 +89,9 @@ function ChatPage() {
       {/* Chat Interface */}
       <main className="flex-1 overflow-hidden">
         <div className="max-w-4xl mx-auto h-full">
-          <Chat key={selectedAgent} agentId={selectedAgent} connectionString={connectionString} />
+          {selectedAgent && (
+            <Chat key={selectedAgent} agentId={selectedAgent} connectionString={connectionString} />
+          )}
         </div>
       </main>
     </div>

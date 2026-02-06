@@ -6,7 +6,7 @@ import { NextRequest } from 'next/server';
  */
 export async function POST(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const agentId = searchParams.get('agentId') || 'data-analyst';
+  const agentId = searchParams.get('agentId') || 'testingAgent';
 
   // Forward request to Mastra server
   const mastraUrl = process.env.MASTRA_URL || 'http://localhost:4111';

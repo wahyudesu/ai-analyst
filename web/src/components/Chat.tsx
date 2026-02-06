@@ -11,17 +11,15 @@ interface ChatProps {
   className?: string;
 }
 
-// Available test agents
-const AGENTS = [
-  { id: 'test-agent-1', name: 'Greeter Agent', description: 'Sapa pengguna dengan ramah' },
-  { id: 'test-agent-2', name: 'Math Agent', description: 'Bantu hitung-hitungan sederhana' },
-  { id: 'test-agent-3', name: 'Story Agent', description: 'Buat cerita pendek' },
-];
+interface Agent {
+  id: string;
+  name: string;
+  description?: string;
+}
 
-export function Chat({ agentId = 'test-agent-1', connectionString, className }: ChatProps) {
+export function Chat({ agentId, connectionString, className }: ChatProps) {
   const [input, setInput] = useState('');
-  const [currentAgent, setCurrentAgent] = useState(agentId);
-  const [showAgentSelector, setShowAgentSelector] = useState(false);
+  const [currentAgentInfo, setCurrentAgentInfo] = useState<Agent | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Get Mastra server URL from environment or default to localhost:4111
@@ -29,11 +27,29 @@ export function Chat({ agentId = 'test-agent-1', connectionString, className }: 
 
   const { messages, status, sendMessage, error } = useChat({
     transport: new DefaultChatTransport({
-      api: `${mastraUrl}/chat/${currentAgent}`,
+      api: `${mastraUrl}/chat/${agentId}`,
     }),
   });
 
   const isLoading = status === 'streaming' || status === 'submitted';
+
+  // Fetch current agent info
+  useEffect(() => {
+    const fetchAgentInfo = async () => {
+      if (!agentId) return;
+      try {
+        const response = await fetch('/api/agents');
+        if (response.ok) {
+          const agents: Agent[] = await response.json();
+          const agent = agents.find(a => a.id === agentId);
+          if (agent) setCurrentAgentInfo(agent);
+        }
+      } catch (error) {
+        console.error('Failed to fetch agent info:', error);
+      }
+    };
+    fetchAgentInfo();
+  }, [agentId]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -48,52 +64,8 @@ export function Chat({ agentId = 'test-agent-1', connectionString, className }: 
     }
   };
 
-  const currentAgentInfo = AGENTS.find(a => a.id === currentAgent) || AGENTS[0];
-
   return (
     <div className={`flex flex-col h-full ${className || ''}`}>
-      {/* Header with Agent Selector */}
-      <div className="border-b border-zinc-200 dark:border-zinc-800 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
-              {currentAgentInfo.name}
-            </h1>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              {currentAgentInfo.description}
-            </p>
-          </div>
-          <button
-            onClick={() => setShowAgentSelector(!showAgentSelector)}
-            className="px-4 py-2 text-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700"
-          >
-            {showAgentSelector ? 'Tutup' : 'Ganti Agent'}
-          </button>
-        </div>
-
-        {showAgentSelector && (
-          <div className="mt-4 grid grid-cols-3 gap-2">
-            {AGENTS.map((agent) => (
-              <button
-                key={agent.id}
-                onClick={() => {
-                  setCurrentAgent(agent.id);
-                  setShowAgentSelector(false);
-                }}
-                className={`p-3 rounded-lg text-left transition-colors ${
-                  currentAgent === agent.id
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                }`}
-              >
-                <div className="font-medium text-sm">{agent.name}</div>
-                <div className="text-xs opacity-80 mt-1">{agent.description}</div>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
         {messages.length === 0 ? (
@@ -105,10 +77,10 @@ export function Chat({ agentId = 'test-agent-1', connectionString, className }: 
                 </svg>
               </div>
               <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
-                {currentAgentInfo.name}
+                {currentAgentInfo?.name || 'AI Agent'}
               </h2>
               <p className="text-zinc-600 dark:text-zinc-400">
-                {currentAgentInfo.description}. Coba kirim pesan untuk testing streaming!
+                {currentAgentInfo?.description || 'Coba kirim pesan untuk testing streaming!'}
               </p>
             </div>
           </div>
