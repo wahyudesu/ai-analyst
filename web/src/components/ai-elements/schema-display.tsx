@@ -117,7 +117,7 @@ const methodStyles: Record<HttpMethod, string> = {
   GET: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
   PATCH:
     "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-  POST: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  POST: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
   PUT: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
 };
 
@@ -153,7 +153,7 @@ export const SchemaDisplayPath = ({
   // Highlight path parameters
   const highlightedPath = path.replaceAll(
     /\{([^}]+)\}/g,
-    '<span class="text-blue-600 dark:text-blue-400">{$1}</span>'
+    '<span class="text-orange-600 dark:text-orange-400">{$1}</span>'
   );
 
   return (

@@ -1,26 +1,25 @@
 import { NextRequest } from 'next/server';
 
+const MASTRA_URL = process.env.MASTRA_URL || 'http://localhost:4111';
+
 /**
  * Chat API route that proxies to Mastra's AI SDK-compatible chat endpoint
- * This allows the web frontend to use AI SDK's useChat hook with Mastra agents
  */
 export async function POST(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const agentId = searchParams.get('agentId') || 'testingAgent';
 
-  // Forward request to Mastra server
-  const mastraUrl = process.env.MASTRA_URL || 'http://localhost:4111';
-  const targetUrl = `${mastraUrl}/chat/${agentId}`;
-
   const body = await req.json();
+  const targetUrl = `${MASTRA_URL}/chat/${agentId}`;
 
   try {
     const response = await fetch(targetUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...body,
+        messages: body.messages ?? [],
+      }),
     });
 
     if (!response.ok) {
@@ -40,10 +39,7 @@ export async function POST(req: NextRequest) {
     console.error('Chat API error:', error);
     return new Response(
       JSON.stringify({ error: 'Failed to connect to Mastra server' }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 }

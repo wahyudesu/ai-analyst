@@ -1,34 +1,43 @@
-import { MCPClient } from "@mastra/mcp";
-import { Agent } from "@mastra/core/agent";
-import { Composio } from "@composio/core";
-import { DATA_ANALYST_INSTRUCTIONS } from "./prompt/prompt-supabase";
+import { Composio } from "@composio/core"
+import { Agent } from "@mastra/core/agent"
+import { MCPClient } from "@mastra/mcp"
+import { DATA_ANALYST_INSTRUCTIONS } from "./prompt/prompt-supabase"
+import { dataAnalystMemory } from "../memory"
 
-// Initialize Composio
-const composio = new Composio();
+// Get Composio configuration from environment variables
+const configId = process.env.COMPOSIO_MCP_CONFIG_ID
+const userId = process.env.COMPOSIO_USER_ID
 
-const configId = "b4a38de3-407d-40d1-8317-f82f739a3994";
-const userId = "pg-test-ef1ee700-5a85-4b0d-af86-196821a6f5d4";
+let mcpClient: MCPClient | null = null
+let supabaseAgent: Agent | null = null
 
-// Generate MCP instance for user using the correct function signature
-// generate(userId: string, mcpConfigId: string, options?: { manuallyManageConnections?: boolean })
-const instance = await composio.mcp.generate(userId, configId);
+if (configId && userId) {
+  const composio = new Composio()
 
-// Create MCP client with Composio server URL
-export const mcpClient = new MCPClient({
-  id: "composio-mcp-client",
-  servers: {
-    composio: { url: new URL(instance.url) },
-  },
-});
+  // Generate MCP instance for user using the correct function signature
+  // generate(userId: string, mcpConfigId: string, options?: { manuallyManageConnections?: boolean })
+  const instance = await composio.mcp.generate(userId, configId)
 
-// Create a data analyst agent for Supabase/PostgreSQL database
-export const supabaseAgent = new Agent({
-  id: "supabase-agent",
-  name: "Supabase Agent",
-  description:
-    "AI Data analyst specialized in querying, analyzing, and understanding data stored in Supabase/PostgreSQL databases",
-  instructions: DATA_ANALYST_INSTRUCTIONS,
-  // model: "openai/o4-mini",
-  model: "zai-coding-plan/glm-4.5",
-  tools: await mcpClient.listTools(),
-});
+  // Create MCP client with Composio server URL
+  mcpClient = new MCPClient({
+    id: "composio-mcp-client",
+    servers: {
+      composio: { url: new URL(instance.url) },
+    },
+  })
+
+  // Create a data analyst agent for Supabase/PostgreSQL database with memory
+  supabaseAgent = new Agent({
+    id: "supabase-agent",
+    name: "Supabase Agent",
+    description:
+      "AI Data analyst specialized in querying, analyzing, and understanding data stored in Supabase/PostgreSQL databases",
+    instructions: DATA_ANALYST_INSTRUCTIONS,
+    // model: "openai/o4-mini",
+    model: "zai-coding-plan/glm-4.5",
+    tools: await mcpClient.listTools(),
+    memory: dataAnalystMemory,
+  })
+}
+
+export { mcpClient, supabaseAgent }

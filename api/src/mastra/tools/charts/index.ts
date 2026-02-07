@@ -2,7 +2,19 @@
  * Chart tools exports
  */
 
-export { generateChartTool } from './generate-chart.js';
+import { generateChartTool } from "./generate-chart.js"
+import { suggestChartsTool } from "./suggest-charts.js"
+import { sampleChartTool } from "./sample-chart.js"
+import { generateMultipleChartsTool } from "./generate-multiple-charts.js"
+
+export const chartTools = {
+  generateChart: generateChartTool,
+  suggestCharts: suggestChartsTool,
+  sampleChart: sampleChartTool,
+  generateMultipleCharts: generateMultipleChartsTool,
+} as const
+
+export { generateChartTool, suggestChartsTool, sampleChartTool, generateMultipleChartsTool }
 export type {
   ChartType,
   AxisType,
@@ -24,10 +36,6 @@ export type {
   ColorConfig,
   ChartMetadata,
   GenerateChartOutput,
-} from './types.js';
+} from "./types.js"
 
-import { generateChartTool } from './generate-chart.js';
-
-export const chartTools = {
-  generateChart: generateChartTool,
-};
+export type { MultipleChartsOutput } from "./generate-multiple-charts.js"

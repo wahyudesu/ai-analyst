@@ -356,7 +356,7 @@ export const Test = ({
 const statusStyles: Record<TestStatus, string> = {
   failed: "text-red-600 dark:text-red-400",
   passed: "text-green-600 dark:text-green-400",
-  running: "text-blue-600 dark:text-blue-400",
+  running: "text-orange-600 dark:text-orange-400",
   skipped: "text-yellow-600 dark:text-yellow-400",
 };
 

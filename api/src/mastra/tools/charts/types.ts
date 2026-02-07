@@ -3,61 +3,61 @@
  */
 
 // Chart type enum
-export const chartTypes = ['bar', 'line', 'area', 'pie'] as const;
-export type ChartType = (typeof chartTypes)[number];
+export const chartTypes = ["bar", "line", "area", "pie"] as const
+export type ChartType = (typeof chartTypes)[number]
 
 // Axis types
-export type AxisType = 'category' | 'time' | 'number';
+export type AxisType = "category" | "time" | "number"
 
 // Aggregation types
-export type AggregationType = 'none' | 'sum' | 'avg' | 'count' | 'min' | 'max';
+export type AggregationType = "none" | "sum" | "avg" | "count" | "min" | "max"
 
 // Sort types
-export type SortType = 'asc' | 'desc' | 'none';
+export type SortType = "asc" | "desc" | "none"
 
 // Color schemes
-export type ColorScheme = 'default' | 'categorical' | 'sequential';
+export type ColorScheme = "default" | "categorical" | "sequential"
 
 /**
  * SQL Query Result from execute-sql tool
  */
 export interface SQLQueryResult {
-  columns: string[];
-  rows: Record<string, unknown>[];
-  rowCount: number;
-  executionTime?: number;
+  columns: string[]
+  rows: Record<string, unknown>[]
+  rowCount: number
+  executionTime?: number
 }
 
 /**
  * X-axis configuration
  */
 export interface XAxisConfig {
-  column: string;
-  label?: string;
-  type?: AxisType;
-  dateFormat?: string;
+  column: string
+  label?: string
+  type?: AxisType
+  dateFormat?: string
 }
 
 /**
  * Y-axis / Series configuration
  */
 export interface YAxisConfig {
-  column: string;
-  label?: string;
-  color?: string;
-  aggregation?: AggregationType;
+  column: string
+  label?: string
+  color?: string
+  aggregation?: AggregationType
 }
 
 /**
  * Display options
  */
 export interface ChartOptions {
-  legend?: boolean;
-  stacked?: boolean;
-  horizontal?: boolean;
-  showDataLabels?: boolean;
-  sort?: SortType;
-  limit?: number;
+  legend?: boolean
+  stacked?: boolean
+  horizontal?: boolean
+  showDataLabels?: boolean
+  sort?: SortType
+  limit?: number
 }
 
 /**
@@ -65,55 +65,55 @@ export interface ChartOptions {
  */
 export interface GenerateChartInput {
   // Data source
-  data: SQLQueryResult;
+  data: SQLQueryResult
 
   // Chart configuration
-  chartType: ChartType;
+  chartType: ChartType
 
   // X-axis configuration (optional for pie charts)
-  xAxis?: XAxisConfig;
+  xAxis?: XAxisConfig
 
   // Y-axis / Series configuration
-  yAxis: YAxisConfig[];
+  yAxis: YAxisConfig[]
 
   // Metadata
-  title: string;
-  subtitle?: string;
+  title: string
+  subtitle?: string
 
   // Display options
-  options?: ChartOptions;
+  options?: ChartOptions
 
   // Color scheme
-  colorScheme?: ColorScheme;
-  primaryColor?: string;
+  colorScheme?: ColorScheme
+  primaryColor?: string
 }
 
 /**
  * Data point for series (bar/line/area charts)
  */
 export interface DataPoint {
-  x: string | number;
-  y: number;
-  label?: string;
+  x: string | number
+  y: number
+  label?: string
 }
 
 /**
  * Series data for bar/line/area charts
  */
 export interface Series {
-  name: string;
-  data: DataPoint[];
-  color?: string;
+  name: string
+  data: DataPoint[]
+  color?: string
 }
 
 /**
  * Slice data for pie charts
  */
 export interface PieSlice {
-  name: string;
-  value: number;
-  color?: string;
-  percentage?: number;
+  name: string
+  value: number
+  color?: string
+  percentage?: number
 }
 
 /**
@@ -121,75 +121,75 @@ export interface PieSlice {
  */
 export interface ProcessedData {
   // For bar/line/area charts
-  series?: Series[];
+  series?: Series[]
   // For pie charts
-  slices?: PieSlice[];
+  slices?: PieSlice[]
 }
 
 /**
  * Output X-axis configuration
  */
 export interface OutputXAxis {
-  label: string;
-  type: AxisType;
-  dateFormat?: string;
+  label: string
+  type: AxisType
+  dateFormat?: string
 }
 
 /**
  * Output Y-axis configuration
  */
 export interface OutputYAxis {
-  label: string;
+  label: string
 }
 
 /**
  * Output display options
  */
 export interface OutputOptions {
-  legend: boolean;
-  stacked: boolean;
-  horizontal: boolean;
-  showDataLabels: boolean;
+  legend: boolean
+  stacked: boolean
+  horizontal: boolean
+  showDataLabels: boolean
 }
 
 /**
  * Color configuration
  */
 export interface ColorConfig {
-  palette: string[];
-  primary?: string;
+  palette: string[]
+  primary?: string
 }
 
 /**
  * Metadata
  */
 export interface ChartMetadata {
-  dataSourceRowCount: number;
-  displayedPointCount: number;
-  generatedAt: string;
+  dataSourceRowCount: number
+  displayedPointCount: number
+  generatedAt: string
 }
 
 /**
  * Output schema for generate-chart tool
  */
 export interface GenerateChartOutput {
-  chartType: ChartType;
-  title: string;
-  subtitle?: string;
+  chartType: ChartType
+  title: string
+  subtitle?: string
 
   // Processed data for rendering
-  data: ProcessedData;
+  data: ProcessedData
 
   // Axis configuration
-  xAxis?: OutputXAxis;
-  yAxis?: OutputYAxis[];
+  xAxis?: OutputXAxis
+  yAxis?: OutputYAxis[]
 
   // Display options
-  options: OutputOptions;
+  options: OutputOptions
 
   // Styling
-  colors: ColorConfig;
+  colors: ColorConfig
 
   // Metadata
-  metadata: ChartMetadata;
+  metadata: ChartMetadata
 }

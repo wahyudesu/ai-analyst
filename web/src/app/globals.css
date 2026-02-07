@@ -132,3 +132,91 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Markdown content styles for streamdown */
+.markdown-content {
+  @apply text-sm leading-relaxed;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  @apply font-semibold mt-4 mb-2;
+}
+
+.markdown-content h1 {
+  @apply text-xl;
+}
+
+.markdown-content h2 {
+  @apply text-lg;
+}
+
+.markdown-content h3 {
+  @apply text-base;
+}
+
+.markdown-content p {
+  @apply my-2;
+}
+
+.markdown-content a {
+  @apply text-orange-600 dark:text-orange-400 underline;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  @apply ml-4 my-2;
+}
+
+.markdown-content li {
+  @apply my-1;
+}
+
+.markdown-content code {
+  @apply bg-zinc-200 dark:bg-zinc-700 px-1.5 py-0.5 rounded text-sm font-mono;
+}
+
+.markdown-content pre {
+  @apply bg-zinc-100 dark:bg-zinc-800 p-3 rounded-lg overflow-x-auto my-3;
+}
+
+.markdown-content pre code {
+  @apply bg-transparent p-0;
+}
+
+.markdown-content blockquote {
+  @apply border-l-4 border-zinc-300 dark:border-zinc-600 pl-4 italic my-2;
+}
+
+.markdown-content table {
+  @apply border-collapse w-full my-3;
+}
+
+.markdown-content th,
+.markdown-content td {
+  @apply border border-zinc-300 dark:border-zinc-600 px-3 py-2 text-sm;
+}
+
+.markdown-content th {
+  @apply bg-zinc-100 dark:bg-zinc-700 font-semibold;
+}
+
+.markdown-content hr {
+  @apply border-t border-zinc-300 dark:border-zinc-600 my-4;
+}
+
+.markdown-content img {
+  @apply max-w-full h-auto rounded-lg my-2;
+}
+
+.markdown-content strong {
+  @apply font-semibold;
+}
+
+.markdown-content em {
+  @apply italic;
+}

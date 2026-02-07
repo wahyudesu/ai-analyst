@@ -3,202 +3,200 @@
  * Creates visualization specifications from SQL query results
  */
 
-import { createTool } from '@mastra/core/tools';
-import { z } from 'zod';
+import { createTool } from "@mastra/core/tools"
+import { z } from "zod"
+import {
+  type DetectedColumn,
+  analyzeColumns,
+  detectAggregation,
+  detectAxisType,
+  detectSort,
+  selectXAxisColumn,
+  selectYAxisColumn,
+} from "./auto-detect.js"
+import { buildChartResult, processPieChart, processXYChart } from "./data-processors.js"
 import type {
-  ChartType,
-  AxisType,
   AggregationType,
-  SortType,
-  ColorScheme,
+  ChartType,
   GenerateChartOutput,
-} from './types.js';
-import { processXYChart, processPieChart, countDataPoints } from './data-processors.js';
-import { getPalette } from './color-palettes.js';
+  PieSlice,
+  Series,
+  SortType,
+} from "./types.js"
 
-// Chart type enum
-const chartTypes = ['bar', 'line', 'area', 'pie'] as const;
+const chartTypes = ["bar", "line", "area", "pie"] as const
+const aggregationTypes = ["none", "sum", "avg", "count", "min", "max"] as const
+const sortTypes = ["asc", "desc", "none"] as const
 
-// Axis type enum
-const axisTypes = ['category', 'time', 'number'] as const;
-
-// Aggregation type enum
-const aggregationTypes = ['none', 'sum', 'avg', 'count', 'min', 'max'] as const;
-
-// Sort type enum
-const sortTypes = ['asc', 'desc', 'none'] as const;
-
-// Color scheme enum
-const colorSchemes = ['default', 'categorical', 'sequential'] as const;
-
-// SQL Query Result Schema
 const SQLQueryResultSchema = z.object({
   columns: z.array(z.string()),
   rows: z.array(z.any()),
   rowCount: z.number(),
   executionTime: z.number().optional(),
-});
-
-// X-axis config schema
-const XAxisConfigSchema = z.object({
-  column: z.string().describe('Column name from data.columns'),
-  label: z.string().optional().describe('Custom label for the axis'),
-  type: z.enum(axisTypes).optional().describe('Axis type: category, time, or number'),
-  dateFormat: z.string().optional().describe('Date format for time axis'),
-});
-
-// Y-axis config schema
-const YAxisConfigSchema = z.object({
-  column: z.string().describe('Column name from data.columns'),
-  label: z.string().optional().describe('Custom label for the series'),
-  color: z.string().optional().describe('Color hex code (e.g. #3b82f6)'),
-  aggregation: z.enum(aggregationTypes).optional().describe('Aggregation method for grouped data'),
-});
-
-// Chart options schema
-const ChartOptionsSchema = z.object({
-  legend: z.boolean().optional().describe('Show legend'),
-  stacked: z.boolean().optional().describe('Stack series (for bar/area charts)'),
-  horizontal: z.boolean().optional().describe('Horizontal orientation (for bar charts)'),
-  showDataLabels: z.boolean().optional().describe('Show data labels on chart'),
-  sort: z.enum(sortTypes).optional().describe('Sort order: asc, desc, or none'),
-  limit: z.number().optional().describe('Maximum number of data points to display'),
-});
+})
 
 /**
- * Generate Chart Tool
- * Creates chart configurations from SQL query results for frontend rendering
+ * Generate Chart Tool (Simplified)
+ * Creates chart configurations from SQL query results with smart auto-detection
  */
 export const generateChartTool = createTool({
-  id: 'generate-chart',
-  description: `Generate chart configurations from SQL query results.
-Creates visualization specifications for frontend rendering using Recharts.
+  id: "generate-chart",
+  description: `Generate chart visualizations from SQL query results.
+IMPORTANT: Use this AFTER executeSQL tool to visualize the data. Pass the entire result from executeSQL as the 'data' parameter.
 
-Choose appropriate chart types based on data:
+Creates chart configurations for frontend rendering using Recharts.
+
+Choose appropriate chart types:
 - bar: Comparisons across categories (e.g., "sales by month", "top products")
-- line: Trends over time with continuous data (e.g., "stock prices over time")
-- area: Trends showing volume/magnitude over time (e.g., "website traffic over time")
+- line: Trends over time (e.g., "stock prices over time", "user growth")
+- area: Volume/magnitude over time (e.g., "website traffic", "cumulative revenue")
 - pie: Proportions of a whole (max 5-7 categories, e.g., "sales by category")
 
-The tool processes the SQL query result and returns a structured configuration
-that can be rendered by the frontend ChartRenderer component.`,
-  inputSchema: z.object({
-    // Data source
-    data: SQLQueryResultSchema.describe('SQL query result from execute-sql tool'),
+Auto-detection (works if you don't specify columns):
+- xColumn: Auto-detected from date/keyword columns if not specified
+- yColumns: Auto-detected from numeric/value columns if not specified
+- axis type: Inferred from data (time/category/number)
+- aggregation: Auto-sum for duplicates, none otherwise
+- sort: Pie charts → desc, Time series → asc, others → none
 
-    // Chart configuration
+Usage: Pass the result from executeSQL directly as 'data', specify chartType and title. The tool will auto-detect columns.`,
+  inputSchema: z.object({
+    data: SQLQueryResultSchema.describe(
+      "SQL query result from execute-sql tool"
+    ),
     chartType: z
       .enum(chartTypes)
-      .describe('Type of chart: bar, line, area, or pie'),
-
-    // X-axis configuration
-    xAxis: XAxisConfigSchema
-      .optional()
-      .describe('X-axis configuration (required for bar/line/area, optional for pie)'),
-
-    // Y-axis / Series configuration
-    yAxis: z
-      .array(YAxisConfigSchema)
-      .min(1)
-      .describe('Array of Y-axis/series configurations with column name, optional label, color, and aggregation'),
-
-    // Metadata
-    title: z.string().describe('Chart title'),
-    subtitle: z.string().optional().describe('Chart subtitle'),
-
-    // Display options
-    options: ChartOptionsSchema.optional().describe('Display options for the chart'),
-
-    // Color scheme
-    colorScheme: z
-      .enum(colorSchemes)
-      .optional()
-      .describe('Color scheme: default, categorical, or sequential'),
-    primaryColor: z
+      .describe("Type of chart: bar, line, area, or pie"),
+    xColumn: z
       .string()
       .optional()
-      .describe('Primary color hex code (e.g. #3b82f6)'),
+      .describe("Column name for x-axis. Auto-detected if not specified."),
+    yColumns: z
+      .union([z.string(), z.array(z.string())])
+      .optional()
+      .describe(
+        'Column name(s) for y-axis/series. Pass as string for single column: "jumlah" or as array: ["jumlah", "count"]. Auto-detected from numeric columns if not specified.'
+      ),
+    title: z.string().describe("Chart title"),
+    subtitle: z.string().optional().describe("Chart subtitle"),
+    aggregation: z
+      .enum(aggregationTypes)
+      .optional()
+      .describe("Aggregation method. Auto-detected based on data pattern."),
+    sort: z
+      .enum(sortTypes)
+      .optional()
+      .describe("Sort order. Auto-detected based on chart type and axis type."),
+    limit: z
+      .number()
+      .optional()
+      .describe(
+        "Max data points to display. Auto-defaulted (50 for XY, 7 for pie)."
+      ),
+    stacked: z
+      .boolean()
+      .optional()
+      .describe("Stack series (for bar/area charts). Default: false"),
+    showDataLabels: z
+      .boolean()
+      .optional()
+      .describe("Show data labels on chart. Default: false"),
   }),
   execute: async ({
     data,
     chartType,
-    xAxis,
-    yAxis,
+    xColumn,
+    yColumns,
     title,
     subtitle,
-    options = {},
-    colorScheme = 'default',
-    primaryColor,
+    aggregation,
+    sort,
+    limit,
+    stacked = false,
+    showDataLabels = false,
   }): Promise<GenerateChartOutput> => {
-    const { columns, rows, rowCount } = data;
+    const columns = analyzeColumns(data)
 
-    // Validate column names exist in data
-    for (const series of yAxis) {
-      if (!columns.includes(series.column)) {
-        throw new Error(
-          `Column "${series.column}" not found in data. Available columns: ${columns.join(', ')}`
-        );
+    const xAxisColumn = xColumn || selectXAxisColumn(columns)?.name
+
+    // Parse yColumns if it's a stringified JSON array (common when LLM passes it as string)
+    let parsedYColumns = yColumns
+    if (typeof yColumns === "string") {
+      // Try to parse as JSON array
+      if (yColumns.startsWith("[") && yColumns.endsWith("]")) {
+        try {
+          parsedYColumns = JSON.parse(yColumns) as string | string[]
+        } catch {
+          // If parsing fails, use as-is (single column name)
+          parsedYColumns = yColumns
+        }
       }
     }
 
-    if (xAxis && !columns.includes(xAxis.column)) {
+    const yAxisColumns = parsedYColumns || selectYAxisColumn(columns)?.name
+
+    if (!xAxisColumn) {
       throw new Error(
-        `Column "${xAxis.column}" not found in data. Available columns: ${columns.join(', ')}`
-      );
+        "No suitable x-axis column found. Please specify xColumn explicitly."
+      )
     }
 
-    // Process data based on chart type
-    let processedData: GenerateChartOutput['data'];
+    if (!yAxisColumns) {
+      throw new Error(
+        "No suitable y-axis column found. Please specify yColumns explicitly."
+      )
+    }
 
-    if (chartType === 'pie') {
+    const yCols = Array.isArray(yAxisColumns) ? yAxisColumns : [yAxisColumns]
+
+    const xAxisType = detectAxisType(data, xAxisColumn)
+    const autoAggregation =
+      aggregation ?? detectAggregation(data, xAxisColumn, chartType)
+    const autoSort = sort ?? detectSort(chartType, xAxisType)
+
+    const yAxisConfigs = yCols.map((col) => ({
+      column: col,
+      label: col,
+      aggregation: autoAggregation,
+    }))
+
+    const options = {
+      legend: true,
+      stacked,
+      horizontal: false,
+      showDataLabels,
+      sort: autoSort,
+      limit: limit || (chartType === "pie" ? 7 : 50),
+    }
+
+    let processedData: { series?: Series[]; slices?: PieSlice[] }
+
+    if (chartType === "pie") {
       processedData = {
-        slices: processPieChart(data, yAxis, options),
-      };
-    } else {
-      // bar, line, area require xAxis
-      if (!xAxis) {
-        throw new Error(`xAxis is required for ${chartType} charts`);
+        slices: processPieChart(data, yAxisConfigs, options),
       }
+    } else {
       processedData = {
-        series: processXYChart(data, chartType, xAxis, yAxis, options),
-      };
+        series: processXYChart(
+          data,
+          chartType,
+          { column: xAxisColumn, type: xAxisType },
+          yAxisConfigs,
+          options
+        ),
+      }
     }
 
-    // Build output
-    const result: GenerateChartOutput = {
+    return buildChartResult({
       chartType,
       title,
       subtitle,
-      data: processedData,
-      options: {
-        legend: options.legend ?? true,
-        stacked: options.stacked ?? false,
-        horizontal: options.horizontal ?? false,
-        showDataLabels: options.showDataLabels ?? false,
-      },
-      colors: {
-        palette: getPalette(colorScheme),
-        primary: primaryColor,
-      },
-      metadata: {
-        dataSourceRowCount: rowCount,
-        displayedPointCount: countDataPoints(processedData.series, processedData.slices),
-        generatedAt: new Date().toISOString(),
-      },
-    };
-
-    // Add axis info for non-pie charts
-    if (chartType !== 'pie' && xAxis) {
-      result.xAxis = {
-        label: xAxis.label || xAxis.column,
-        type: xAxis.type || 'category',
-        dateFormat: xAxis.dateFormat,
-      };
-      result.yAxis = yAxis.map((y) => ({
-        label: y.label || y.column,
-      }));
-    }
-
-    return result;
+      processedData,
+      options,
+      xAxis: { label: xAxisColumn, type: xAxisType },
+      yAxisLabels: yAxisConfigs.map((y) => y.label),
+      dataSourceRowCount: data.rowCount,
+      colorScheme: "default",
+    })
   },
-});
+})

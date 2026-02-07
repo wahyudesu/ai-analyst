@@ -72,7 +72,7 @@ pnpm start:web
 Mastra-based AI backend with PostgreSQL data analyst agent.
 
 - **Agent**: Data Analyst - Query & visualize PostgreSQL data
-- **Tools**: execute-sql, list-tables, get-table-schema, generate-chart
+- **Tools**: get-schema, get-table, execute-sql, generate-chart, suggest-charts
 - **Model**: GLM-4.5
 
 ### web/

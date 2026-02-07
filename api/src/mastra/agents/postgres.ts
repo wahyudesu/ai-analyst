@@ -2,8 +2,9 @@ import { Agent } from "@mastra/core/agent";
 import { POSTGRES_DATA_ANALYST_INSTRUCTIONS } from "./prompt/prompt-postgres";
 import { postgresTools } from "../tools/postgres";
 import { chartTools } from "../tools/charts";
+import { dataAnalystMemory } from "../memory";
 
-// Create a data analyst agent for PostgreSQL database
+// Create a data analyst agent for PostgreSQL database with memory
 export const sqlagent = new Agent({
   id: "data-analyst",
   name: "Data Analyst",
@@ -13,4 +14,5 @@ export const sqlagent = new Agent({
   // model: "openai/o4-mini",
   model: "zai-coding-plan/glm-4.5",
   tools: { ...postgresTools, ...chartTools },
+  memory: dataAnalystMemory,
 });

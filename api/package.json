@@ -31,12 +31,14 @@
     "@mastra/memory": "^1.0.1",
     "@mastra/observability": "^1.1.0",
     "pg": "^8.14.1",
+    "postgres": "^3.4.8",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^25.2.0",
     "@types/pg": "^8.12.0",
     "mastra": "^1.1.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
 }

@@ -6,6 +6,8 @@
 export type ChartType = 'bar' | 'line' | 'area' | 'pie';
 export type AxisType = 'category' | 'time' | 'number';
 
+export type ChartsLayout = 'grid' | 'vertical' | 'tabs';
+
 export interface DataPoint {
   x: string | number;
   y: number;
@@ -68,4 +70,15 @@ export interface ChartConfig {
   options: OutputOptions;
   colors: ColorConfig;
   metadata: ChartMetadata;
+}
+
+/**
+ * Multiple charts output format
+ * Used when generate-multiple-charts tool is called
+ */
+export interface MultipleChartsConfig {
+  charts: ChartConfig[];
+  layout?: ChartsLayout;
+  title?: string;
+  description?: string;
 }

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "pnpm -r --parallel dev",
+    "dev": "concurrently \"pnpm --filter api dev\" \"pnpm --filter web dev\" --names \"api,web\" --prefix-colors \"cyan,magenta\" --hide \"none\"",
     "dev:api": "pnpm --filter api dev",
     "dev:web": "pnpm --filter web dev",
     "build": "pnpm -r build",
@@ -25,6 +25,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^9.2.1",
     "typescript": "^5"
   },
   "engines": {
