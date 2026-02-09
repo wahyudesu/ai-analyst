@@ -1,51 +1,59 @@
-'use client';
+"use client";
 
-import { Chat } from '@/components/Chat';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { useSearchParams } from 'next/navigation';
-import { Suspense, useState, useEffect } from 'react';
-import { Database, AlertCircle } from 'lucide-react';
+import { Chat } from "@/components/Chat";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { DatabaseSettings } from "@/components/DatabaseSettings";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useState, useEffect } from "react";
+import { Database, AlertCircle, Settings } from "lucide-react";
 
 const SERVER_CHECK_RETRIES = 3;
 const SERVER_RETRY_DELAY = 1500;
 
-type ServerStatus = 'loading' | 'ready' | 'error';
+type ServerStatus = "loading" | "ready" | "error";
 
 function ChatPage() {
   const searchParams = useSearchParams();
-  const connectionString = searchParams.get('connection') ?? undefined;
-  const [status, setStatus] = useState<ServerStatus>('loading');
+  const connectionString = searchParams.get("connection") ?? undefined;
+  const [status, setStatus] = useState<ServerStatus>("loading");
   const [error, setError] = useState<string | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   useEffect(() => {
     async function checkServer() {
       for (let i = 0; i < SERVER_CHECK_RETRIES; i++) {
         try {
-          const response = await fetch('/api/agents');
+          const response = await fetch("/api/agents");
 
           if (response.status === 503 && i < SERVER_CHECK_RETRIES - 1) {
-            await new Promise(resolve => setTimeout(resolve, SERVER_RETRY_DELAY));
+            await new Promise((resolve) =>
+              setTimeout(resolve, SERVER_RETRY_DELAY),
+            );
             continue;
           }
 
           if (response.ok) {
-            setStatus('ready');
+            setStatus("ready");
             setError(null);
             return;
           }
         } catch (err) {
           if (i === SERVER_CHECK_RETRIES - 1) {
-            setError(err instanceof Error ? err.message : 'Failed to connect to Mastra server');
+            setError(
+              err instanceof Error
+                ? err.message
+                : "Failed to connect to Mastra server",
+            );
           }
         }
       }
-      setStatus('error');
+      setStatus("error");
     }
 
     checkServer();
   }, []);
 
-  if (status === 'loading') {
+  if (status === "loading") {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
@@ -54,13 +62,15 @@ function ChatPage() {
             <div className="w-2 h-2 bg-orange-600 rounded-full animate-bounce delay-100" />
             <div className="w-2 h-2 bg-orange-600 rounded-full animate-bounce delay-200" />
           </div>
-          <p className="text-zinc-600 dark:text-zinc-400">Connecting to Mastra server...</p>
+          <p className="text-zinc-600 dark:text-zinc-400">
+            Connecting to Mastra server...
+          </p>
         </div>
       </div>
     );
   }
 
-  if (status === 'error') {
+  if (status === "error") {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center max-w-md">
@@ -69,7 +79,8 @@ function ChatPage() {
             Connection Error
           </h2>
           <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
-            {error || 'No agents available. Make sure the Mastra server is running.'}
+            {error ||
+              "No agents available. Make sure the Mastra server is running."}
           </p>
           <button
             onClick={() => window.location.reload()}
@@ -105,6 +116,13 @@ function ChatPage() {
                 Connected
               </div>
             )}
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400"
+              aria-label="Open database settings"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
             <ThemeToggle />
           </div>
         </div>
@@ -113,6 +131,10 @@ function ChatPage() {
       <main className="flex-1 overflow-hidden">
         <Chat connectionString={connectionString} />
       </main>
+      <DatabaseSettings
+        open={isSettingsOpen}
+        onOpenChange={setIsSettingsOpen}
+      />
     </div>
   );
 }

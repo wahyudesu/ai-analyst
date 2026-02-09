@@ -1,19 +1,20 @@
-'use client';
+"use client";
 
-import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport } from 'ai';
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Database, ChartBar, ChevronDown, Menu, X, Plus } from 'lucide-react';
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { Database, ChartBar, ChevronDown, Menu, X, Plus } from "lucide-react";
 
-import { MessageRenderer } from './MessageRenderer';
-import { threadsClient } from '@/lib/threads-client';
-import { Button } from '@/components/ui/button';
+import { MessageRenderer } from "./MessageRenderer";
+import { threadsClient } from "@/lib/threads-client";
+import { useDatabaseConfig } from "@/lib/use-database-config";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -21,7 +22,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 
 interface ChatProps {
   agentId?: string;
@@ -44,24 +45,30 @@ interface ChatSession {
 }
 
 // Constants
-const DEFAULT_AGENT_ID = 'data-analyst';
+const DEFAULT_AGENT_ID = "data-analyst";
 
 // Agent icons mapping - stable outside component
 const AGENT_ICONS: Record<string, React.ElementType> = {
-  'data-analyst': Database,
-  'chart-agent': ChartBar,
-  'supabase-agent': Database,
+  "data-analyst": Database,
+  "chart-agent": ChartBar,
+  "supabase-agent": Database,
 } as const;
 
 function getAgentIcon(agentId?: string): React.ElementType {
   return AGENT_ICONS[agentId || DEFAULT_AGENT_ID] || Database;
 }
 
-export function Chat({ agentId: propAgentId, connectionString, className }: ChatProps) {
-  const [input, setInput] = useState('');
-  const [currentAgentId, setCurrentAgentId] = useState<string>(DEFAULT_AGENT_ID);
+export function Chat({
+  agentId: propAgentId,
+  connectionString,
+  className,
+}: ChatProps) {
+  const [input, setInput] = useState("");
+  const [currentAgentId, setCurrentAgentId] =
+    useState<string>(DEFAULT_AGENT_ID);
   const [allAgents, setAllAgents] = useState<Agent[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { databaseUrl } = useDatabaseConfig();
 
   // Session management
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -77,7 +84,7 @@ export function Chat({ agentId: propAgentId, connectionString, className }: Chat
   }>({
     isOpen: false,
     sessionId: null,
-    sessionTitle: '',
+    sessionTitle: "",
   });
 
   // Get or create thread ID for session management
@@ -90,13 +97,13 @@ export function Chat({ agentId: propAgentId, connectionString, className }: Chat
   useEffect(() => {
     const fetchAgents = async () => {
       try {
-        const response = await fetch('/api/agents');
+        const response = await fetch("/api/agents");
         if (response.ok) {
           const agents: Agent[] = await response.json();
           setAllAgents(agents);
         }
       } catch (error) {
-        console.error('Failed to fetch agents:', error);
+        console.error("Failed to fetch agents:", error);
       }
     };
     fetchAgents();
@@ -108,6 +115,7 @@ export function Chat({ agentId: propAgentId, connectionString, className }: Chat
     agentId: currentAgentId,
     threadId,
     resourceId,
+    databaseUrl,
   });
 
   // Update ref when values change (doesn't trigger re-render)
@@ -115,21 +123,28 @@ export function Chat({ agentId: propAgentId, connectionString, className }: Chat
     agentId: currentAgentId,
     threadId,
     resourceId,
+    databaseUrl,
   };
 
   const transport = useMemo(
-    () => new DefaultChatTransport({
-      api: `/api/chat?agentId=${currentAgentId}`,
-      prepareSendMessagesRequest: ({ messages }) => ({
-        body: {
-          messages,
-          memory: {
-            thread: { id: transportParamsRef.current.threadId },
-            ...(transportParamsRef.current.resourceId && { resource: transportParamsRef.current.resourceId }),
+    () =>
+      new DefaultChatTransport({
+        api: `/api/chat?agentId=${currentAgentId}`,
+        prepareSendMessagesRequest: ({ messages }) => ({
+          body: {
+            messages,
+            memory: {
+              thread: { id: transportParamsRef.current.threadId },
+              ...(transportParamsRef.current.resourceId && {
+                resource: transportParamsRef.current.resourceId,
+              }),
+            },
+            ...(transportParamsRef.current.databaseUrl && {
+              databaseUrl: transportParamsRef.current.databaseUrl,
+            }),
           },
-        },
+        }),
       }),
-    }),
     [currentAgentId],
   );
 
@@ -137,12 +152,12 @@ export function Chat({ agentId: propAgentId, connectionString, className }: Chat
     transport,
   });
 
-  const isLoading = status === 'streaming' || status === 'submitted';
+  const isLoading = status === "streaming" || status === "submitted";
 
   // Get current agent info
   const currentAgentInfo = useMemo(
-    () => allAgents.find(a => a.id === currentAgentId) || null,
-    [allAgents, currentAgentId]
+    () => allAgents.find((a) => a.id === currentAgentId) || null,
+    [allAgents, currentAgentId],
   );
 
   // Title update ref - must be before other hooks
@@ -150,19 +165,21 @@ export function Chat({ agentId: propAgentId, connectionString, className }: Chat
 
   // Helper functions - declared early, stable dependencies
   const saveSessions = useCallback((updatedSessions: ChatSession[]) => {
-    localStorage.setItem('chat-sessions', JSON.stringify(updatedSessions));
+    localStorage.setItem("chat-sessions", JSON.stringify(updatedSessions));
   }, []);
 
   // Initialize session - run once on mount
   useEffect(() => {
     const loadSessions = () => {
-      const stored = localStorage.getItem('chat-sessions');
+      const stored = localStorage.getItem("chat-sessions");
       if (stored) {
         const parsed = JSON.parse(stored);
-        setSessions(parsed.map((s: any) => ({
-          ...s,
-          createdAt: new Date(s.createdAt)
-        })));
+        setSessions(
+          parsed.map((s: any) => ({
+            ...s,
+            createdAt: new Date(s.createdAt),
+          })),
+        );
       }
     };
 
@@ -194,7 +211,7 @@ export function Chat({ agentId: propAgentId, connectionString, className }: Chat
       setIsLoadingMessages(true);
       try {
         const response = await fetch(
-          `/api/chat/messages?threadId=${threadId}&agentId=${currentAgentId}`
+          `/api/chat/messages?threadId=${threadId}&agentId=${currentAgentId}`,
         );
         if (response.ok) {
           const data = await response.json();
@@ -203,7 +220,7 @@ export function Chat({ agentId: propAgentId, connectionString, className }: Chat
           }
         }
       } catch (error) {
-        console.error('Failed to fetch message history:', error);
+        console.error("Failed to fetch message history:", error);
       } finally {
         setIsLoadingMessages(false);
       }
@@ -216,7 +233,7 @@ export function Chat({ agentId: propAgentId, connectionString, className }: Chat
 
   // Auto-scroll
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   // Update session title - with proper guard
@@ -229,17 +246,18 @@ export function Chat({ agentId: propAgentId, connectionString, className }: Chat
     if (messages.length > 0 && currentSessionId) {
       if (titleUpdateRef.current === currentSessionId) return;
 
-      const firstUserMessage = messages.find(m => m.role === 'user');
+      const firstUserMessage = messages.find((m) => m.role === "user");
       if (firstUserMessage) {
-        const content = firstUserMessage.parts?.find(p => p.type === 'text')?.text ||
-                       (firstUserMessage as any).content ||
-                       'New Chat';
+        const content =
+          firstUserMessage.parts?.find((p) => p.type === "text")?.text ||
+          (firstUserMessage as any).content ||
+          "New Chat";
         const title = String(content).slice(0, 50);
 
         // Use functional update to avoid dependency on sessions
-        setSessions(prev => {
+        setSessions((prev) => {
           // Check if session already exists with this title to avoid update
-          const existing = prev.find(s => s.id === currentSessionId);
+          const existing = prev.find((s) => s.id === currentSessionId);
           if (existing && existing.title === title) {
             // Still mark as updated to prevent re-checking
             return prev;
@@ -247,13 +265,13 @@ export function Chat({ agentId: propAgentId, connectionString, className }: Chat
 
           let updated;
           if (existing) {
-            updated = prev.map(s =>
-              s.id === currentSessionId ? { ...s, title } : s
+            updated = prev.map((s) =>
+              s.id === currentSessionId ? { ...s, title } : s,
             );
           } else {
             const newSession: ChatSession = {
               id: currentSessionId,
-              title: title || 'New Chat',
+              title: title || "New Chat",
               createdAt: new Date(),
               agentId: agentIdRef.current || DEFAULT_AGENT_ID,
             };
@@ -261,7 +279,7 @@ export function Chat({ agentId: propAgentId, connectionString, className }: Chat
           }
 
           // Save to localStorage directly to avoid dependency on saveSessions callback
-          localStorage.setItem('chat-sessions', JSON.stringify(updated));
+          localStorage.setItem("chat-sessions", JSON.stringify(updated));
           return updated;
         });
 
@@ -281,81 +299,93 @@ export function Chat({ agentId: propAgentId, connectionString, className }: Chat
     setCurrentSessionId(newThreadId);
     setCurrentAgentId(agentToUse);
     setMessages([]);
-    setInput('');
+    setInput("");
     titleUpdateRef.current = undefined;
     setIsSidebarOpen(false);
   }, []);
 
-  const switchSession = useCallback(async (sessionId: string, sessionAgentId?: string) => {
-    threadsClient.setCurrentThreadId(sessionId);
-    threadIdRef.current = sessionId;
-    setCurrentSessionId(sessionId);
+  const switchSession = useCallback(
+    async (sessionId: string, sessionAgentId?: string) => {
+      threadsClient.setCurrentThreadId(sessionId);
+      threadIdRef.current = sessionId;
+      setCurrentSessionId(sessionId);
 
-    const agentToUse = sessionAgentId || DEFAULT_AGENT_ID;
-    setCurrentAgentId(agentToUse);
+      const agentToUse = sessionAgentId || DEFAULT_AGENT_ID;
+      setCurrentAgentId(agentToUse);
 
-    setIsLoadingMessages(true);
-    try {
-      const response = await fetch(
-        `/api/chat/messages?threadId=${sessionId}&agentId=${agentToUse}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setMessages(data.messages || []);
-      } else {
+      setIsLoadingMessages(true);
+      try {
+        const response = await fetch(
+          `/api/chat/messages?threadId=${sessionId}&agentId=${agentToUse}`,
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setMessages(data.messages || []);
+        } else {
+          setMessages([]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch message history:", error);
         setMessages([]);
+      } finally {
+        setIsLoadingMessages(false);
       }
-    } catch (error) {
-      console.error('Failed to fetch message history:', error);
-      setMessages([]);
-    } finally {
-      setIsLoadingMessages(false);
-    }
-    titleUpdateRef.current = undefined;
-  }, []);
+      titleUpdateRef.current = undefined;
+    },
+    [],
+  );
 
-  const confirmDeleteSession = useCallback((sessionId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    // Find session from current state (not from dependency)
-    setDeleteDialog(prev => {
-      const session = sessions.find(s => s.id === sessionId);
-      return {
-        isOpen: true,
-        sessionId,
-        sessionTitle: session?.title || 'This chat',
-      };
-    });
-  }, [sessions]);
+  const confirmDeleteSession = useCallback(
+    (sessionId: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      // Find session from current state (not from dependency)
+      setDeleteDialog((prev) => {
+        const session = sessions.find((s) => s.id === sessionId);
+        return {
+          isOpen: true,
+          sessionId,
+          sessionTitle: session?.title || "This chat",
+        };
+      });
+    },
+    [sessions],
+  );
 
-  const deleteSession = useCallback((sessionId: string) => {
-    setSessions(prev => {
-      const updated = prev.filter(s => s.id !== sessionId);
-      saveSessions(updated);
-      return updated;
-    });
+  const deleteSession = useCallback(
+    (sessionId: string) => {
+      setSessions((prev) => {
+        const updated = prev.filter((s) => s.id !== sessionId);
+        saveSessions(updated);
+        return updated;
+      });
 
-    if (sessionId === currentSessionId) {
-      // Start new chat with default agent when current session is deleted
-      startNewChat(DEFAULT_AGENT_ID);
-    }
+      if (sessionId === currentSessionId) {
+        // Start new chat with default agent when current session is deleted
+        startNewChat(DEFAULT_AGENT_ID);
+      }
 
-    // Close dialog
-    setDeleteDialog({ isOpen: false, sessionId: null, sessionTitle: '' });
-  }, [currentSessionId, saveSessions, startNewChat]);
+      // Close dialog
+      setDeleteDialog({ isOpen: false, sessionId: null, sessionTitle: "" });
+    },
+    [currentSessionId, saveSessions, startNewChat],
+  );
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (input.trim()) {
       sendMessage({ text: input });
-      setInput('');
+      setInput("");
     }
   };
 
   // Current agent icon (memoized)
-  const AgentIcon = useMemo(() => getAgentIcon(currentAgentId), [currentAgentId]);
+  const AgentIcon = useMemo(
+    () => getAgentIcon(currentAgentId),
+    [currentAgentId],
+  );
 
   return (
-    <div className={`flex h-full ${className || ''}`}>
+    <div className={`flex h-full ${className || ""}`}>
       {/* Sidebar Toggle Button (Mobile) */}
       <button
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -366,12 +396,14 @@ export function Chat({ agentId: propAgentId, connectionString, className }: Chat
       </button>
 
       {/* Sidebar - Chat History */}
-      <aside className={`
+      <aside
+        className={`
         fixed lg:relative inset-y-0 left-0 z-40
         w-72 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800
         transform transition-transform duration-200 ease-in-out
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}>
+        ${isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+      `}
+      >
         <div className="flex flex-col h-full p-4">
           {/* New Chat with Agent Selection */}
           <DropdownMenu>
@@ -394,7 +426,9 @@ export function Chat({ agentId: propAgentId, connectionString, className }: Chat
                     <Icon className="w-4 h-4 mr-2" />
                     <div className="flex flex-col">
                       <span className="font-medium">{agent.name}</span>
-                      <span className="text-xs text-zinc-500">{agent.description}</span>
+                      <span className="text-xs text-zinc-500">
+                        {agent.description}
+                      </span>
                     </div>
                     {isSelected && (
                       <div className="ml-auto">
@@ -426,14 +460,17 @@ export function Chat({ agentId: propAgentId, connectionString, className }: Chat
                       onClick={() => switchSession(session.id, session.agentId)}
                       className={`
                         group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors
-                        ${currentSessionId === session.id
-                          ? 'bg-orange-100 dark:bg-orange-900/30/30 text-orange-700 dark:text-orange-300'
-                          : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
+                        ${
+                          currentSessionId === session.id
+                            ? "bg-orange-100 dark:bg-orange-900/30/30 text-orange-700 dark:text-orange-300"
+                            : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
                         }
                       `}
                     >
                       <SessionIcon className="w-4 h-4 flex-shrink-0" />
-                      <span className="flex-1 text-sm truncate">{session.title}</span>
+                      <span className="flex-1 text-sm truncate">
+                        {session.title}
+                      </span>
                       <button
                         onClick={(e) => confirmDeleteSession(session.id, e)}
                         className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-opacity"
@@ -451,8 +488,13 @@ export function Chat({ agentId: propAgentId, connectionString, className }: Chat
           {/* Thread Info */}
           <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800">
             <div className="text-xs text-zinc-500 dark:text-zinc-400 space-y-1">
-              <p>Thread: <span className="font-mono">{threadId.slice(0, 8)}...</span></p>
-              <p>Resource: <span className="font-mono">{resourceId}</span></p>
+              <p>
+                Thread:{" "}
+                <span className="font-mono">{threadId.slice(0, 8)}...</span>
+              </p>
+              <p>
+                Resource: <span className="font-mono">{resourceId}</span>
+              </p>
             </div>
           </div>
         </div>
@@ -486,10 +528,11 @@ export function Chat({ agentId: propAgentId, connectionString, className }: Chat
                   <AgentIcon className="w-8 h-8 text-orange-600 dark:text-orange-400" />
                 </div>
                 <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
-                  {currentAgentInfo?.name || 'AI Agent'}
+                  {currentAgentInfo?.name || "AI Agent"}
                 </h2>
                 <p className="text-zinc-600 dark:text-zinc-400">
-                  {currentAgentInfo?.description || 'Start a conversation with the AI agent.'}
+                  {currentAgentInfo?.description ||
+                    "Start a conversation with the AI agent."}
                 </p>
                 <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-4">
                   Session: {threadId}
@@ -523,7 +566,10 @@ export function Chat({ agentId: propAgentId, connectionString, className }: Chat
         </div>
 
         {/* Input */}
-        <form onSubmit={onSubmit} className="border-t border-zinc-200 dark:border-zinc-800 px-6 py-4">
+        <form
+          onSubmit={onSubmit}
+          className="border-t border-zinc-200 dark:border-zinc-800 px-6 py-4"
+        >
           <div className="flex gap-2">
             <input
               type="text"
@@ -545,24 +591,38 @@ export function Chat({ agentId: propAgentId, connectionString, className }: Chat
       </div>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialog.isOpen} onOpenChange={(open) => setDeleteDialog(prev => ({ ...prev, isOpen: open }))}>
+      <Dialog
+        open={deleteDialog.isOpen}
+        onOpenChange={(open) =>
+          setDeleteDialog((prev) => ({ ...prev, isOpen: open }))
+        }
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Chat</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{deleteDialog.sessionTitle}"? This action cannot be undone.
+              Are you sure you want to delete "{deleteDialog.sessionTitle}"?
+              This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setDeleteDialog({ isOpen: false, sessionId: null, sessionTitle: '' })}
+              onClick={() =>
+                setDeleteDialog({
+                  isOpen: false,
+                  sessionId: null,
+                  sessionTitle: "",
+                })
+              }
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
-              onClick={() => deleteDialog.sessionId && deleteSession(deleteDialog.sessionId)}
+              onClick={() =>
+                deleteDialog.sessionId && deleteSession(deleteDialog.sessionId)
+              }
             >
               Delete
             </Button>

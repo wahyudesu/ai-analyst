@@ -11,8 +11,8 @@ export const sqlagent = new Agent({
   description:
     "AI Data analyst specialized in querying, analyzing, and visualizing data stored in PostgreSQL databases",
   instructions: POSTGRES_DATA_ANALYST_INSTRUCTIONS,
-  // model: "openai/o4-mini",
-  model: "zai-coding-plan/glm-4.5",
+  model: "openai/gpt-5-mini",
+  // model: "zai-coding-plan/glm-4.5",
   tools: { ...postgresTools, ...chartTools },
   memory: dataAnalystMemory,
 });

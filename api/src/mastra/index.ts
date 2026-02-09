@@ -1,7 +1,7 @@
 import { chatRoute } from "@mastra/ai-sdk"
 import { Mastra } from "@mastra/core/mastra"
 import { registerApiRoute } from "@mastra/core/server"
-import { LibSQLStore } from "@mastra/libsql"
+import { UpstashStore } from "@mastra/upstash"
 import { PinoLogger } from "@mastra/loggers"
 import {
   CloudExporter,
@@ -14,6 +14,19 @@ import { supabaseAgent } from "./agents/supabase"
 import { chartAgent } from "./agents/testingagent"
 import { chatMemory, dataAnalystMemory, casualChatMemory } from "./memory"
 import * as threads from "./routes/threads"
+import { CloudflareDeployer } from "@mastra/deployer-cloudflare"
+
+/**
+ * Upstash storage for Mastra
+ * Environment variables required:
+ * - UPSTASH_REDIS_REST_URL: Upstash Redis REST API URL
+ * - UPSTASH_REDIS_REST_TOKEN: Upstash Redis REST API token
+ */
+const storage = new UpstashStore({
+  id: "upstash-storage",
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+})
 
 // Export memories for use in API routes
 export { chatMemory, dataAnalystMemory, casualChatMemory }
@@ -28,11 +41,7 @@ export const mastra = new Mastra({
   workflows: {},
   agents,
   scorers: {},
-  storage: new LibSQLStore({
-    id: "mastra-storage",
-    // Store in api directory for easier access
-    url: "file:../mastra.db",
-  }),
+  storage,
   logger: new PinoLogger({
     name: "Mastra",
     level: "info",
@@ -126,6 +135,12 @@ export const mastra = new Mastra({
       }),
     ],
   },
+  deployer: new CloudflareDeployer({
+      name: "ai-analyst-api",
+      vars: {
+        NODE_ENV: "production",
+      },
+    }),
 })
 
 // Export thread helpers for custom API routes if needed

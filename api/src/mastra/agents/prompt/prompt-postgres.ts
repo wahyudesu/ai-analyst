@@ -21,11 +21,21 @@ The database connection is already configured via DATABASE_URL environment varia
   2. **Second**: Use getTable to see the EXACT column names and data types
   3. **Third**: Generate SQL query using ONLY columns that exist
   4. **Fourth**: Execute the query using executeSQL
-  5. **Fifth**: If query succeeds and has data, create visualization:
+  5. **Fifth**: If query succeeds, create visualization:
+     - Even with 0 rows, generate charts to show the query result
+     - Empty charts help users understand that no data matches the criteria
      - Use **generateMultipleCharts** for comprehensive data exploration (creates bar, line, area, pie charts)
      - Use **generateChart** when user requests a specific chart type
      - Use **suggestCharts** to get chart recommendations without generating actual charts
   6. **Handle errors**: If SQL fails, use getTable to check schema and retry with correct columns
+
+## IMPORTANT: Charts Require Numeric Data
+Chart tools require at least one numeric column for visualization. When data lacks numeric values:
+- **For counting records**: Rewrite query with COUNT(*) to get numeric values
+  - Example: Instead of \`SELECT name FROM users\`, use \`SELECT name, COUNT(*) as count FROM users GROUP BY name\`
+- **For time-based analysis**: Use aggregations like COUNT, SUM, AVG with GROUP BY
+  - Example: \`SELECT DATE(created_at) as date, COUNT(*) as count FROM users GROUP BY date\`
+- **If visualization is not possible**: Explain to the user that the data doesn't contain numeric values suitable for charting
 
 Key SQL formatting tips:
   - Start main clauses (SELECT, FROM, WHERE, etc.) on new lines
@@ -99,5 +109,24 @@ Return results in markdown format with these sections:
 [Query results in table format]
 
 ### Visualization
-[The agent will automatically generate charts when applicable]
+[CRITICAL: After EVERY successful query, you MUST call generateChart or generateMultipleCharts to create visualization]
+
+## Chart Tool Calling Rules (CRITICAL)
+1. **ALWAYS call a chart tool after executeSQL succeeds** - This is mandatory, not optional
+2. **Pass the entire sqlResult object as the 'data' parameter** - Do not extract or modify the data
+3. **For simple queries**: Use generateChart with appropriate chartType (bar, line, area, pie)
+4. **For analysis requests**: Use generateMultipleCharts for comprehensive dashboard view
+5. **Specify explicit columns when auto-detection might fail**:
+   - Use xColumn parameter for the category/date column
+   - Use yColumns parameter for the numeric value column(s)
+6. **Provide meaningful titles** that describe what the chart shows
+
+## Handling Chart Tool Errors
+If generateChart or generateMultipleCharts fails with "No suitable y-axis column found":
+- This means the data lacks numeric columns for visualization
+- **Rewrite your query to include aggregations**:
+  - For counting: \`SELECT category_column, COUNT(*) as count FROM table GROUP BY category_column\`
+  - For time series: \`SELECT DATE(date_column) as date, COUNT(*) as count FROM table GROUP BY date\`
+  - For existing numeric: \`SELECT category, SUM(numeric_column) as total FROM table GROUP BY category\`
+- Re-execute the new query and try the chart tool again
 `;

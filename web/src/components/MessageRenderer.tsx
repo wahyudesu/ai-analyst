@@ -211,11 +211,15 @@ function MessageRenderer({ message, agentInfo }: MessageRendererProps) {
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-5xl rounded-2xl px-4 py-3 relative group ${
-          isUser
-            ? "bg-orange-600 text-white"
-            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50"
-        }`}
+        className={`
+          max-w-5xl min-h-[5rem] rounded-2xl px-4 py-3 relative group
+          flex flex-col gap-3
+          ${
+            isUser
+              ? "bg-orange-600 text-white"
+              : "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50"
+          }
+        `}
       >
         {/* Copy button - shown on hover for AI messages */}
         {!isUser && (
@@ -234,7 +238,7 @@ function MessageRenderer({ message, agentInfo }: MessageRendererProps) {
 
         {/* Agent Badge - shown only for AI messages */}
         {!isUser && agentInfo && (
-          <div className="flex items-center gap-2 mb-2 pb-2 border-b border-zinc-200 dark:border-zinc-700 pr-8">
+          <div className="flex items-center gap-2 pb-2 border-b border-zinc-200 dark:border-zinc-700 pr-8">
             <Database className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
             <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
               by {agentInfo.name}
@@ -253,7 +257,7 @@ function MessageRenderer({ message, agentInfo }: MessageRendererProps) {
 
         {/* Tool parts */}
         {toolParts.length > 0 && !isUser && (
-          <div className="mt-3 space-y-2">
+          <div className="space-y-2">
             {toolParts.map((part, index) => (
               <ToolPart
                 key={index}
@@ -268,12 +272,12 @@ function MessageRenderer({ message, agentInfo }: MessageRendererProps) {
 
         {/* Chart rendering */}
         {multipleChartsConfig && !isUser && (
-          <div className="mt-4">
+          <div className="min-h-[5rem]">
             <CollapsibleMultipleCharts config={multipleChartsConfig} defaultOpen={false} />
           </div>
         )}
         {chartConfig && !isUser && (
-          <div className="mt-4 bg-white dark:bg-zinc-900 rounded-lg p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-lg p-4 min-h-[20rem]">
             <ChartRenderer config={chartConfig} />
           </div>
         )}
@@ -350,8 +354,8 @@ function ToolInputState({
 }) {
   return (
     <Collapsible open={!isCollapsed} onOpenChange={onToggleCollapse}>
-      <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 px-3 py-2">
-        <CollapsibleTrigger className="flex items-center justify-between w-full">
+      <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 overflow-hidden">
+        <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 min-h-[2.5rem]">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
             <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
@@ -362,7 +366,7 @@ function ToolInputState({
         </CollapsibleTrigger>
         <CollapsibleContent>
           {part.args != null && (
-            <pre className="text-xs text-zinc-600 dark:text-zinc-400 mt-2 overflow-x-auto">
+            <pre className="text-xs text-zinc-600 dark:text-zinc-400 mt-2 px-3 pb-2 overflow-x-auto">
               {formatArgs(part.args as Record<string, unknown>)}
             </pre>
           )}
@@ -388,7 +392,7 @@ function ToolOutputState({
   return (
     <Collapsible open={!isCollapsed} onOpenChange={canCollapse ? onToggleCollapse : undefined}>
       <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 overflow-hidden">
-        <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-700/50 transition-colors">
+        <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 min-h-[2.5rem] hover:bg-zinc-100 dark:hover:bg-zinc-700/50 transition-colors">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-green-500 rounded-full" />
             <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
@@ -417,7 +421,7 @@ function ToolOutputState({
 
 function ToolErrorState({ part, toolName }: { part: MessagePart; toolName: string }) {
   return (
-    <div className="rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-3 py-2">
+    <div className="rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-3 py-2 min-h-[2.5rem]">
       <div className="flex items-center gap-2">
         <div className="w-2 h-2 bg-red-500 rounded-full" />
         <span className="text-xs font-medium text-red-700 dark:text-red-300">
@@ -456,7 +460,7 @@ function ToolLegacyState({
             : "border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50"
         }`}
       >
-        <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-700/50 transition-colors">
+        <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 min-h-[2.5rem] hover:bg-zinc-100 dark:hover:bg-zinc-700/50 transition-colors">
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${isError ? "bg-red-500" : "bg-green-500"}`} />
             <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">{toolName}</span>
