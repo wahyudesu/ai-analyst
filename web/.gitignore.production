@@ -1,0 +1,7 @@
+# Environment variables
+.env.local
+.env*.local
+
+# Database connections stored in browser (localStorage)
+# Note: In production, consider using server-side session management
+# instead of localStorage for database credentials

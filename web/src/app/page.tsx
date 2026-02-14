@@ -7,7 +7,7 @@ import { AuthDialog } from "@/components/auth";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState, useEffect } from "react";
 import { Database, AlertCircle, Settings, LogOut } from "lucide-react";
-import { authClient } from "@/lib/auth-client";
+import { useAuth } from "@/lib/simple-auth";
 
 const SERVER_CHECK_RETRIES = 3;
 const SERVER_RETRY_DELAY = 1500;
@@ -21,11 +21,11 @@ function ChatPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Auth state
-  const { data: session, isPending } = authClient.useSession();
+  // Simple auth - localStorage based
+  const { data: session, isPending, signOut } = useAuth();
 
   const handleSignOut = async () => {
-    await authClient.signOut();
+    signOut();
   };
 
   useEffect(() => {
@@ -112,7 +112,7 @@ function ChatPage() {
           </h2>
           <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
             {error ||
-              "No agents available. Make sure the Mastra server is running."}
+              "No agents available. Make sure to Mastra server is running."}
           </p>
           <button
             onClick={() => window.location.reload()}
