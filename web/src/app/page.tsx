@@ -3,9 +3,11 @@
 import { Chat } from "@/components/Chat";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { DatabaseSettings } from "@/components/DatabaseSettings";
+import { AuthDialog } from "@/components/auth";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState, useEffect } from "react";
-import { Database, AlertCircle, Settings } from "lucide-react";
+import { Database, AlertCircle, Settings, LogOut } from "lucide-react";
+import { authClient } from "@/lib/auth-client";
 
 const SERVER_CHECK_RETRIES = 3;
 const SERVER_RETRY_DELAY = 1500;
@@ -18,6 +20,13 @@ function ChatPage() {
   const [status, setStatus] = useState<ServerStatus>("loading");
   const [error, setError] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Auth state
+  const { data: session, isPending } = authClient.useSession();
+
+  const handleSignOut = async () => {
+    await authClient.signOut();
+  };
 
   useEffect(() => {
     async function checkServer() {
@@ -52,6 +61,29 @@ function ChatPage() {
 
     checkServer();
   }, []);
+
+  // Show loading while checking session
+  if (isPending) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <div className="w-2 h-2 bg-orange-600 rounded-full animate-bounce" />
+            <div className="w-2 h-2 bg-orange-600 rounded-full animate-bounce delay-100" />
+            <div className="w-2 h-2 bg-orange-600 rounded-full animate-bounce delay-200" />
+          </div>
+          <p className="text-zinc-600 dark:text-zinc-400">
+            Loading...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show auth dialog if not authenticated
+  if (!session?.user) {
+    return <AuthDialog />;
+  }
 
   if (status === "loading") {
     return (
@@ -116,6 +148,17 @@ function ChatPage() {
                 Connected
               </div>
             )}
+            <div className="text-xs text-zinc-600 dark:text-zinc-400">
+              {session?.user?.email}
+            </div>
+            <button
+              onClick={handleSignOut}
+              className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400"
+              aria-label="Sign out"
+              title="Sign out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
             <button
               onClick={() => setIsSettingsOpen(true)}
               className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400"

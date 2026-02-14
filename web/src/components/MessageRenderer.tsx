@@ -1,13 +1,19 @@
 "use client"
 
 import { memo, useMemo, useState } from "react"
-import { ChevronDown, ChevronRight, Database, Copy, Check } from "lucide-react"
+import { ChevronDown, ChevronRight, Database, Copy, Check, ThumbsUp, ThumbsDown, MoreVertical } from "lucide-react"
 import { Streamdown } from "streamdown"
 import { code } from "@streamdown/code"
 import { math } from "@streamdown/math"
 import { mermaid } from "@streamdown/mermaid"
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { ChartRenderer, MultipleCharts, CollapsibleMultipleCharts } from "./charts"
 import type { ChartConfig, MultipleChartsConfig } from "./charts/types"
 
@@ -45,6 +51,10 @@ interface MessageRendererProps {
     name: string
     description?: string
   } | null
+  onRename?: () => void
+  onPin?: () => void
+  onDelete?: () => void
+  sessionId?: string
 }
 
 // Helper functions outside component for stability
@@ -154,9 +164,11 @@ function getToolName(part: MessagePart): string {
  * Supports text, tool calls, and chart visualizations
  * Pattern based on Vercel AI SDK Generative UI
  */
-function MessageRenderer({ message, agentInfo }: MessageRendererProps) {
+function MessageRenderer({ message, agentInfo, onRename, onPin, onDelete, sessionId }: MessageRendererProps) {
   const isUser = message.role === "user"
   const [copied, setCopied] = useState(false)
+  const [liked, setLiked] = useState(false)
+  const [disliked, setDisliked] = useState(false)
 
   // Memoized derived values
   const chartConfig = useMemo(() => extractChartConfig(message.parts), [message.parts])
@@ -208,6 +220,24 @@ function MessageRenderer({ message, agentInfo }: MessageRendererProps) {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const handleLike = () => {
+    if (disliked) {
+      setDisliked(false)
+    }
+    setLiked(!liked)
+    // TODO: Send to backend when ready
+    console.log("Message liked:", message.id)
+  }
+
+  const handleDislike = () => {
+    if (liked) {
+      setLiked(false)
+    }
+    setDisliked(!disliked)
+    // TODO: Send to backend when ready
+    console.log("Message disliked:", message.id)
+  }
+
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
@@ -221,19 +251,84 @@ function MessageRenderer({ message, agentInfo }: MessageRendererProps) {
           }
         `}
       >
-        {/* Copy button - shown on hover for AI messages */}
+        {/* Action buttons - shown on hover for AI messages */}
         {!isUser && (
-          <button
-            onClick={handleCopy}
-            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg"
-            title={copied ? "Copied!" : "Copy message"}
-          >
-            {copied ? (
-              <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
-            ) : (
-              <Copy className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+            {/* Copy button */}
+            <button
+              onClick={handleCopy}
+              className="p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+              title={copied ? "Copied!" : "Copy"}
+            >
+              {copied ? (
+                <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
+              ) : (
+                <Copy className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+              )}
+            </button>
+
+            {/* Like button */}
+            <button
+              onClick={handleLike}
+              className={`p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors ${
+                liked ? "text-blue-600 dark:text-blue-400" : "text-zinc-500 dark:text-zinc-400"
+              }`}
+              title="Like"
+            >
+              <ThumbsUp className="w-4 h-4" />
+            </button>
+
+            {/* Dislike button */}
+            <button
+              onClick={handleDislike}
+              className={`p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors ${
+                disliked ? "text-red-600 dark:text-red-400" : "text-zinc-500 dark:text-zinc-400"
+              }`}
+              title="Dislike"
+            >
+              <ThumbsDown className="w-4 h-4" />
+            </button>
+
+            {/* More actions menu - only show if callbacks are provided */}
+            {(onRename || onPin || onDelete) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors text-zinc-500 dark:text-zinc-400"
+                    title="More actions"
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  {onRename && (
+                    <DropdownMenuItem
+                      onClick={onRename}
+                      className="cursor-pointer"
+                    >
+                      Rename chat
+                    </DropdownMenuItem>
+                  )}
+                  {onPin && (
+                    <DropdownMenuItem
+                      onClick={onPin}
+                      className="cursor-pointer"
+                    >
+                      Pin to top
+                    </DropdownMenuItem>
+                  )}
+                  {onDelete && (
+                    <DropdownMenuItem
+                      onClick={onDelete}
+                      className="cursor-pointer text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
+                    >
+                      Delete chat
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
-          </button>
+          </div>
         )}
 
         {/* Agent Badge - shown only for AI messages */}

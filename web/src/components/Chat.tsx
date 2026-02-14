@@ -3,12 +3,13 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { Database, ChartBar, ChevronDown, Menu, X, Plus } from "lucide-react";
+import { Database, ChartBar, ChevronDown, Menu, X, Plus, Pin } from "lucide-react";
 
 import { MessageRenderer } from "./MessageRenderer";
 import { threadsClient } from "@/lib/threads-client";
 import { useDatabaseConfig } from "@/lib/use-database-config";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,6 +43,7 @@ interface ChatSession {
   createdAt: Date;
   messageCount?: number;
   agentId?: string;
+  isPinned?: boolean;
 }
 
 // Constants
@@ -85,6 +87,19 @@ export function Chat({
     isOpen: false,
     sessionId: null,
     sessionTitle: "",
+  });
+
+  // Rename dialog state
+  const [renameDialog, setRenameDialog] = useState<{
+    isOpen: boolean;
+    sessionId: string | null;
+    currentTitle: string;
+    newTitle: string;
+  }>({
+    isOpen: false,
+    sessionId: null,
+    currentTitle: "",
+    newTitle: "",
   });
 
   // Get or create thread ID for session management
@@ -370,6 +385,58 @@ export function Chat({
     [currentSessionId, saveSessions, startNewChat],
   );
 
+  const pinSession = useCallback(
+    (sessionId: string) => {
+      setSessions((prev) => {
+        const session = prev.find((s) => s.id === sessionId);
+        if (!session) return prev;
+
+        const updated = prev.map((s) =>
+          s.id === sessionId ? { ...s, isPinned: !s.isPinned } : s,
+        );
+        saveSessions(updated);
+        return updated;
+      });
+    },
+    [saveSessions],
+  );
+
+  const openRenameDialog = useCallback(
+    (sessionId: string) => {
+      const session = sessions.find((s) => s.id === sessionId);
+      if (!session) return;
+
+      setRenameDialog({
+        isOpen: true,
+        sessionId,
+        currentTitle: session.title,
+        newTitle: session.title,
+      });
+    },
+    [sessions],
+  );
+
+  const renameSession = useCallback(
+    (sessionId: string, newTitle: string) => {
+      setSessions((prev) => {
+        const updated = prev.map((s) =>
+          s.id === sessionId ? { ...s, title: newTitle } : s,
+        );
+        saveSessions(updated);
+        return updated;
+      });
+
+      // Close dialog
+      setRenameDialog({
+        isOpen: false,
+        sessionId: null,
+        currentTitle: "",
+        newTitle: "",
+      });
+    },
+    [saveSessions],
+  );
+
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (input.trim()) {
@@ -452,35 +519,59 @@ export function Chat({
                   No chat history yet
                 </p>
               ) : (
-                sessions.map((session) => {
-                  const SessionIcon = getAgentIcon(session.agentId);
-                  return (
-                    <div
-                      key={session.id}
-                      onClick={() => switchSession(session.id, session.agentId)}
-                      className={`
-                        group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors
-                        ${
-                          currentSessionId === session.id
-                            ? "bg-orange-100 dark:bg-orange-900/30/30 text-orange-700 dark:text-orange-300"
-                            : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
-                        }
-                      `}
-                    >
-                      <SessionIcon className="w-4 h-4 flex-shrink-0" />
-                      <span className="flex-1 text-sm truncate">
-                        {session.title}
-                      </span>
-                      <button
-                        onClick={(e) => confirmDeleteSession(session.id, e)}
-                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-opacity"
-                        aria-label="Delete chat"
+                sessions
+                  .sort((a, b) => {
+                    // Pinned sessions first
+                    if (a.isPinned && !b.isPinned) return -1;
+                    if (!a.isPinned && b.isPinned) return 1;
+                    // Then by date (newest first)
+                    return b.createdAt.getTime() - a.createdAt.getTime();
+                  })
+                  .map((session) => {
+                    const SessionIcon = getAgentIcon(session.agentId);
+                    return (
+                      <div
+                        key={session.id}
+                        onClick={() => switchSession(session.id, session.agentId)}
+                        className={`
+                          group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors
+                          ${
+                            currentSessionId === session.id
+                              ? "bg-orange-100 dark:bg-orange-900/30/30 text-orange-700 dark:text-orange-300"
+                              : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                          }
+                        `}
                       >
-                        <X className="w-3 h-3 text-red-500" />
-                      </button>
-                    </div>
-                  );
-                })
+                        {session.isPinned && (
+                          <Pin className="w-3 h-3 text-orange-500 shrink-0" />
+                        )}
+                        <SessionIcon className="w-4 h-4 shrink-0" />
+                        <span className="flex-1 text-sm truncate">
+                          {session.title}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            pinSession(session.id);
+                          }}
+                          className={`opacity-0 group-hover:opacity-100 p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded transition-opacity ${
+                            session.isPinned ? "opacity-100" : ""
+                          }`}
+                          aria-label={session.isPinned ? "Unpin chat" : "Pin chat"}
+                          title={session.isPinned ? "Unpin chat" : "Pin chat"}
+                        >
+                          <Pin className={`w-3 h-3 ${session.isPinned ? "text-orange-500" : "text-zinc-500"}`} />
+                        </button>
+                        <button
+                          onClick={(e) => confirmDeleteSession(session.id, e)}
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-opacity"
+                          aria-label="Delete chat"
+                        >
+                          <X className="w-3 h-3 text-red-500" />
+                        </button>
+                      </div>
+                    );
+                  })
               )}
             </div>
           </div>
@@ -546,6 +637,10 @@ export function Chat({
                   key={message.id || index}
                   message={message as any}
                   agentInfo={currentAgentInfo}
+                  sessionId={currentSessionId || undefined}
+                  onRename={() => currentSessionId && openRenameDialog(currentSessionId)}
+                  onPin={() => currentSessionId && pinSession(currentSessionId)}
+                  onDelete={() => currentSessionId && confirmDeleteSession(currentSessionId, { stopPropagation: () => {} } as any)}
                 />
               ))}
               {error && (
@@ -625,6 +720,71 @@ export function Chat({
               }
             >
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename Dialog */}
+      <Dialog
+        open={renameDialog.isOpen}
+        onOpenChange={(open) =>
+          setRenameDialog((prev) => ({ ...prev, isOpen: open }))
+        }
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Chat</DialogTitle>
+            <DialogDescription>
+              Enter a new name for this chat session.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <label
+              htmlFor="chat-title"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Chat Title
+            </label>
+            <Input
+              id="chat-title"
+              value={renameDialog.newTitle}
+              onChange={(e) =>
+                setRenameDialog((prev) => ({ ...prev, newTitle: e.target.value }))
+              }
+              placeholder="Enter chat title..."
+              maxLength={100}
+              className="mt-2"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && renameDialog.newTitle.trim()) {
+                  renameDialog.sessionId &&
+                    renameSession(renameDialog.sessionId, renameDialog.newTitle.trim());
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setRenameDialog({
+                  isOpen: false,
+                  sessionId: null,
+                  currentTitle: "",
+                  newTitle: "",
+                })
+              }
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() =>
+                renameDialog.sessionId &&
+                renameSession(renameDialog.sessionId, renameDialog.newTitle.trim())
+              }
+              disabled={!renameDialog.newTitle.trim()}
+            >
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>
