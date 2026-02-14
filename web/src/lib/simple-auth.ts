@@ -28,124 +28,94 @@ async function hashPassword(password: string): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-export const simpleAuth = {
-  /**
-   * Get all users from localStorage
-   */
-  getUsers(): StoredUser[] {
-    if (typeof window === "undefined") return [];
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
-  },
+// Helper functions (not using 'this')
+function getUsers(): StoredUser[] {
+  if (typeof window === "undefined") return [];
+  const data = localStorage.getItem(STORAGE_KEY);
+  return data ? JSON.parse(data) : [];
+}
 
-  /**
-   * Save users to localStorage
-   */
-  saveUsers(users: StoredUser[]): void {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
-  },
+function saveUsers(users: StoredUser[]): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
+}
 
-  /**
-   * Get current session
-   */
-  getSession(): User | null {
-    if (typeof window === "undefined") return null;
-    const data = localStorage.getItem(SESSION_KEY);
-    return data ? JSON.parse(data) : null;
-  },
+function getSession(): User | null {
+  if (typeof window === "undefined") return null;
+  const data = localStorage.getItem(SESSION_KEY);
+  return data ? JSON.parse(data) : null;
+}
 
-  /**
-   * Set current session
-   */
-  setSession(user: User): void {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(SESSION_KEY, JSON.stringify(user));
-  },
+function setSession(user: User): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+}
 
-  /**
-   * Clear session
-   */
-  clearSession(): void {
-    if (typeof window === "undefined") return;
-    localStorage.removeItem(SESSION_KEY);
-  },
+function clearSession(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(SESSION_KEY);
+}
 
-  /**
-   * Sign up new user
-   */
-  async signUp(email: string, password: string, name: string): Promise<{ success: boolean; user?: User; error?: string }> {
-    const users = this.getUsers();
+// Auth functions
+export async function signUp(email: string, password: string, name: string): Promise<{ success: boolean; user?: User; error?: string }> {
+  const users = getUsers();
 
-    // Check if email already exists
-    if (users.find((u) => u.email === email)) {
-      return { success: false, error: "Email already registered" };
-    }
+  // Check if email already exists
+  if (users.find((u) => u.email === email)) {
+    return { success: false, error: "Email already registered" };
+  }
 
-    // Create new user
-    const hashedPassword = await hashPassword(password);
-    const newUser: StoredUser = {
-      id: crypto.randomUUID(),
-      email,
-      password: hashedPassword,
-      name,
-      createdAt: new Date().toISOString(),
-    };
+  // Create new user
+  const hashedPassword = await hashPassword(password);
+  const newUser: StoredUser = {
+    id: crypto.randomUUID(),
+    email,
+    password: hashedPassword,
+    name,
+    createdAt: new Date().toISOString(),
+  };
 
-    users.push(newUser);
-    this.saveUsers(users);
+  users.push(newUser);
+  saveUsers(users);
 
-    // Auto sign in after sign up
-    const { password: _, ...userSession } = newUser;
-    this.setSession(userSession);
+  // Auto sign in after sign up
+  const { password: _, ...userSession } = newUser;
+  setSession(userSession);
 
-    return { success: true, user: userSession };
-  },
+  return { success: true, user: userSession };
+}
 
-  /**
-   * Sign in existing user
-   */
-  async signIn(email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> {
-    const users = this.getUsers();
-    const user = users.find((u) => u.email === email);
+export async function signIn(email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> {
+  const users = getUsers();
+  const user = users.find((u) => u.email === email);
 
-    if (!user) {
-      return { success: false, error: "Invalid email or password" };
-    }
+  if (!user) {
+    return { success: false, error: "Invalid email or password" };
+  }
 
-    const hashedPassword = await hashPassword(password);
-    if (user.password !== hashedPassword) {
-      return { success: false, error: "Invalid email or password" };
-    }
+  const hashedPassword = await hashPassword(password);
+  if (user.password !== hashedPassword) {
+    return { success: false, error: "Invalid email or password" };
+  }
 
-    // Create session
-    const { password: _, ...userSession } = user;
-    this.setSession(userSession);
+  // Create session
+  const { password: _, ...userSession } = user;
+  setSession(userSession);
 
-    return { success: true, user: userSession };
-  },
+  return { success: true, user: userSession };
+}
 
-  /**
-   * Sign out
-   */
-  signOut(): void {
-    this.clearSession();
-  },
+export function signOut(): void {
+  clearSession();
+}
 
-  /**
-   * Check if user is authenticated
-   */
-  isAuthenticated(): boolean {
-    return this.getSession() !== null;
-  },
+export function isAuthenticated(): boolean {
+  return getSession() !== null;
+}
 
-  /**
-   * Get current user
-   */
-  getCurrentUser(): User | null {
-    return this.getSession();
-  },
-};
+export function getCurrentUser(): User | null {
+  return getSession();
+}
 
 // React hook for auth
 export function useSimpleAuth() {
@@ -154,7 +124,7 @@ export function useSimpleAuth() {
 
   React.useEffect(() => {
     // Check session on mount
-    const session = simpleAuth.getSession();
+    const session = getSession();
     setUser(session);
     setIsLoading(false);
   }, []);
@@ -163,28 +133,28 @@ export function useSimpleAuth() {
     user,
     isLoading,
     isAuthenticated: !!user,
-    signUp: simpleAuth.signUp,
-    signIn: simpleAuth.signIn,
-    signOut: simpleAuth.signOut,
+    signUp,
+    signIn,
+    signOut,
   };
 }
 
-// For non-component usage
+// For non-component usage (compatible with old auth pattern)
 export function useAuth() {
-  const [session, setSession] = React.useState<User | null>(null);
+  const [session, setSessionState] = React.useState<User | null>(null);
   const [isPending, setIsPending] = React.useState(true);
 
   React.useEffect(() => {
-    const session = simpleAuth.getSession();
-    setSession(session);
+    const currentSession = getSession();
+    setSessionState(currentSession);
     setIsPending(false);
   }, []);
 
   return {
     data: { user: session },
     isPending,
-    signIn: simpleAuth.signIn,
-    signOut: simpleAuth.signOut,
-    signUp: simpleAuth.signUp,
+    signIn,
+    signOut,
+    signUp,
   };
 }
