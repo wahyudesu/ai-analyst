@@ -14,6 +14,7 @@ import { supabaseAgent } from "./agents/supabase"
 import { chartAgent } from "./agents/testingagent"
 import { chatMemory, dataAnalystMemory, casualChatMemory } from "./memory"
 import * as threads from "./routes/threads"
+import { customChatRoute } from "./routes/chat"
 import { CloudflareDeployer } from "@mastra/deployer-cloudflare"
 
 /**
@@ -62,12 +63,9 @@ export const mastra = new Mastra({
   }),
   server: {
     apiRoutes: [
-      // Chat route for AI SDK UI compatibility
-      // Use /chat/data-analyst for PostgreSQL agent
-      // Use /chat/supabase-agent for Supabase agent
-      chatRoute({
-        path: "/chat/:agentId",
-      }),
+      // Custom chat route with dynamic model selection
+      // Accepts modelId parameter to override agent's default model
+      customChatRoute,
       // Thread/Session management routes
       // Using Mastra's built-in memory routes
       // Threads are managed via Mastra Memory API automatically

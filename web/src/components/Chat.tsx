@@ -3,7 +3,7 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { Database, ChartBar, ChevronDown, Menu, X, Plus, Pin } from "lucide-react";
+import { Database, ChartBar, ChevronDown, Menu, X, Plus, Pin, Edit2, Check } from "lucide-react";
 
 import { MessageRenderer } from "./MessageRenderer";
 import { threadsClient } from "@/lib/threads-client";
@@ -14,6 +14,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -44,10 +45,28 @@ interface ChatSession {
   messageCount?: number;
   agentId?: string;
   isPinned?: boolean;
+  modelId?: string;
+}
+
+interface ModelOption {
+  id: string;
+  name: string;
+  provider: "zai" | "openai";
 }
 
 // Constants
 const DEFAULT_AGENT_ID = "data-analyst";
+
+// Model options
+const MODEL_OPTIONS: ModelOption[] = [
+  { id: "zai-coding-plan/glm-4.5", name: "ZAI GLM 4.5", provider: "zai" },
+  { id: "zai-coding-plan/glm-4.5-flash", name: "ZAI GLM 4.5 Flash", provider: "zai" },
+  { id: "openai/gpt-4o-mini", name: "GPT-4o Mini", provider: "openai" },
+  { id: "openai/gpt-4o", name: "GPT-4o", provider: "openai" },
+  { id: "openai/o1-mini", name: "O1 Mini", provider: "openai" },
+];
+
+const DEFAULT_MODEL_ID = MODEL_OPTIONS[0].id;
 
 // Agent icons mapping - stable outside component
 const AGENT_ICONS: Record<string, React.ElementType> = {
@@ -68,6 +87,8 @@ export function Chat({
   const [input, setInput] = useState("");
   const [currentAgentId, setCurrentAgentId] =
     useState<string>(DEFAULT_AGENT_ID);
+  const [currentModelId, setCurrentModelId] =
+    useState<string>(DEFAULT_MODEL_ID);
   const [allAgents, setAllAgents] = useState<Agent[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { databaseUrl } = useDatabaseConfig();
@@ -102,6 +123,16 @@ export function Chat({
     newTitle: "",
   });
 
+  // Session actions menu state
+  const [sessionActionsOpen, setSessionActionsOpen] = useState<string | null>(null);
+
+  // Inline rename state
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+
+  // Model selector open state
+  const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
+
   // Get or create thread ID for session management
   const threadIdRef = useRef<string>(threadsClient.getOrCreateThreadId());
   const threadId = threadIdRef.current;
@@ -128,6 +159,7 @@ export function Chat({
   // Use a ref to track current values without triggering re-creation
   const transportParamsRef = useRef({
     agentId: currentAgentId,
+    modelId: currentModelId,
     threadId,
     resourceId,
     databaseUrl,
@@ -136,6 +168,7 @@ export function Chat({
   // Update ref when values change (doesn't trigger re-render)
   transportParamsRef.current = {
     agentId: currentAgentId,
+    modelId: currentModelId,
     threadId,
     resourceId,
     databaseUrl,
@@ -157,10 +190,13 @@ export function Chat({
             ...(transportParamsRef.current.databaseUrl && {
               databaseUrl: transportParamsRef.current.databaseUrl,
             }),
+            ...(transportParamsRef.current.modelId && {
+              modelId: transportParamsRef.current.modelId,
+            }),
           },
         }),
       }),
-    [currentAgentId],
+    [currentAgentId, currentModelId],
   );
 
   const { messages, status, sendMessage, error, setMessages } = useChat({
@@ -317,6 +353,8 @@ export function Chat({
     setInput("");
     titleUpdateRef.current = undefined;
     setIsSidebarOpen(false);
+    // Reset to default model for new chat
+    setCurrentModelId(DEFAULT_MODEL_ID);
   }, []);
 
   const switchSession = useCallback(
@@ -529,46 +567,121 @@ export function Chat({
                   })
                   .map((session) => {
                     const SessionIcon = getAgentIcon(session.agentId);
+                    const isEditing = editingSessionId === session.id;
                     return (
                       <div
                         key={session.id}
-                        onClick={() => switchSession(session.id, session.agentId)}
                         className={`
-                          group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors
+                          group flex items-center gap-2 px-3 py-2 rounded-lg transition-colors
                           ${
                             currentSessionId === session.id
                               ? "bg-orange-100 dark:bg-orange-900/30/30 text-orange-700 dark:text-orange-300"
                               : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
                           }
+                          ${!isEditing ? "cursor-pointer" : ""}
                         `}
+                        onClick={() => !isEditing && switchSession(session.id, session.agentId)}
                       >
                         {session.isPinned && (
                           <Pin className="w-3 h-3 text-orange-500 shrink-0" />
                         )}
                         <SessionIcon className="w-4 h-4 shrink-0" />
-                        <span className="flex-1 text-sm truncate">
-                          {session.title}
-                        </span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            pinSession(session.id);
-                          }}
-                          className={`opacity-0 group-hover:opacity-100 p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded transition-opacity ${
-                            session.isPinned ? "opacity-100" : ""
-                          }`}
-                          aria-label={session.isPinned ? "Unpin chat" : "Pin chat"}
-                          title={session.isPinned ? "Unpin chat" : "Pin chat"}
-                        >
-                          <Pin className={`w-3 h-3 ${session.isPinned ? "text-orange-500" : "text-zinc-500"}`} />
-                        </button>
-                        <button
-                          onClick={(e) => confirmDeleteSession(session.id, e)}
-                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-opacity"
-                          aria-label="Delete chat"
-                        >
-                          <X className="w-3 h-3 text-red-500" />
-                        </button>
+
+                        {/* Title or inline edit input */}
+                        {isEditing ? (
+                          <div className="flex-1 flex items-center gap-1">
+                            <input
+                              type="text"
+                              value={editingTitle}
+                              onChange={(e) => setEditingTitle(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && editingTitle.trim()) {
+                                  renameSession(session.id, editingTitle.trim());
+                                  setEditingSessionId(null);
+                                } else if (e.key === "Escape") {
+                                  setEditingSessionId(null);
+                                }
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex-1 text-sm bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 rounded px-1.5 py-0.5 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                              autoFocus
+                            />
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (editingTitle.trim()) {
+                                  renameSession(session.id, editingTitle.trim());
+                                }
+                                setEditingSessionId(null);
+                              }}
+                              className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded"
+                              title="Save"
+                            >
+                              <Check className="w-4 h-4 text-green-600" />
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="flex-1 text-sm truncate">
+                            {session.title}
+                          </span>
+                        )}
+
+                        {/* Edit button with dropdown menu - only show when not editing */}
+                        {!isEditing && (
+                          <DropdownMenu
+                            open={sessionActionsOpen === session.id}
+                            onOpenChange={(open) => setSessionActionsOpen(open ? session.id : null)}
+                          >
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSessionActionsOpen(sessionActionsOpen === session.id ? null : session.id);
+                                }}
+                                className={`opacity-0 group-hover:opacity-100 p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded transition-opacity ${
+                                  sessionActionsOpen === session.id ? "opacity-100" : ""
+                                }`}
+                                aria-label="Edit chat"
+                              >
+                                <Edit2 className="w-4 h-4 text-zinc-500" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                              align="end"
+                              className="w-40"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setEditingTitle(session.title);
+                                  setEditingSessionId(session.id);
+                                  setSessionActionsOpen(null);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                Rename
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  pinSession(session.id);
+                                  setSessionActionsOpen(null);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                {session.isPinned ? "Unpin" : "Pin"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  confirmDeleteSession(session.id, { stopPropagation: () => {} } as any);
+                                  setSessionActionsOpen(null);
+                                }}
+                                className="cursor-pointer text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </div>
                     );
                   })
@@ -665,7 +778,56 @@ export function Chat({
           onSubmit={onSubmit}
           className="border-t border-zinc-200 dark:border-zinc-800 px-6 py-4"
         >
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            {/* Model Selector */}
+            <DropdownMenu open={modelSelectorOpen} onOpenChange={setModelSelectorOpen}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 min-w-[140px] justify-between"
+                  disabled={isLoading}
+                >
+                  <span className="text-sm truncate">
+                    {MODEL_OPTIONS.find(m => m.id === currentModelId)?.name || "Select Model"}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform ${modelSelectorOpen ? "rotate-180" : ""}`} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <div className="px-2 py-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                  ZAI Models
+                </div>
+                {MODEL_OPTIONS.filter(m => m.provider === "zai").map((model) => (
+                  <DropdownMenuItem
+                    key={model.id}
+                    onClick={() => setCurrentModelId(model.id)}
+                    className={`cursor-pointer ${currentModelId === model.id ? "bg-orange-50 dark:bg-orange-900/20" : ""}`}
+                  >
+                    <span className="flex-1">{model.name}</span>
+                    {currentModelId === model.id && (
+                      <div className="w-2 h-2 bg-orange-500 rounded-full" />
+                    )}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <div className="px-2 py-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                  OpenAI Models
+                </div>
+                {MODEL_OPTIONS.filter(m => m.provider === "openai").map((model) => (
+                  <DropdownMenuItem
+                    key={model.id}
+                    onClick={() => setCurrentModelId(model.id)}
+                    className={`cursor-pointer ${currentModelId === model.id ? "bg-orange-50 dark:bg-orange-900/20" : ""}`}
+                  >
+                    <span className="flex-1">{model.name}</span>
+                    {currentModelId === model.id && (
+                      <div className="w-2 h-2 bg-orange-500 rounded-full" />
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <input
               type="text"
               value={input}

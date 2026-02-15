@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   const agentId = searchParams.get("agentId") || "testingAgent";
 
   const body = await req.json();
-  const { databaseUrl, ...restBody } = body;
+  const { databaseUrl, modelId, ...restBody } = body;
   const targetUrl = `${MASTRA_URL}/chat/${agentId}`;
 
   try {
@@ -22,6 +22,11 @@ export async function POST(req: NextRequest) {
     // Include databaseUrl if provided
     if (databaseUrl) {
       requestBody.databaseUrl = databaseUrl;
+    }
+
+    // Include modelId if provided
+    if (modelId) {
+      requestBody.modelId = modelId;
     }
 
     const response = await fetch(targetUrl, {
