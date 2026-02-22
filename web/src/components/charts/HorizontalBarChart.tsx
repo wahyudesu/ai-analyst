@@ -1,20 +1,22 @@
 'use client';
 
-import {
-  BarChart as RechartsBarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from 'recharts';
+import { useMemo, useState, useRef, useEffect } from 'react';
+import { scaleBand, scaleLinear } from '@visx/scale';
+import { AxisBottom, AxisLeft } from '@visx/axis';
+import { useTooltip, Tooltip, defaultStyles } from '@visx/tooltip';
+import { localPoint } from '@visx/event';
+import { motion } from 'motion/react';
 import type { ChartConfig } from './types';
 
 interface HorizontalBarChartProps {
   config: ChartConfig;
   className?: string;
+}
+
+interface TooltipData {
+  x: string;
+  y: number;
+  color: string;
 }
 
 /**
@@ -23,11 +25,36 @@ interface HorizontalBarChartProps {
 export function HorizontalBarChart({ config, className }: HorizontalBarChartProps) {
   const { data, xAxis, options, colors } = config;
   const series = data.series || [];
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 400, height: 300 });
+  const [hoveredBar, setHoveredBar] = useState<number | null>(null);
+
+  const {
+    tooltipData,
+    tooltipLeft,
+    tooltipTop,
+    tooltipOpen,
+    showTooltip,
+    hideTooltip,
+  } = useTooltip<TooltipData>();
+
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const { width } = containerRef.current.getBoundingClientRect();
+        setDimensions({ width: Math.max(width, 300), height: 300 });
+      }
+    };
+
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    return () => window.removeEventListener('resize', updateDimensions);
+  }, []);
 
   if (series.length === 0) {
     return (
-      <div className={`flex items-center justify-center h-64 text-zinc-500 ${className || ''}`}>
-        No data available
+      <div className={`flex items-center justify-center ${className || ''}`} style={{ height: '300px' }}>
+        <p className="text-muted-foreground text-sm">No data available</p>
       </div>
     );
   }
@@ -35,52 +62,164 @@ export function HorizontalBarChart({ config, className }: HorizontalBarChartProp
   const chartData = series[0].data.map((point) => ({
     name: point.label || String(point.x),
     value: point.y,
+    originalX: point.x,
   }));
 
+  const margin = { top: 10, right: 10, bottom: 10, left: 10 };
+  const width = dimensions.width;
+  const height = 300;
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
+
+  // Chart colors from CSS variables
+  const chartColors = [
+    'hsl(var(--chart-1))',
+    'hsl(var(--chart-2))',
+    'hsl(var(--chart-3))',
+    'hsl(var(--chart-4))',
+    'hsl(var(--chart-5))',
+  ];
+
+  const yScale = useMemo(
+    () =>
+      scaleBand({
+        range: [0, innerHeight],
+        round: true,
+        domain: chartData.map((d) => d.name),
+        padding: 0.2,
+      }),
+    [chartData, innerHeight]
+  );
+
+  const xScale = useMemo(
+    () =>
+      scaleLinear({
+        range: [0, innerWidth],
+        round: true,
+        domain: [0, Math.max(...chartData.map((d) => d.value)) * 1.05],
+      }),
+    [chartData, innerWidth]
+  );
+
   return (
-    <div className={className}>
-      <ResponsiveContainer width="100%" height={300}>
-        <RechartsBarChart
-          data={chartData}
-          layout="vertical"
-          margin={{ top: 20, right: 30, left: 60, bottom: 5 }}
+    <div ref={containerRef} className={className} style={{ width: '100%', height: '300px' }}>
+      <svg width={width} height={height}>
+        <g transform={`translate(${margin.left},${margin.top})`}>
+          {chartData.map((d, i) => {
+            const barHeight = yScale.bandwidth();
+            const y = yScale(d.name) ?? 0;
+            const barWidth = xScale(d.value) ?? 0;
+            const color = chartColors[i % chartColors.length];
+            const isHovered = hoveredBar === i;
+
+            return (
+              <g key={i}>
+                {/* Label */}
+                <text
+                  x={0}
+                  y={y + barHeight / 2}
+                  fill="hsl(var(--foreground))"
+                  fontSize={11}
+                  textAnchor="start"
+                  dominantBaseline="middle"
+                  style={{ pointerEvents: 'none' }}
+                >
+                  {d.name}
+                </text>
+
+                {/* Bar */}
+                <motion.rect
+                  x={4}
+                  y={y}
+                  height={barHeight}
+                  fill={color}
+                  opacity={isHovered ? 1 : hoveredBar !== null ? 0.5 : 1}
+                  initial={{ width: 0 }}
+                  animate={{ width: barWidth }}
+                  transition={{
+                    duration: 0.5,
+                    ease: [0.85, 0, 0.15, 1],
+                    delay: i * 0.02,
+                  }}
+                  onMouseEnter={(event) => {
+                    setHoveredBar(i);
+                    const coords = localPoint(event);
+                    if (!coords) return;
+                    showTooltip({
+                      tooltipLeft: coords.x + margin.left,
+                      tooltipTop: coords.y + margin.top,
+                      tooltipData: { x: d.name, y: d.value, color },
+                    });
+                  }}
+                  onMouseMove={(event) => {
+                    const coords = localPoint(event);
+                    if (!coords) return;
+                    showTooltip({
+                      tooltipLeft: coords.x + margin.left,
+                      tooltipTop: coords.y + margin.top,
+                      tooltipData: { x: d.name, y: d.value, color },
+                    });
+                  }}
+                  onMouseLeave={() => {
+                    setHoveredBar(null);
+                    hideTooltip();
+                  }}
+                  style={{ cursor: 'pointer' }}
+                />
+
+                {/* Value label at end of bar */}
+                <motion.text
+                  x={barWidth + 8}
+                  y={y + barHeight / 2}
+                  fill="hsl(var(--muted-foreground))"
+                  fontSize={10}
+                  textAnchor="start"
+                  dominantBaseline="middle"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: i * 0.02 + 0.3 }}
+                  style={{ pointerEvents: 'none' }}
+                >
+                  {d.value.toLocaleString()}
+                </motion.text>
+              </g>
+            );
+          })}
+        </g>
+      </svg>
+
+      {/* Tooltip */}
+      {tooltipOpen && tooltipData && (
+        <Tooltip
+          style={{
+            ...defaultStyles,
+            backgroundColor: 'hsl(var(--popover))',
+            border: '1px solid hsl(var(--border))',
+            borderRadius: '8px',
+            color: 'hsl(var(--popover-foreground))',
+            boxShadow: 'hsl(var(--shadow))',
+            fontSize: '12px',
+            padding: '8px 12px',
+          }}
+          left={tooltipLeft}
+          top={tooltipTop}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-zinc-800" />
-          <XAxis
-            type="number"
-            stroke="#71717a"
-            className="text-xs"
-            tick={{ fill: '#71717a' }}
-            tickLine={{ stroke: '#71717a' }}
-          />
-          <YAxis
-            type="category"
-            dataKey="name"
-            stroke="#71717a"
-            className="text-xs"
-            tick={{ fill: '#71717a' }}
-            tickLine={{ stroke: '#71717a' }}
-            width={55}
-          />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: '#ffffff',
-              border: '1px solid #e5e7eb',
-              borderRadius: '0.5rem',
-            }}
-            itemStyle={{ color: '#18181b' }}
-            labelStyle={{ color: '#71717a' }}
-          />
-          <Bar dataKey="value">
-            {chartData.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={colors.palette[index % colors.palette.length]}
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">{tooltipData.x}</div>
+            <div className="flex items-center gap-2">
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: tooltipData.color }}
               />
-            ))}
-          </Bar>
-        </RechartsBarChart>
-      </ResponsiveContainer>
+              <span className="text-xs font-bold">
+                {typeof tooltipData.y === 'number'
+                  ? tooltipData.y.toLocaleString()
+                  : tooltipData.y}
+              </span>
+            </div>
+          </div>
+        </Tooltip>
+      )}
     </div>
   );
 }

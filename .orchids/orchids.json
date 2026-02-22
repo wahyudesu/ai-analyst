@@ -1,0 +1,10 @@
+{
+  "projectId": "b9b3c236-489b-48ec-9384-4b116447775f",
+  "createdAt": 1771770543540,
+  "version": "1.0",
+  "startupCommands": [
+    "pnpm install; pnpm --filter api dev",
+    "pnpm --filter web dev"
+  ],
+  "templateId": "any"
+}

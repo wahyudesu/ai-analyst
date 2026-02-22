@@ -55,6 +55,7 @@ interface MessageRendererProps {
   onPin?: () => void
   onDelete?: () => void
   sessionId?: string
+  compact?: boolean
 }
 
 // Helper functions outside component for stability
@@ -164,7 +165,7 @@ function getToolName(part: MessagePart): string {
  * Supports text, tool calls, and chart visualizations
  * Pattern based on Vercel AI SDK Generative UI
  */
-function MessageRenderer({ message, agentInfo, onRename, onPin, onDelete, sessionId }: MessageRendererProps) {
+function MessageRenderer({ message, agentInfo, onRename, onPin, onDelete, sessionId, compact = false }: MessageRendererProps) {
   const isUser = message.role === "user"
   const [copied, setCopied] = useState(false)
   const [liked, setLiked] = useState(false)
@@ -242,13 +243,14 @@ function MessageRenderer({ message, agentInfo, onRename, onPin, onDelete, sessio
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
         className={`
-          max-w-5xl min-h-[5rem] rounded-2xl px-4 py-3 relative group
+          ${compact ? "max-w-full" : "max-w-5xl"} min-h-[5rem] rounded-2xl px-4 py-3 relative group
           flex flex-col gap-3
           ${
             isUser
-              ? "bg-orange-600 text-white"
-              : "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50"
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted text-foreground"
           }
+          ${compact ? "text-sm" : ""}
         `}
       >
         {/* Action buttons - shown on hover for AI messages */}

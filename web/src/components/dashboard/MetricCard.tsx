@@ -50,32 +50,27 @@ export function MetricCard({
 
   return (
     <Card className={cn("hover:shadow-md transition-shadow", className)}>
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <p className="text-sm font-medium text-muted-foreground mb-1">
-              {title}
-            </p>
-            <p className="text-2xl font-bold text-foreground">
-              {formatValue(value, format)}
-            </p>
-            {change !== undefined && (
-              <div className="flex items-center gap-1 mt-2">
-                <TrendIcon className={cn("w-4 h-4", trendColor)} />
-                <span className={cn("text-sm font-medium", trendColor)}>
-                  {change > 0 ? "+" : ""}{change}%
-                </span>
-                {changeLabel && (
-                  <span className="text-sm text-muted-foreground ml-1">
-                    {changeLabel}
-                  </span>
-                )}
-              </div>
+      <CardContent className="px-4 py-0">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {Icon && (
+              <Icon className="w-4 h-4 text-muted-foreground shrink-0" />
             )}
+            <div className="flex flex-col justify-center">
+              <p className="text-xs text-muted-foreground leading-tight">
+                {title}
+              </p>
+              <p className="text-lg font-bold text-foreground leading-tight">
+                {formatValue(value, format)}
+              </p>
+            </div>
           </div>
-          {Icon && (
-            <div className="p-3 bg-primary/10 dark:bg-primary/20 rounded-lg">
-              <Icon className="w-5 h-5 text-primary" />
+          {change !== undefined && (
+            <div className="flex items-center gap-0.5 shrink-0">
+              <TrendIcon className={cn("w-3 h-3", trendColor)} />
+              <span className={cn("text-xs font-medium", trendColor)}>
+                {change > 0 ? "+" : ""}{change}%
+              </span>
             </div>
           )}
         </div>

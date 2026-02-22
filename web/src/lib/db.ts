@@ -1,10 +1,15 @@
 /**
  * Database connection utility for Neon PostgreSQL
  *
- * Uses pg (node-postgres) with connection pooling for reliable connectivity
+ * Uses @neondatabase/serverless for optimal serverless performance
  */
 
-import { Pool } from "pg";
+import { neon, neonConfig, NeonQueryFunction } from '@neondatabase/serverless';
+import ws from 'ws';
+
+// Configure WebSocket for Neon
+neonConfig.fetchConnectionCache = true;
+neonConfig.webSocketConstructor = ws as any;
 
 const NEON_CONNECTION_STRING = process.env.NEON_DATABASE_URL || "";
 
@@ -20,60 +25,38 @@ export const getConnectionString = () => {
   return NEON_CONNECTION_STRING;
 };
 
-// Singleton connection pool
-let pool: Pool | null = null;
+// Singleton SQL client
+let sql: NeonQueryFunction<false, false> | null = null;
 
 /**
- * Get or create the connection pool
+ * Get or create the SQL client
  */
-function getPool(): Pool {
-  if (!pool) {
+function getSql(): NeonQueryFunction<false, false> {
+  if (!sql) {
     const connString = getConnectionString();
-
-    // Parse connection string to extract components
-    // We need to add the endpoint parameter for Neon's SNI support
-    const url = new URL(connString);
-    const host = url.hostname;
-    const pathname = url.pathname.slice(1); // remove leading slash
-    const searchParams = url.search;
-
-    // Extract endpoint ID from hostname (format: ep-xxx-xxx.pooler.region.aws.neon.tech)
-    const endpointId = host.split('.')[0];
-
-    pool = new Pool({
-      host: host,
-      database: pathname,
-      user: url.username,
-      password: url.password,
-      ssl: { rejectUnauthorized: false }, // Neon requires SSL
-      options: `endpoint=${endpointId}`, // Required for Neon SNI support
-      max: 10, // Maximum number of clients in the pool
-      idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-      connectionTimeoutMillis: 10000, // Return error after 10 seconds if connection fails
-    });
-
-    // Handle pool errors
-    pool.on('error', (err) => {
-      console.error('Unexpected error on idle client', err);
-      process.exit(-1);
-    });
+    if (!connString) {
+      throw new Error("NEON_DATABASE_URL environment variable is not set");
+    }
+    sql = neon(connString);
   }
-  return pool;
+  return sql;
 }
 
 /**
  * Execute a SQL query and return the rows
+ * Note: @neondatabase/serverless uses tagged template literals, not traditional params
  */
 export async function queryNeon(query: string, params: any[] = []): Promise<any[]> {
   if (!NEON_CONNECTION_STRING) {
     throw new Error("NEON_DATABASE_URL environment variable is not set");
   }
 
-  const pool = getPool();
+  const sql = getSql();
 
   try {
-    const result = await pool.query(query, params);
-    return result.rows;
+    // Use .query() method for traditional param-based queries ($1, $2, etc.)
+    const result = await (sql as any).query(query, params);
+    return result as any[];
   } catch (error) {
     console.error("Database query error:", error);
     throw error;
@@ -95,11 +78,9 @@ export async function createClient() {
 }
 
 /**
- * Close the connection pool (useful for cleanup/shutdown)
+ * Close the connection pool (no-op for serverless)
  */
 export async function closePool() {
-  if (pool) {
-    await pool.end();
-    pool = null;
-  }
+  // Serverless connections don't need to be closed
+  sql = null;
 }

@@ -17,6 +17,20 @@ interface LineChartProps {
   className?: string;
 }
 
+// Format date strings to readable format
+function formatXLabel(value: string): string {
+  // Check if it's an ISO date string
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value) || /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const date = new Date(value);
+    if (!isNaN(date.getTime())) {
+      const day = date.getDate();
+      const month = date.toLocaleDateString('en-US', { month: 'short' });
+      return `${month} ${day}`;
+    }
+  }
+  return value;
+}
+
 /**
  * Line chart component using Recharts
  * Supports multiple series for trends over time
@@ -57,13 +71,14 @@ export function LineChart({ config, className }: LineChartProps) {
           margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-zinc-800" />
-          <XAxis
-            dataKey="_x"
-            stroke="#71717a"
-            className="text-xs"
-            tick={{ fill: '#71717a' }}
-            tickLine={{ stroke: '#71717a' }}
-          />
+            <XAxis
+              dataKey="_x"
+              stroke="#71717a"
+              className="text-xs"
+              tick={{ fill: '#71717a' }}
+              tickLine={{ stroke: '#71717a' }}
+              tickFormatter={(value) => formatXLabel(String(value))}
+            />
           <YAxis
             stroke="#71717a"
             className="text-xs"

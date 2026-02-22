@@ -19,5 +19,7 @@
     "lib": "@/lib",
     "hooks": "@/hooks"
   },
-  "registries": {}
+  "registries": {
+    "@bklit-ui": "https://ui.bklit.com/r/{name}.json"
+  }
 }

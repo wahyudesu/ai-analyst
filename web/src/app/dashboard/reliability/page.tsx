@@ -124,14 +124,14 @@ export default function ReliabilityPage() {
   const uptime = data?.metrics.uptime.value || 99.95;
   const uptimeStatus = uptime >= 99.9 ? "excellent" : uptime >= 99.5 ? "good" : "fair";
 
-  return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <DashboardHeader
-        title="Reliability & Tech Health"
-        subtitle="System performance and deployment metrics"
-      />
+      return (
+        <div className="flex flex-col">
+          <DashboardHeader
+            title="Reliability & Tech Health"
+            subtitle="System performance and deployment metrics"
+          />
 
-      <main className="flex-1 overflow-y-auto p-6">
+        <main className="p-6">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Status Banner */}
           <div className={`p-4 rounded-lg ${

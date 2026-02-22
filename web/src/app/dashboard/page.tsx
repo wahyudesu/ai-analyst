@@ -2,6 +2,7 @@
 
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { MetricCard } from "@/components/dashboard/MetricCard";
+import { RefreshButton } from "@/components/dashboard/RefreshButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BarChart, LineChart } from "@/components/charts";
@@ -10,8 +11,9 @@ import {
   MetricCardGridSkeleton,
   ChartSkeleton,
 } from "@/components/dashboard/Skeleton";
+import { useDashboardCache } from "@/hooks/useDashboardCache";
 import { Users, Bot, MessageSquare, Send, CreditCard, TrendingUp, AlertCircle, Zap } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 interface OverviewData {
   metrics: {
@@ -48,38 +50,85 @@ export default function OverviewPage() {
   const [data, setData] = useState<OverviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setError(null);
-        const response = await fetch("/api/dashboard/overview");
-        if (!response.ok) {
-          throw new Error(`Failed to fetch: ${response.statusText}`);
-        }
-        const result = await response.json();
-        if (result.error) {
-          throw new Error(result.error);
-        }
-        setData(result);
-      } catch (error) {
-        console.error("Failed to fetch overview data:", error);
-        setError(error instanceof Error ? error.message : "Unknown error");
-      } finally {
-        setLoading(false);
+  const {
+    getCachedData,
+    setCachedData,
+    isCacheValid,
+    clearCache,
+    getLastRefreshTime,
+  } = useDashboardCache<OverviewData>({ ttl: 24 * 60 * 60 * 1000 }); // 1 day TTL
+
+  const fetchFromAPI = useCallback(async (bypassCache = false): Promise<OverviewData | null> => {
+    try {
+      setError(null);
+      const response = await fetch("/api/dashboard/overview", {
+        // Add cache-busting parameter when bypassing cache
+        cache: bypassCache ? "no-store" : "default",
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch: ${response.statusText}`);
       }
+      const result = await response.json();
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      return result;
+    } catch (error) {
+      console.error("Failed to fetch overview data:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      setError(errorMessage);
+      return null;
     }
-    fetchData();
   }, []);
 
-  if (error) {
-    return (
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardHeader
-          title="Overview"
-          subtitle="AIWorkerX Platform Analytics"
-        />
-        <main className="flex-1 overflow-y-auto p-6">
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const freshData = await fetchFromAPI(true);
+      if (freshData) {
+        setData(freshData);
+        setCachedData(freshData);
+      }
+      // If error occurs, we keep the existing data (from cache)
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [fetchFromAPI, setCachedData]);
+
+  useEffect(() => {
+    async function loadData() {
+      // First, try to get data from cache
+      const cachedData = getCachedData();
+      const cacheValid = isCacheValid();
+
+      if (cachedData && cacheValid) {
+        // Use cached data if valid
+        setData(cachedData);
+        setLoading(false);
+        return;
+      }
+
+      // If no valid cache, fetch from API
+      const freshData = await fetchFromAPI();
+      if (freshData) {
+        setData(freshData);
+        setCachedData(freshData);
+      }
+      setLoading(false);
+    }
+    loadData();
+  }, [getCachedData, isCacheValid, fetchFromAPI, setCachedData]);
+
+      if (error) {
+        return (
+          <div className="flex flex-col">
+            <DashboardHeader
+              title="Overview"
+              subtitle="AIWorkerX Platform Analytics"
+            />
+            <main className="p-6">
           <div className="max-w-7xl mx-auto">
             <Card className="border-destructive/50">
               <CardContent className="p-6">
@@ -89,7 +138,7 @@ export default function OverviewPage() {
                     Failed to load dashboard data
                   </h3>
                   <p className="text-sm text-muted-foreground mb-4">{error}</p>
-                  <Button onClick={() => window.location.reload()}>Try Again</Button>
+                  <Button onClick={handleRefresh}>Try Again</Button>
                 </div>
               </CardContent>
             </Card>
@@ -300,14 +349,23 @@ export default function OverviewPage() {
     },
   } : null;
 
-  return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <DashboardHeader
-        title="Overview"
-        subtitle="AIWorkerX Platform Analytics"
-      />
+      return (
+        <div className="flex flex-col">
+          <DashboardHeader
+            title="Overview"
+            subtitle="AIWorkerX Platform Analytics"
+            actions={
+            !loading && (
+              <RefreshButton
+                onRefresh={handleRefresh}
+                isRefreshing={isRefreshing}
+                lastRefresh={getLastRefreshTime()}
+              />
+            )
+          }
+        />
 
-      <main className="flex-1 overflow-y-auto p-6">
+        <main className="p-6">
         <div className="max-w-7xl mx-auto space-y-6">
           {loading ? (
             <>
@@ -316,8 +374,8 @@ export default function OverviewPage() {
             </>
           ) : (
             <>
-              {/* Metric Cards Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Metric Cards Grid - Top Row */}
+              <div className="grid grid-cols-5 gap-3">
                 <MetricCard
                   title="Total Users"
                   value={data?.metrics.totalUsers.value || 0}
@@ -350,10 +408,20 @@ export default function OverviewPage() {
                   icon={CreditCard}
                   format="number"
                 />
+              </div>
+
+              {/* Metric Cards Grid - Bottom Row */}
+              <div className="grid grid-cols-2 gap-3">
                 <MetricCard
                   title="Messages (30d)"
                   value={data?.metrics.messagesLast30Days.value || 0}
                   icon={Zap}
+                  format="number"
+                />
+                <MetricCard
+                  title="Conversations (30d)"
+                  value={data?.metrics.conversationsLast30Days.value || 0}
+                  icon={MessageSquare}
                   format="number"
                 />
               </div>

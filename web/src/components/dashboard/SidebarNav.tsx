@@ -68,7 +68,7 @@ export function SidebarNav({ className }: SidebarNavProps) {
               "text-sm font-medium",
               isActive
                 ? "bg-primary text-primary-foreground"
-                : item.highlight
+                : (item as any).highlight
                 ? "bg-primary/10 text-primary hover:bg-primary/20"
                 : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
             )}

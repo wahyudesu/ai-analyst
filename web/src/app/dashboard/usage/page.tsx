@@ -105,14 +105,14 @@ export default function UsagePage() {
     },
   } : null;
 
-  return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <DashboardHeader
-        title="Product Usage"
-        subtitle="User engagement and feature adoption metrics"
-      />
+    return (
+      <div className="flex flex-col">
+        <DashboardHeader
+          title="Product Usage"
+          subtitle="User engagement and feature adoption metrics"
+        />
 
-      <main className="flex-1 overflow-y-auto p-6">
+          <main className="p-6">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Key Metrics */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -142,61 +142,89 @@ export default function UsagePage() {
             />
           </div>
 
-          {/* DAU/MAU Gauge */}
-          <Card>
-            <CardHeader>
-              <CardTitle>User Stickiness (DAU/MAU)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-center">
-                <div className="relative w-48 h-48">
-                  <svg className="w-full h-full transform -rotate-90">
-                    <circle
-                      cx="96"
-                      cy="96"
-                      r="88"
-                      stroke="currentColor"
-                      strokeWidth="12"
-                      fill="none"
-                      className="text-zinc-200 dark:text-zinc-800"
-                    />
-                    <circle
-                      cx="96"
-                      cy="96"
-                      r="88"
-                      stroke="currentColor"
-                      strokeWidth="12"
-                      fill="none"
-                      strokeDasharray={`${(data?.metrics.dauMauRatio.value || 0) * 5.53} 553`}
-                      className="text-primary"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <p className="text-4xl font-bold text-zinc-900 dark:text-zinc-50">
-                      {data?.metrics.dauMauRatio.value.toFixed(1) || 0}%
+          {/* DAU/MAU Gauge & Agent Adoption - Side by Side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* DAU/MAU Gauge */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">User Stickiness (DAU/MAU)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-6">
+                  {/* Compact Gauge */}
+                  <div className="relative w-32 h-32 flex-shrink-0">
+                    <svg className="w-full h-full transform -rotate-90">
+                      <circle
+                        cx="64"
+                        cy="64"
+                        r="56"
+                        stroke="currentColor"
+                        strokeWidth="10"
+                        fill="none"
+                        className="text-zinc-200 dark:text-zinc-800"
+                      />
+                      <circle
+                        cx="64"
+                        cy="64"
+                        r="56"
+                        stroke="currentColor"
+                        strokeWidth="10"
+                        fill="none"
+                        strokeDasharray={`${(data?.metrics.dauMauRatio.value || 0) * 3.52} 352`}
+                        className="text-primary"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+                        {data?.metrics.dauMauRatio.value.toFixed(1) || 0}%
+                      </p>
+                      <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                        {(data?.metrics.dauMauRatio.value || 0) > 25 ? "Excellent" : (data?.metrics.dauMauRatio.value || 0) > 15 ? "Good" : "Fair"}
+                      </p>
+                    </div>
+                  </div>
+                  {/* Legend */}
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                      <p className="text-sm"><span className="font-medium text-green-600 dark:text-green-400">25%+</span> <span className="text-zinc-500">Excellent</span></p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-primary"></div>
+                      <p className="text-sm"><span className="font-medium text-primary">15-25%</span> <span className="text-zinc-500">Good</span></p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-primary/40"></div>
+                      <p className="text-sm"><span className="font-medium text-primary/60">&lt;15%</span> <span className="text-zinc-500">Fair</span></p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Agent Adoption */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Agent Adoption</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg">
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400">Total Agents Created</p>
+                    <p className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
+                      {data?.metrics.totalAgents.value || 0}
                     </p>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                      {(data?.metrics.dauMauRatio.value || 0) > 25 ? "Excellent" : (data?.metrics.dauMauRatio.value || 0) > 15 ? "Good" : "Fair"}
+                  </div>
+                  <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg">
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400">Unique Creators</p>
+                    <p className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
+                      {data?.metrics.uniqueCreators.value || 0}
                     </p>
                   </div>
                 </div>
-              </div>
-              <div className="mt-4 grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <p className="text-lg font-semibold text-green-600 dark:text-green-400">25%+</p>
-                  <p className="text-xs text-zinc-500">Excellent</p>
-                </div>
-                <div>
-                  <p className="text-lg font-semibold text-primary">15-25%</p>
-                  <p className="text-xs text-zinc-500">Good</p>
-                </div>
-                <div>
-                  <p className="text-lg font-semibold text-primary/60">&lt;15%</p>
-                  <p className="text-xs text-zinc-500">Fair</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -241,35 +269,35 @@ export default function UsagePage() {
 
           {/* Source Usage Breakdown */}
           <Card>
-            <CardHeader>
-              <CardTitle>Source Usage Breakdown</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Source Usage Breakdown</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-zinc-200 dark:border-zinc-800">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-zinc-600 dark:text-zinc-400">Source</th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-zinc-600 dark:text-zinc-400">Conversations</th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-zinc-600 dark:text-zinc-400">Users</th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-zinc-600 dark:text-zinc-400">Messages</th>
+                      <th className="text-left py-2 px-3 text-xs font-medium text-zinc-600 dark:text-zinc-400">Source</th>
+                      <th className="text-right py-2 px-3 text-xs font-medium text-zinc-600 dark:text-zinc-400">Conversations</th>
+                      <th className="text-right py-2 px-3 text-xs font-medium text-zinc-600 dark:text-zinc-400">Users</th>
+                      <th className="text-right py-2 px-3 text-xs font-medium text-zinc-600 dark:text-zinc-400">Messages</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data?.charts.sourceUsage.map((source, i) => (
-                      <tr key={i} className="border-b border-zinc-100 dark:border-zinc-800">
-                        <td className="py-3 px-4">
-                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary/10 dark:bg-primary/20 text-primary capitalize">
+                      <tr key={i} className="border-b border-zinc-100 dark:border-zinc-800/50">
+                        <td className="py-2 px-3">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/10 dark:bg-primary/20 text-primary capitalize">
                             {source.source}
                           </span>
                         </td>
-                        <td className="text-right py-3 px-4 text-sm text-zinc-900 dark:text-zinc-50">
+                        <td className="text-right py-2 px-3 text-sm text-zinc-900 dark:text-zinc-50">
                           {source.conversations.toLocaleString()}
                         </td>
-                        <td className="text-right py-3 px-4 text-sm text-zinc-900 dark:text-zinc-50">
+                        <td className="text-right py-2 px-3 text-sm text-zinc-900 dark:text-zinc-50">
                           {source.users.toLocaleString()}
                         </td>
-                        <td className="text-right py-3 px-4 text-sm text-zinc-900 dark:text-zinc-50">
+                        <td className="text-right py-2 px-3 text-sm text-zinc-900 dark:text-zinc-50">
                           {source.messages.toLocaleString()}
                         </td>
                       </tr>
@@ -280,28 +308,6 @@ export default function UsagePage() {
             </CardContent>
           </Card>
 
-          {/* Agent Adoption */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Agent Adoption</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">Total Agents Created</p>
-                  <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-                    {data?.metrics.totalAgents.value || 0}
-                  </p>
-                </div>
-                <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">Unique Creators</p>
-                  <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-                    {data?.metrics.uniqueCreators.value || 0}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </main>
     </div>

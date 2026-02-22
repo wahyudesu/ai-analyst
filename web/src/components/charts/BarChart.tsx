@@ -1,109 +1,332 @@
 'use client';
 
-import {
-  BarChart as RechartsBarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  Cell,
-} from 'recharts';
+import { useMemo, useState, useRef, useEffect } from 'react';
+import { scaleBand, scaleLinear } from '@visx/scale';
+import { AxisBottom, AxisLeft } from '@visx/axis';
+import { useTooltip, Tooltip, defaultStyles } from '@visx/tooltip';
+import { localPoint } from '@visx/event';
+import { motion } from 'motion/react';
 import type { ChartConfig } from './types';
+
+// Format date strings to readable format
+function formatXLabel(value: string): string {
+  // Check if it's an ISO date string
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value) || /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const date = new Date(value);
+    if (!isNaN(date.getTime())) {
+      const day = date.getDate();
+      const month = date.toLocaleDateString('en-US', { month: 'short' });
+      return `${month} ${day}`;
+    }
+  }
+  return value;
+}
 
 interface BarChartProps {
   config: ChartConfig;
   className?: string;
 }
 
-/**
- * Bar chart component using Recharts
- * Supports horizontal/vertical, stacked, and multiple series
- */
+interface TooltipData {
+  x: string;
+  y: number;
+  series: string;
+  color: string;
+}
+
 export function BarChart({ config, className }: BarChartProps) {
   const { data, xAxis, yAxis, options, colors } = config;
   const series = data.series || [];
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 400, height: 300 });
+  const [hoveredBar, setHoveredBar] = useState<string | null>(null);
 
-  if (series.length === 0) {
+  const {
+    tooltipData,
+    tooltipLeft,
+    tooltipTop,
+    tooltipOpen,
+    showTooltip,
+    hideTooltip,
+  } = useTooltip<TooltipData>();
+
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const { width } = containerRef.current.getBoundingClientRect();
+        setDimensions({ width: Math.max(width, 300), height: 300 });
+      }
+    };
+
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    return () => window.removeEventListener('resize', updateDimensions);
+  }, []);
+
+  const chartData = useMemo(() => {
+    return series[0]?.data?.map((point, index) => ({
+      x: point.x,
+      y: series.map((s) => s.data[index]?.y ?? 0),
+      label: point.label || String(point.x),
+    })) || [];
+  }, [series]);
+
+  const isHorizontal = options.horizontal;
+  const isStacked = options.stacked;
+
+    const margin = {
+      top: 10,
+      right: 40,
+      bottom: isHorizontal ? 30 : 30,
+      left: isHorizontal ? 80 : 40,
+    };
+
+  const width = dimensions.width;
+  const height = 300;
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
+
+  const xScale = useMemo(
+    () =>
+      scaleBand({
+        range: isHorizontal ? [0, innerHeight] : [0, innerWidth],
+        round: true,
+        domain: chartData.map((d) => String(d.x)),
+        padding: 0.15,
+      }),
+    [chartData, innerWidth, innerHeight, isHorizontal]
+  );
+
+  const maxY = useMemo(() => {
+    if (isStacked) {
+      return Math.max(...chartData.map((d) => d.y.reduce((a, b) => a + b, 0)));
+    }
+    return Math.max(...chartData.map((d) => Math.max(...d.y)));
+  }, [chartData, isStacked]);
+
+  const yScale = useMemo(
+    () =>
+      scaleLinear({
+        range: isHorizontal ? [0, innerWidth] : [innerHeight, 0],
+        round: true,
+        domain: [0, maxY * 1.05],
+      }),
+    [innerWidth, innerHeight, maxY, isHorizontal]
+  );
+
+  // Chart colors from CSS variables
+  const chartColors = [
+    'hsl(var(--chart-1))',
+    'hsl(var(--chart-2))',
+    'hsl(var(--chart-3))',
+    'hsl(var(--chart-4))',
+    'hsl(var(--chart-5))',
+  ];
+
+  const getBarColor = (seriesIndex: number) => {
+    return series[seriesIndex]?.color || chartColors[seriesIndex % chartColors.length];
+  };
+
+  if (series.length === 0 || chartData.length === 0) {
     return (
-      <div className={`flex items-center justify-center h-64 text-zinc-500 ${className || ''}`}>
-        No data available
+      <div className={`flex items-center justify-center ${className || ''}`} style={{ height: '300px' }}>
+        <p className="text-muted-foreground text-sm">No data available</p>
       </div>
     );
   }
 
-  // Prepare data for Recharts
-  const chartData = series[0].data.map((point, index) => {
-    const row: Record<string, unknown> = {
-      _x: point.x,
-      _label: point.label,
-    };
-
-    series.forEach((s) => {
-      if (s.data[index]) {
-        row[s.name] = s.data[index].y;
-      }
-    });
-
-    return row;
-  });
-
-  const isHorizontal = options.horizontal;
-
   return (
-    <div className={className}>
-      <ResponsiveContainer width="100%" height={300}>
-        <RechartsBarChart
-          data={chartData}
-          layout={isHorizontal ? 'vertical' : 'horizontal'}
-          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+    <div ref={containerRef} className={className} style={{ width: '100%', height: '300px' }}>
+      <svg width={width} height={height}>
+        <g transform={`translate(${margin.left},${margin.top})`}>
+          {chartData.map((d, dataIndex) => {
+            const bandwidth = xScale.bandwidth();
+            const barWidth = isStacked ? bandwidth : bandwidth / series.length;
+
+            return series.map((s, seriesIndex) => {
+              const value = d.y[seriesIndex];
+              const color = getBarColor(seriesIndex);
+              const barKey = `${s.name}-${dataIndex}`;
+
+              let x, y, barHeight, barWidthValue;
+
+              if (isHorizontal) {
+                x = 0;
+                y = xScale(String(d.x)) ?? 0;
+                barWidthValue = yScale(value) ?? 0;
+                barHeight = barWidth;
+
+                if (isStacked && seriesIndex > 0) {
+                  const prevValue = d.y.slice(0, seriesIndex).reduce((a, b) => a + b, 0);
+                  x = yScale(prevValue) ?? 0;
+                }
+              } else {
+                x = xScale(String(d.x)) ?? 0;
+                y = yScale(value) ?? 0;
+                barWidthValue = barWidth;
+                barHeight = innerHeight - y;
+
+                if (isStacked && seriesIndex > 0) {
+                  const prevValue = d.y.slice(0, seriesIndex).reduce((a, b) => a + b, 0);
+                  y = yScale(prevValue + value) ?? 0;
+                  barHeight = (yScale(prevValue) ?? 0) - y;
+                }
+
+                if (!isStacked) {
+                  x += seriesIndex * barWidth;
+                }
+              }
+
+                const isHovered = hoveredBar === barKey;
+
+                return (
+                  <g key={barKey}>
+                    <motion.rect
+                      x={x}
+                      y={y}
+                      width={barWidthValue}
+                      height={barHeight}
+                      fill={color}
+                      rx={isHorizontal ? 4 : 2}
+                      opacity={isHovered ? 1 : hoveredBar ? 0.5 : 1}
+                      initial={isHorizontal ? { width: 0 } : { height: 0 }}
+                      animate={{ width: barWidthValue, height: barHeight }}
+                      transition={{
+                        duration: 0.5,
+                        ease: [0.85, 0, 0.15, 1],
+                        delay: dataIndex * 0.02,
+                      }}
+                      onMouseEnter={(event) => {
+                        setHoveredBar(barKey);
+                        const coords = localPoint(event);
+                        if (!coords) return;
+                        showTooltip({
+                          tooltipLeft: coords.x + margin.left,
+                          tooltipTop: coords.y + margin.top,
+                          tooltipData: { x: String(d.x), y: value, series: s.name, color },
+                        });
+                      }}
+                      onMouseMove={(event) => {
+                        const coords = localPoint(event);
+                        if (!coords) return;
+                        showTooltip({
+                          tooltipLeft: coords.x + margin.left,
+                          tooltipTop: coords.y + margin.top,
+                          tooltipData: { x: String(d.x), y: value, series: s.name, color },
+                        });
+                      }}
+                      onMouseLeave={() => {
+                        setHoveredBar(null);
+                        hideTooltip();
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    {/* Value label for horizontal bars */}
+                    {isHorizontal && seriesIndex === 0 && (
+                      <motion.text
+                        x={(x + barWidthValue + 8)}
+                        y={y + barHeight / 2}
+                        fill="hsl(var(--foreground))"
+                        fontSize={12}
+                        fontWeight={500}
+                        textAnchor="start"
+                        dominantBaseline="middle"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: dataIndex * 0.02 + 0.3 }}
+                        style={{ pointerEvents: 'none' }}
+                      >
+                        {value.toLocaleString()}
+                      </motion.text>
+                    )}
+                  </g>
+                );
+              });
+            })}
+
+          {/* X Axis */}
+          {isHorizontal ? (
+            <AxisLeft
+              scale={xScale}
+              stroke="hsl(var(--border))"
+              tickStroke="hsl(var(--border))"
+              tickLabelProps={() => ({
+                fill: 'hsl(var(--foreground))',
+                fontSize: 12,
+                fontWeight: 500,
+                textAnchor: 'end',
+                dx: -8,
+                dy: 3,
+              })}
+            />
+            ) : (
+              <g transform={`translate(0, ${innerHeight})`}>
+                <AxisBottom
+                  scale={xScale}
+                  stroke="hsl(var(--muted-foreground) / 0.3)"
+                  tickStroke="hsl(var(--muted-foreground) / 0.5)"
+                  tickFormat={(value) => formatXLabel(String(value))}
+                  tickLabelProps={() => ({
+                    fill: 'hsl(var(--muted-foreground))',
+                    fontSize: 11,
+                    textAnchor: 'middle',
+                    dy: 3,
+                  })}
+                />
+              </g>
+            )}
+
+            {/* Y Axis */}
+            {!isHorizontal && (
+              <AxisLeft
+                scale={yScale}
+                stroke="hsl(var(--muted-foreground) / 0.3)"
+                tickStroke="hsl(var(--muted-foreground) / 0.5)"
+                tickLabelProps={() => ({
+                  fill: 'hsl(var(--muted-foreground))',
+                  fontSize: 11,
+                  textAnchor: 'end',
+                  dx: -5,
+                  dy: 3,
+                })}
+              />
+            )}
+        </g>
+      </svg>
+
+      {/* Tooltip */}
+      {tooltipOpen && tooltipData && (
+        <Tooltip
+          style={{
+            ...defaultStyles,
+            backgroundColor: 'hsl(var(--popover))',
+            border: '1px solid hsl(var(--border))',
+            borderRadius: '8px',
+            color: 'hsl(var(--popover-foreground))',
+            boxShadow: 'hsl(var(--shadow))',
+            fontSize: '12px',
+            padding: '8px 12px',
+          }}
+          left={tooltipLeft}
+          top={tooltipTop}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-zinc-800" />
-          <XAxis
-            dataKey={isHorizontal ? undefined : '_x'}
-            type={isHorizontal ? 'number' : undefined}
-            stroke="#71717a"
-            className="text-xs"
-            tick={{ fill: '#71717a' }}
-            tickLine={{ stroke: '#71717a' }}
-          />
-          <YAxis
-            stroke="#71717a"
-            className="text-xs"
-            tick={{ fill: '#71717a' }}
-            tickLine={{ stroke: '#71717a' }}
-          />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: '#ffffff',
-              border: '1px solid #e5e7eb',
-              borderRadius: '0.5rem',
-            }}
-            itemStyle={{ color: '#18181b' }}
-            labelStyle={{ color: '#71717a' }}
-          />
-          {options.legend && <Legend />}
-          {series.map((s, seriesIndex) => (
-            <Bar
-              key={s.name}
-              dataKey={s.name}
-              name={s.name}
-              fill={s.color || colors.palette[seriesIndex % colors.palette.length]}
-              stackId={options.stacked ? 'stack' : undefined}
-            >
-              {seriesIndex === 0 &&
-                chartData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={s.color || colors.palette[index % colors.palette.length]}
-                  />
-                ))}
-            </Bar>
-          ))}
-        </RechartsBarChart>
-      </ResponsiveContainer>
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">{formatXLabel(tooltipData.x)}</div>
+            <div className="flex items-center gap-2">
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: tooltipData.color }}
+              />
+              <span className="text-xs font-medium">{tooltipData.series}</span>
+              <span className="text-xs font-bold">
+                {typeof tooltipData.y === 'number'
+                  ? tooltipData.y.toLocaleString()
+                  : tooltipData.y}
+              </span>
+            </div>
+          </div>
+        </Tooltip>
+      )}
     </div>
   );
 }
