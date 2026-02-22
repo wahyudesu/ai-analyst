@@ -1,0 +1,1 @@
+coba baca database url yg kumiliki di env dan dari situ sesuaikan 

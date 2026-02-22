@@ -1,6 +1,6 @@
 /**
- * Simple Auth - localStorage based authentication
- * For demo/internal use only
+ * Simple Auth - Server-side API based authentication
+ * For demo/internal use only - users defined in server environment (AUTH_USERS)
  */
 
 import React from "react";
@@ -12,33 +12,7 @@ export interface User {
   createdAt: string;
 }
 
-export interface StoredUser extends User {
-  password: string; // In production, this should be hashed!
-}
-
-const STORAGE_KEY = "ai-analyst-users";
 const SESSION_KEY = "ai-analyst-session";
-
-// Simple password hashing (for demo only - use bcrypt in real production)
-async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-// Helper functions (not using 'this')
-function getUsers(): StoredUser[] {
-  if (typeof window === "undefined") return [];
-  const data = localStorage.getItem(STORAGE_KEY);
-  return data ? JSON.parse(data) : [];
-}
-
-function saveUsers(users: StoredUser[]): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
-}
 
 function getSession(): User | null {
   if (typeof window === "undefined") return null;
@@ -56,53 +30,32 @@ function clearSession(): void {
   localStorage.removeItem(SESSION_KEY);
 }
 
-// Auth functions
-export async function signUp(email: string, password: string, name: string): Promise<{ success: boolean; user?: User; error?: string }> {
-  const users = getUsers();
-
-  // Check if email already exists
-  if (users.find((u) => u.email === email)) {
-    return { success: false, error: "Email already registered" };
-  }
-
-  // Create new user
-  const hashedPassword = await hashPassword(password);
-  const newUser: StoredUser = {
-    id: crypto.randomUUID(),
-    email,
-    password: hashedPassword,
-    name,
-    createdAt: new Date().toISOString(),
-  };
-
-  users.push(newUser);
-  saveUsers(users);
-
-  // Auto sign in after sign up
-  const { password: _, ...userSession } = newUser;
-  setSession(userSession);
-
-  return { success: true, user: userSession };
-}
-
+/**
+ * Sign in with email and password
+ * Validates against users defined in server-side AUTH_USERS environment variable
+ * Uses API route to keep credentials secure on the server
+ */
 export async function signIn(email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> {
-  const users = getUsers();
-  const user = users.find((u) => u.email === email);
+  try {
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    });
 
-  if (!user) {
-    return { success: false, error: "Invalid email or password" };
+    const result = await response.json();
+
+    if (result.success && result.user) {
+      setSession(result.user);
+      return { success: true, user: result.user };
+    }
+
+    return { success: false, error: result.error || "Sign in failed" };
+  } catch (error) {
+    return { success: false, error: "Network error. Please try again." };
   }
-
-  const hashedPassword = await hashPassword(password);
-  if (user.password !== hashedPassword) {
-    return { success: false, error: "Invalid email or password" };
-  }
-
-  // Create session
-  const { password: _, ...userSession } = user;
-  setSession(userSession);
-
-  return { success: true, user: userSession };
 }
 
 export function signOut(): void {
@@ -133,7 +86,6 @@ export function useSimpleAuth() {
     user,
     isLoading,
     isAuthenticated: !!user,
-    signUp,
     signIn,
     signOut,
   };
@@ -155,6 +107,5 @@ export function useAuth() {
     isPending,
     signIn,
     signOut,
-    signUp,
   };
 }

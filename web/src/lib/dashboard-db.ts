@@ -1,0 +1,88 @@
+/**
+ * Dashboard database utilities for Neon PostgreSQL
+ */
+
+const NEON_CONNECTION_STRING = process.env.NEON_DATABASE_URL ||
+  "postgresql://neondb_owner:npoul_A_WzgURl:ZOOpcK2RpL1EpB@ep-proud-mouse-aijyu7tu-pooler.c-4.us-east-1.aws.neon.tech/neondb";
+
+export interface MetricRow {
+  [key: string]: any;
+}
+
+/**
+ * Execute SQL query against Neon PostgreSQL database
+ */
+export async function queryNeon(sql: string, params: any[] = []): Promise<any[]> {
+  try {
+    // Use the internal API route to query the database
+    const response = await fetch("/api/dashboard/query", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ sql, params }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Query failed: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    return result.rows || [];
+  } catch (error) {
+    console.error("Database query error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Helper to format currency
+ */
+export function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+/**
+ * Helper to format percentage
+ */
+export function formatPercentage(value: number, decimals: number = 1): string {
+  return `${value.toFixed(decimals)}%`;
+}
+
+/**
+ * Helper to format large numbers
+ */
+export function formatNumber(value: number): string {
+  return new Intl.NumberFormat("en-US").format(value);
+}
+
+/**
+ * Get date range for queries
+ */
+export function getDateRange(days: number = 30): { start: Date; end: Date } {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - days);
+  return { start, end };
+}
+
+/**
+ * Convert database row to chart data point
+ */
+export function rowToDataPoint(
+  row: any,
+  xKey: string,
+  yKey: string,
+  labelKey?: string
+): { x: string | number; y: number; label?: string } {
+  return {
+    x: row[xKey],
+    y: row[yKey],
+    label: labelKey ? row[labelKey] : undefined,
+  };
+}

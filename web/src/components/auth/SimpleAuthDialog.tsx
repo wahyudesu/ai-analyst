@@ -1,19 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { Database, Mail, Lock, User as UserIcon, Eye, EyeOff } from "lucide-react";
-import { useAuth, type User } from "@/lib/simple-auth";
+import { useRouter } from "next/navigation";
+import { Database, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { signIn, type User } from "@/lib/simple-auth";
 
 interface SimpleAuthDialogProps {
   onSuccess?: (user: User) => void;
 }
 
 export function SimpleAuthDialog({ onSuccess }: SimpleAuthDialogProps) {
-  const { signIn, signUp, data } = useAuth();
-  const [isSignUp, setIsSignUp] = useState(false);
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -24,20 +23,13 @@ export function SimpleAuthDialog({ onSuccess }: SimpleAuthDialogProps) {
     setIsLoading(true);
 
     try {
-      if (isSignUp) {
-        const result = await signUp(email, password, name);
-        if (result.success && result.user) {
-          onSuccess?.(result.user);
-        } else {
-          setError(result.error || "Sign up failed");
-        }
+      const result = await signIn(email, password);
+      if (result.success && result.user) {
+        onSuccess?.(result.user);
+        // Redirect to dashboard after successful login
+        router.push("/dashboard");
       } else {
-        const result = await signIn(email, password);
-        if (result.success && result.user) {
-          onSuccess?.(result.user);
-        } else {
-          setError(result.error || "Sign in failed");
-        }
+        setError(result.error || "Sign in failed");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -59,7 +51,7 @@ export function SimpleAuthDialog({ onSuccess }: SimpleAuthDialogProps) {
               AI Data Analyst
             </h1>
             <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2">
-              {isSignUp ? "Create your account" : "Sign in to your account"}
+              Sign in to your account
             </p>
           </div>
 
@@ -72,26 +64,6 @@ export function SimpleAuthDialog({ onSuccess }: SimpleAuthDialogProps) {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {isSignUp && (
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
-                  Name
-                </label>
-                <div className="relative">
-                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
-                  <input
-                    id="name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-zinc-900 dark:text-zinc-50"
-                    placeholder="Your name"
-                    required={isSignUp}
-                  />
-                </div>
-              </div>
-            )}
-
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
                 Email
@@ -141,29 +113,14 @@ export function SimpleAuthDialog({ onSuccess }: SimpleAuthDialogProps) {
               disabled={isLoading}
               className="w-full py-3 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white font-medium rounded-lg transition-colors"
             >
-              {isLoading ? "Please wait..." : isSignUp ? "Create Account" : "Sign In"}
+              {isLoading ? "Please wait..." : "Sign In"}
             </button>
           </form>
-
-          {/* Toggle Sign In/Up */}
-          <p className="mt-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
-            {isSignUp ? "Already have an account? " : "Don't have an account? "}
-            <button
-              type="button"
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                setError(null);
-              }}
-              className="text-orange-600 dark:text-orange-400 font-medium hover:underline"
-            >
-              {isSignUp ? "Sign in" : "Sign up"}
-            </button>
-          </p>
         </div>
 
-        {/* Demo Notice */}
+        {/* Notice */}
         <p className="mt-4 text-center text-xs text-zinc-500">
-          Demo mode - data stored locally in your browser
+          Contact your administrator for account access
         </p>
       </div>
     </div>

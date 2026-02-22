@@ -15,6 +15,7 @@ import { chartAgent } from "./agents/testingagent"
 import { chatMemory, dataAnalystMemory, casualChatMemory } from "./memory"
 import * as threads from "./routes/threads"
 import { customChatRoute } from "./routes/chat"
+import { sqlRoute } from "./routes/sql"
 import { CloudflareDeployer } from "@mastra/deployer-cloudflare"
 
 /**
@@ -63,6 +64,8 @@ export const mastra = new Mastra({
   }),
   server: {
     apiRoutes: [
+      // Direct SQL execution route for dashboard (bypasses agent reasoning)
+      sqlRoute,
       // Custom chat route with dynamic model selection
       // Accepts modelId parameter to override agent's default model
       customChatRoute,
