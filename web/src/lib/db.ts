@@ -1,62 +1,62 @@
 /**
- * Database connection utility for Neon PostgreSQL
- *
- * Uses @neondatabase/serverless for optimal serverless performance
+ * Database connection utility for PostgreSQL using pg driver
  */
 
-import { neon, neonConfig, NeonQueryFunction } from '@neondatabase/serverless';
-import ws from 'ws';
+import { Pool } from 'pg';
 
-// Configure WebSocket for Neon
-neonConfig.fetchConnectionCache = true;
-neonConfig.webSocketConstructor = ws as any;
+const CONNECTION_STRING = process.env.NEON_DATABASE_URL || "";
 
-const NEON_CONNECTION_STRING = process.env.NEON_DATABASE_URL || "";
-
-if (!NEON_CONNECTION_STRING) {
+if (!CONNECTION_STRING) {
   console.warn("WARNING: NEON_DATABASE_URL environment variable is not set. Dashboard data will not be available.");
 }
 
-/**
- * Get a connection string with proper SSL mode
- */
-export const getConnectionString = () => {
-  if (!NEON_CONNECTION_STRING) return "";
-  return NEON_CONNECTION_STRING;
-};
+// Parse connection string to explicit params (avoids Next.js SSL parse issues)
+function parseConnectionString(connStr: string) {
+  try {
+    const url = new URL(connStr);
+    return {
+      host: url.hostname,
+      port: parseInt(url.port) || 5432,
+      database: url.pathname.replace(/^\//, ""),
+      user: decodeURIComponent(url.username),
+      password: decodeURIComponent(url.password),
+      ssl: { rejectUnauthorized: false },
+    };
+  } catch {
+    return { connectionString: connStr, ssl: { rejectUnauthorized: false } };
+  }
+}
 
-// Singleton SQL client
-let sql: NeonQueryFunction<false, false> | null = null;
+// Singleton pool
+let pool: Pool | null = null;
 
-/**
- * Get or create the SQL client
- */
-function getSql(): NeonQueryFunction<false, false> {
-  if (!sql) {
-    const connString = getConnectionString();
-    if (!connString) {
+function getPool(): Pool {
+  if (!pool) {
+    if (!CONNECTION_STRING) {
       throw new Error("NEON_DATABASE_URL environment variable is not set");
     }
-    sql = neon(connString);
+    pool = new Pool({
+      ...parseConnectionString(CONNECTION_STRING),
+      max: 5,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+    });
   }
-  return sql;
+  return pool;
 }
 
 /**
  * Execute a SQL query and return the rows
- * Note: @neondatabase/serverless uses tagged template literals, not traditional params
  */
 export async function queryNeon(query: string, params: any[] = []): Promise<any[]> {
-  if (!NEON_CONNECTION_STRING) {
+  if (!CONNECTION_STRING) {
     throw new Error("NEON_DATABASE_URL environment variable is not set");
   }
 
-  const sql = getSql();
-
+  const p = getPool();
   try {
-    // Use .query() method for traditional param-based queries ($1, $2, etc.)
-    const result = await (sql as any).query(query, params);
-    return result as any[];
+    const result = await p.query(query, params);
+    return result.rows;
   } catch (error) {
     console.error("Database query error:", error);
     throw error;
@@ -64,23 +64,25 @@ export async function queryNeon(query: string, params: any[] = []): Promise<any[
 }
 
 /**
- * Create a PostgreSQL client with pg (for compatibility)
+ * Get connection string
  */
-export async function createClient() {
-  const { Client } = await import("pg");
-
-  const client = new Client({
-    connectionString: getConnectionString(),
-    connectionTimeoutMillis: 10000,
-  });
-
-  return client;
-}
+export const getConnectionString = () => CONNECTION_STRING;
 
 /**
- * Close the connection pool (no-op for serverless)
+ * Close the connection pool
  */
 export async function closePool() {
-  // Serverless connections don't need to be closed
-  sql = null;
+  if (pool) {
+    await pool.end();
+    pool = null;
+  }
+}
+
+// Legacy alias
+export async function createClient() {
+  const { Client } = await import("pg");
+  const client = new Client({
+    ...parseConnectionString(CONNECTION_STRING),
+  });
+  return client;
 }

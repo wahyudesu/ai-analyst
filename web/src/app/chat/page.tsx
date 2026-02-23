@@ -6,15 +6,6 @@ import { AlertCircle, Database, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DatabaseSettings } from "@/components/DatabaseSettings";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useAuth } from "@/lib/simple-auth";
 import { useSearchParams } from "next/navigation";
 
 const SERVER_CHECK_RETRIES = 3;
@@ -28,18 +19,6 @@ function ChatPage() {
   const [status, setStatus] = useState<ServerStatus>("loading");
   const [error, setError] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-
-  const { data: session, signOut } = useAuth();
-
-  const getUserInitials = () => {
-    const name = session?.user?.name || session?.user?.email || "User";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
 
   useEffect(() => {
     async function checkServer() {
@@ -131,42 +110,15 @@ function ChatPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsSettingsOpen(true)}
-            >
-              <Settings className="w-4 h-4" />
-            </Button>
-            <ThemeToggle />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="gap-2 h-auto py-2 px-3">
-                  <div className="text-right hidden sm:block">
-                    <p className="text-sm font-medium text-foreground">
-                      {session?.user?.name || "User"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {session?.user?.email || ""}
-                    </p>
-                  </div>
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                      {getUserInitials()}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem
-                  onClick={() => signOut()}
-                  className="text-destructive focus:text-destructive cursor-pointer"
-                >
-                  Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsSettingsOpen(true)}
+              >
+                <Settings className="w-4 h-4" />
+              </Button>
+              <ThemeToggle />
+            </div>
         </div>
       </header>
 

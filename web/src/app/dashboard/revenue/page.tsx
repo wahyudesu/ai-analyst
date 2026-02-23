@@ -92,39 +92,39 @@ export default function RevenuePage() {
     },
   } : null;
 
-  const engagementConfig: ChartConfig | null = data ? {
-    chartType: "line",
-    title: "Product Engagement",
-    data: {
-      series: [
-        {
-          name: "Conversations",
-          data: data.charts.engagement.labels.map((label, i) => ({
-            x: label,
-            y: data.charts.engagement.conversations[i],
-          })),
-          color: "#14B8A6",
-        },
-        {
-          name: "Messages",
-          data: data.charts.engagement.labels.map((label, i) => ({
-            x: label,
-            y: data.charts.engagement.messages[i],
-          })),
-          color: "#10B981",
-        },
-      ],
-    },
-    xAxis: { label: "Week", type: "category" },
-    yAxis: [{ label: "Count" }],
-    options: { legend: true, stacked: false, horizontal: false, showDataLabels: false },
-    colors: { palette: ["#14B8A6", "#10B981"] },
-    metadata: {
-      dataSourceRowCount: data.charts.engagement.labels.length,
-      displayedPointCount: data.charts.engagement.labels.length,
-      generatedAt: new Date().toISOString(),
-    },
-  } : null;
+    const engagementConfig: ChartConfig | null = data ? {
+      chartType: "area",
+      title: "Product Engagement",
+      data: {
+        series: [
+          {
+            name: "Conversations",
+            data: data.charts.engagement.labels.map((label, i) => ({
+              x: label,
+              y: data.charts.engagement.conversations[i],
+            })),
+            color: "#14B8A6",
+          },
+          {
+            name: "Messages",
+            data: data.charts.engagement.labels.map((label, i) => ({
+              x: label,
+              y: data.charts.engagement.messages[i],
+            })),
+            color: "#10B981",
+          },
+        ],
+      },
+      xAxis: { label: "Week", type: "category" },
+      yAxis: [{ label: "Count" }],
+      options: { legend: true, stacked: false, horizontal: false, showDataLabels: false, showGrid: false },
+      colors: { palette: ["#14B8A6", "#10B981"] },
+      metadata: {
+        dataSourceRowCount: data.charts.engagement.labels.length,
+        displayedPointCount: data.charts.engagement.labels.length,
+        generatedAt: new Date().toISOString(),
+      },
+    } : null;
 
     return (
       <div className="flex flex-col">
@@ -219,8 +219,8 @@ export default function RevenuePage() {
                   <div className="h-64 flex items-center justify-center">
                     <p className="text-zinc-500">Loading...</p>
                   </div>
-                ) : data && engagementConfig ? (
-                  <LineChart config={engagementConfig} />
+                  ) : data && engagementConfig ? (
+                    <AreaChart config={engagementConfig} />
                 ) : (
                   <div className="h-64 flex items-center justify-center">
                     <p className="text-zinc-500">No data available</p>

@@ -70,7 +70,7 @@ export function AreaChart({ config, className }: AreaChartProps) {
           data={chartData}
           margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-zinc-800" />
+            {options.showGrid !== false && <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-zinc-800" />}
             <XAxis
               dataKey="_x"
               stroke="#71717a"

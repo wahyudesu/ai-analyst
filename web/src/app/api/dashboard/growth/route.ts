@@ -13,13 +13,13 @@ export async function GET() {
     // Get LTV (Lifetime Value) based on prepaid purchases
     const ltvResult = await queryNeon(`
       SELECT
-        COALESCE(AVG(total_spent), 0) as avg_ltv
-      FROM (
-        SELECT profile_id, SUM(amount) as total_spent
-        FROM billing_prepaid_purchases
-        WHERE status = 'completed'
-        GROUP BY profile_id
-      ) user_spending
+          COALESCE(AVG(total_spent), 0) as avg_ltv
+        FROM (
+          SELECT profile_id, SUM(price_usd) as total_spent
+          FROM billing_prepaid_purchases
+          WHERE status = 'completed'
+          GROUP BY profile_id
+        ) user_spending
     `);
     const ltv = parseFloat(ltvResult[0]?.avg_ltv) || 792;
     const ltvCacRatio = ltv / cac;
@@ -100,19 +100,18 @@ export async function GET() {
           cac: { value: cac, format: "currency" },
           ltv: { value: ltv, format: "currency" },
           ltvCacRatio: { value: ltvCacRatio.toFixed(1), format: "number" },
-          payingRate: { value: payingRate, format: "percentage" },
-          retentionRate: { value: retentionRate, format: "percentage" },
-          referralRate: { value: referralRate, format: "percentage" },
+            payingRate: { value: payingRate, format: "percentage" },
+            repayingRate: { value: retentionRate, format: "percentage" },
+            retentionRate: { value: retentionRate, format: "percentage" },
+            referralRate: { value: referralRate, format: "percentage" },
         },
-        charts: {
-          channels: {
-            data: channels.length > 0 ? channels : [{ name: "Direct", value: 65 }, { name: "Referral", value: 35 }],
+          charts: {
+            channels: channels.length > 0 ? channels : [{ name: "Direct", value: 65 }, { name: "Referral", value: 35 }],
+            weeklyTrend: {
+              labels: weeklyTrendResult.map((r: any) => r.week),
+              values: weeklyTrendResult.map((r: any) => parseInt(r.signups)),
+            },
           },
-          weeklyTrend: {
-            labels: weeklyTrendResult.map((r: any) => r.week),
-            values: weeklyTrendResult.map((r: any) => parseInt(r.signups)),
-          },
-        },
       },
       {
         headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
