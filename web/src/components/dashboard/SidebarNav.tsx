@@ -63,15 +63,15 @@ export function SidebarNav({ className }: SidebarNavProps) {
           <Link
             key={item.href}
             href={item.href}
-            className={cn(
-              "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
-              "text-sm font-medium",
-              isActive
-                ? "bg-primary text-primary-foreground"
-                : (item as any).highlight
-                ? "bg-primary/10 text-primary hover:bg-primary/20"
-                : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-            )}
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
+                "text-sm font-medium",
+                isActive
+                  ? "bg-primary text-primary-foreground"
+                  : (item as any).highlight
+                  ? "bg-primary/10 text-primary hover:bg-primary/20"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
+              )}
           >
             <Icon className="w-5 h-5" />
             <span>{item.title}</span>

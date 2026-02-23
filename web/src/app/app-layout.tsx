@@ -55,14 +55,14 @@ export function AppLayout({
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-      {/* Left Sidebar - Dashboard Navigation */}
-      <aside className="w-64 bg-sidebar flex-shrink-0 flex flex-col">
+        {/* Left Sidebar - Dashboard Navigation */}
+        <aside className="w-64 bg-background flex-shrink-0 flex flex-col border-r border-border">
         {/* Logo */}
-        <div className="p-6 border-b border-sidebar-border">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-sidebar-primary rounded-lg flex items-center justify-center">
-              <svg
-                className="w-6 h-6 text-sidebar-primary-foreground"
+        <div className="p-6 border-b border-border">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                <svg
+                  className="w-6 h-6 text-primary-foreground"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -75,9 +75,9 @@ export function AppLayout({
                 />
               </svg>
             </div>
-            <div>
-              <h1 className="text-lg font-semibold text-sidebar-foreground">AI Analyst</h1>
-              <p className="text-xs text-sidebar-foreground/60">Dashboard</p>
+              <div>
+                <h1 className="text-lg font-semibold text-foreground">AI Analyst</h1>
+                <p className="text-xs text-muted-foreground">Dashboard</p>
             </div>
           </div>
         </div>
@@ -87,11 +87,11 @@ export function AppLayout({
           <SidebarNav />
         </nav>
 
-          {/* Footer with User Menu */}
-          <div className="p-4 border-t border-sidebar-border">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="w-full justify-start gap-3 h-auto py-3 px-3 hover:bg-sidebar-accent">
+            {/* Footer with User Menu */}
+            <div className="p-4 border-t border-border">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-start gap-3 h-auto py-3 px-3 hover:bg-accent">
                   <Avatar className="h-9 w-9">
                     <AvatarFallback className="bg-primary text-primary-foreground text-sm">
                       {(session?.user?.name || session?.user?.email || "U")
@@ -102,14 +102,14 @@ export function AppLayout({
                         .slice(0, 2)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="text-left flex-1 min-w-0">
-                    <p className="text-sm font-medium text-sidebar-foreground truncate">
-                      {session?.user?.name || "User"}
-                    </p>
-                    <p className="text-xs text-sidebar-foreground/60 truncate">
-                      {session?.user?.email || ""}
-                    </p>
-                  </div>
+                    <div className="text-left flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {session?.user?.name || "User"}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {session?.user?.email || ""}
+                      </p>
+                    </div>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56">

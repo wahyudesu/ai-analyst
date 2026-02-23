@@ -39,7 +39,7 @@ export function LineChart({ config, className }: LineChartProps) {
   const { data, options, colors } = config;
   const series = data.series || [];
 
-  if (series.length === 0) {
+  if (series.length === 0 || !series[0]?.data?.length) {
     return (
       <div className={`flex items-center justify-center h-64 text-zinc-500 ${className || ''}`}>
         No data available

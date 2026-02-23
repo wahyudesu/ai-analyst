@@ -149,7 +149,7 @@ export default function OverviewPage() {
   }
 
   // Chart configurations
-  const usersChartConfig: ChartConfig | null = data ? {
+    const usersChartConfig: ChartConfig | null = data && data.charts.newUsersOverTime.labels.length > 0 ? {
     chartType: "line",
     title: "New Users (12 Weeks)",
     data: {
@@ -189,7 +189,7 @@ export default function OverviewPage() {
     },
   } : null;
 
-  const conversationsChartConfig: ChartConfig | null = data ? {
+    const conversationsChartConfig: ChartConfig | null = data && data.charts.conversationsOverTime.labels.length > 0 ? {
     chartType: "bar",
     title: "Conversations (12 Weeks)",
     data: {
@@ -229,7 +229,7 @@ export default function OverviewPage() {
     },
   } : null;
 
-  const messagesChartConfig: ChartConfig | null = data ? {
+    const messagesChartConfig: ChartConfig | null = data && data.charts.messagesOverTime.labels.length > 0 ? {
     chartType: "line",
     title: "Messages (12 Weeks)",
     data: {

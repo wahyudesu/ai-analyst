@@ -33,13 +33,13 @@ export function DualAxisChart({
   const { data, xAxis, yAxis, options, colors } = config;
   const series = data.series || [];
 
-  if (series.length === 0) {
-    return (
-      <div className={`flex items-center justify-center h-64 text-zinc-500 ${className || ''}`}>
-        No data available
-      </div>
-    );
-  }
+    if (series.length === 0 || !series[0]?.data?.length) {
+      return (
+        <div className={`flex items-center justify-center h-64 text-zinc-500 ${className || ''}`}>
+          No data available
+        </div>
+      );
+    }
 
   // Prepare data for Recharts
   const chartData = series[0].data.map((point, index) => {

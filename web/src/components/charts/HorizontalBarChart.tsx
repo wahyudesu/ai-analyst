@@ -51,13 +51,13 @@ export function HorizontalBarChart({ config, className }: HorizontalBarChartProp
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
 
-  if (series.length === 0) {
-    return (
-      <div className={`flex items-center justify-center ${className || ''}`} style={{ height: '300px' }}>
-        <p className="text-muted-foreground text-sm">No data available</p>
-      </div>
-    );
-  }
+    if (series.length === 0 || !series[0]?.data?.length) {
+      return (
+        <div className={`flex items-center justify-center ${className || ''}`} style={{ height: '300px' }}>
+          <p className="text-muted-foreground text-sm">No data available</p>
+        </div>
+      );
+    }
 
   const chartData = series[0].data.map((point) => ({
     name: point.label || String(point.x),
@@ -91,15 +91,14 @@ export function HorizontalBarChart({ config, className }: HorizontalBarChartProp
     [chartData, innerHeight]
   );
 
-  const xScale = useMemo(
-    () =>
-      scaleLinear({
+    const xScale = useMemo(() => {
+      const maxValue = Math.max(...chartData.map((d) => d.value), 1);
+      return scaleLinear({
         range: [0, innerWidth],
         round: true,
-        domain: [0, Math.max(...chartData.map((d) => d.value)) * 1.05],
-      }),
-    [chartData, innerWidth]
-  );
+        domain: [0, maxValue * 1.05],
+      });
+    }, [chartData, innerWidth]);
 
   return (
     <div ref={containerRef} className={className} style={{ width: '100%', height: '300px' }}>

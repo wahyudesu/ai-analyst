@@ -2,11 +2,12 @@
 
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { MetricCard } from "@/components/dashboard/MetricCard";
+import { RefreshButton } from "@/components/dashboard/RefreshButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, BarChart } from "@/components/charts";
 import type { ChartConfig } from "@/components/charts/types";
 import { Activity, Users, Zap, Target } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 interface UsageData {
   metrics: {
@@ -35,25 +36,40 @@ interface UsageData {
 export default function UsagePage() {
   const [data, setData] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const response = await fetch("/api/dashboard/usage");
-        if (response.ok) {
-          const result = await response.json();
-          setData(result);
-        }
-      } catch (error) {
-        console.error("Failed to fetch usage data:", error);
-      } finally {
-        setLoading(false);
-      }
+  const fetchData = useCallback(async (isRefresh = false) => {
+    if (isRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setLoading(true);
     }
-    fetchData();
+    
+    try {
+      const response = await fetch("/api/dashboard/usage");
+      if (response.ok) {
+        const result = await response.json();
+        setData(result);
+        setLastRefresh(new Date());
+      }
+    } catch (error) {
+      console.error("Failed to fetch usage data:", error);
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
   }, []);
 
-  const dailyTrendConfig: ChartConfig | null = data ? {
+  const handleRefresh = useCallback(() => {
+    return fetchData(true);
+  }, [fetchData]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const dailyTrendConfig: ChartConfig | null = data && data.charts.dailyTrend.labels.length > 0 ? {
     chartType: "line",
     title: "Daily Active Users (30 Days)",
     data: {
@@ -79,7 +95,7 @@ export default function UsagePage() {
     },
   } : null;
 
-  const sourceUsageConfig: ChartConfig | null = data ? {
+  const sourceUsageConfig: ChartConfig | null = data && data.charts.sourceUsage.length > 0 ? {
     chartType: "bar",
     title: "Usage by Source",
     data: {
@@ -105,12 +121,19 @@ export default function UsagePage() {
     },
   } : null;
 
-    return (
-      <div className="flex flex-col">
-        <DashboardHeader
-          title="Product Usage"
-          subtitle="User engagement and feature adoption metrics"
-        />
+      return (
+        <div className="flex flex-col">
+          <DashboardHeader
+            title="Product Usage"
+            subtitle="User engagement and feature adoption metrics"
+            actions={
+              <RefreshButton
+                onRefresh={handleRefresh}
+                isRefreshing={isRefreshing}
+                lastRefresh={lastRefresh}
+              />
+            }
+          />
 
           <main className="p-6">
         <div className="max-w-7xl mx-auto space-y-6">

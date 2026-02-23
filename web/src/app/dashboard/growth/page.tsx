@@ -2,11 +2,12 @@
 
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { MetricCard } from "@/components/dashboard/MetricCard";
+import { RefreshButton } from "@/components/dashboard/RefreshButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, BarChart } from "@/components/charts";
 import type { ChartConfig } from "@/components/charts/types";
 import { DollarSign, TrendingUp, Percent, Users } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 interface GrowthData {
   metrics: {
@@ -25,25 +26,40 @@ interface GrowthData {
 export default function GrowthPage() {
   const [data, setData] = useState<GrowthData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const response = await fetch("/api/dashboard/growth");
-        if (response.ok) {
-          const result = await response.json();
-          setData(result);
-        }
-      } catch (error) {
-        console.error("Failed to fetch growth data:", error);
-      } finally {
-        setLoading(false);
-      }
+  const fetchData = useCallback(async (isRefresh = false) => {
+    if (isRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setLoading(true);
     }
-    fetchData();
+
+    try {
+      const response = await fetch("/api/dashboard/growth");
+      if (response.ok) {
+        const result = await response.json();
+        setData(result);
+        setLastRefresh(new Date());
+      }
+    } catch (error) {
+      console.error("Failed to fetch growth data:", error);
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
   }, []);
 
-  const channelChartConfig: ChartConfig | null = data ? {
+  const handleRefresh = useCallback(() => {
+    return fetchData(true);
+  }, [fetchData]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+    const channelChartConfig: ChartConfig | null = data && data.charts.channels.length > 0 ? {
     chartType: "pie",
     title: "Signups by Channel",
     data: {
@@ -70,7 +86,7 @@ export default function GrowthPage() {
     },
   } : null;
 
-  const weeklyTrendChartConfig: ChartConfig | null = data ? {
+    const weeklyTrendChartConfig: ChartConfig | null = data && data.charts.weeklyTrend.labels.length > 0 ? {
     chartType: "bar",
     title: "Weekly Signups Trend",
     data: {
@@ -106,12 +122,19 @@ export default function GrowthPage() {
     },
   } : null;
 
-    return (
-      <div className="flex flex-col">
-        <DashboardHeader
-          title="Growth & Acquisition"
-          subtitle="Customer acquisition and growth metrics"
-        />
+      return (
+        <div className="flex flex-col">
+          <DashboardHeader
+            title="Growth & Acquisition"
+            subtitle="Customer acquisition and growth metrics"
+            actions={
+              <RefreshButton
+                onRefresh={handleRefresh}
+                isRefreshing={isRefreshing}
+                lastRefresh={lastRefresh}
+              />
+            }
+          />
 
         <main className="p-6">
         <div className="max-w-7xl mx-auto space-y-6">

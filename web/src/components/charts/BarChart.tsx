@@ -97,22 +97,26 @@ export function BarChart({ config, className }: BarChartProps) {
     [chartData, innerWidth, innerHeight, isHorizontal]
   );
 
-  const maxY = useMemo(() => {
-    if (isStacked) {
-      return Math.max(...chartData.map((d) => d.y.reduce((a, b) => a + b, 0)));
-    }
-    return Math.max(...chartData.map((d) => Math.max(...d.y)));
-  }, [chartData, isStacked]);
+    const maxY = useMemo(() => {
+      let max: number;
+      if (isStacked) {
+        max = Math.max(...chartData.map((d) => d.y.reduce((a, b) => a + b, 0)));
+      } else {
+        max = Math.max(...chartData.map((d) => Math.max(...d.y)));
+      }
+      // Ensure maxY is never 0 to avoid scale issues
+      return Math.max(max, 1);
+    }, [chartData, isStacked]);
 
-  const yScale = useMemo(
-    () =>
-      scaleLinear({
-        range: isHorizontal ? [0, innerWidth] : [innerHeight, 0],
-        round: true,
-        domain: [0, maxY * 1.05],
-      }),
-    [innerWidth, innerHeight, maxY, isHorizontal]
-  );
+    const yScale = useMemo(
+      () =>
+        scaleLinear({
+          range: isHorizontal ? [0, innerWidth] : [innerHeight, 0],
+          round: true,
+          domain: [0, maxY * 1.05 || 1],
+        }),
+      [innerWidth, innerHeight, maxY, isHorizontal]
+    );
 
   // Chart colors from CSS variables
   const chartColors = [
@@ -127,55 +131,55 @@ export function BarChart({ config, className }: BarChartProps) {
     return series[seriesIndex]?.color || chartColors[seriesIndex % chartColors.length];
   };
 
-  if (series.length === 0 || chartData.length === 0) {
-    return (
-      <div className={`flex items-center justify-center ${className || ''}`} style={{ height: '300px' }}>
-        <p className="text-muted-foreground text-sm">No data available</p>
-      </div>
-    );
-  }
+    if (series.length === 0 || chartData.length === 0 || !series[0]?.data?.length) {
+      return (
+        <div className={`flex items-center justify-center ${className || ''}`} style={{ height: '300px' }}>
+          <p className="text-muted-foreground text-sm">No data available</p>
+        </div>
+      );
+    }
 
   return (
     <div ref={containerRef} className={className} style={{ width: '100%', height: '300px' }}>
       <svg width={width} height={height}>
-        <g transform={`translate(${margin.left},${margin.top})`}>
-          {chartData.map((d, dataIndex) => {
-            const bandwidth = xScale.bandwidth();
-            const barWidth = isStacked ? bandwidth : bandwidth / series.length;
+          <g transform={`translate(${margin.left},${margin.top})`}>
+            {chartData.map((d, dataIndex) => {
+              const bandwidth = xScale.bandwidth() || 1;
+              const barWidth = isStacked ? bandwidth : bandwidth / series.length;
 
             return series.map((s, seriesIndex) => {
               const value = d.y[seriesIndex];
               const color = getBarColor(seriesIndex);
               const barKey = `${s.name}-${dataIndex}`;
 
-              let x, y, barHeight, barWidthValue;
+                  let x = 0, y = 0, barHeight = 0, barWidthValue = 0;
 
-              if (isHorizontal) {
-                x = 0;
-                y = xScale(String(d.x)) ?? 0;
-                barWidthValue = yScale(value) ?? 0;
-                barHeight = barWidth;
+                  if (isHorizontal) {
+                    x = 0;
+                    y = xScale(String(d.x)) ?? 0;
+                    barWidthValue = Math.max(yScale(value) ?? 0, 0);
+                    barHeight = Math.max(barWidth, 0);
 
-                if (isStacked && seriesIndex > 0) {
-                  const prevValue = d.y.slice(0, seriesIndex).reduce((a, b) => a + b, 0);
-                  x = yScale(prevValue) ?? 0;
+                  if (isStacked && seriesIndex > 0) {
+                    const prevValue = d.y.slice(0, seriesIndex).reduce((a, b) => a + b, 0);
+                    x = yScale(prevValue) ?? 0;
+                  }
+                } else {
+                  x = xScale(String(d.x)) ?? 0;
+                  y = yScale(value) ?? 0;
+                  barWidthValue = Math.max(barWidth, 0);
+                  barHeight = Math.max(innerHeight - y, 0);
+
+                  if (isStacked && seriesIndex > 0) {
+                    const prevValue = d.y.slice(0, seriesIndex).reduce((a, b) => a + b, 0);
+                    y = yScale(prevValue + value) ?? 0;
+                    barHeight = Math.max((yScale(prevValue) ?? 0) - y, 0);
+                  }
+
+                  if (!isStacked) {
+                    x += seriesIndex * barWidth;
+                  }
                 }
-              } else {
-                x = xScale(String(d.x)) ?? 0;
-                y = yScale(value) ?? 0;
-                barWidthValue = barWidth;
-                barHeight = innerHeight - y;
-
-                if (isStacked && seriesIndex > 0) {
-                  const prevValue = d.y.slice(0, seriesIndex).reduce((a, b) => a + b, 0);
-                  y = yScale(prevValue + value) ?? 0;
-                  barHeight = (yScale(prevValue) ?? 0) - y;
-                }
-
-                if (!isStacked) {
-                  x += seriesIndex * barWidth;
-                }
-              }
 
                 const isHovered = hoveredBar === barKey;
 

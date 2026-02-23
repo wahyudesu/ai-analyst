@@ -24,7 +24,7 @@ export function StackedAreaChart({ config, className }: StackedAreaChartProps) {
   const { data, xAxis, yAxis, options, colors } = config;
   const series = data.series || [];
 
-  if (series.length === 0) {
+  if (series.length === 0 || !series[0]?.data?.length) {
     return (
       <div className={`flex items-center justify-center h-64 text-zinc-500 ${className || ''}`}>
         No data available

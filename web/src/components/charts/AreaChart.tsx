@@ -39,7 +39,7 @@ export function AreaChart({ config, className }: AreaChartProps) {
   const { data, options, colors } = config;
   const series = data.series || [];
 
-  if (series.length === 0) {
+  if (series.length === 0 || !series[0]?.data?.length) {
     return (
       <div className={`flex items-center justify-center h-64 text-zinc-500 ${className || ''}`}>
         No data available
@@ -70,7 +70,7 @@ export function AreaChart({ config, className }: AreaChartProps) {
           data={chartData}
           margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
         >
-            {options.showGrid !== false && <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-zinc-800" />}
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-zinc-800" />
             <XAxis
               dataKey="_x"
               stroke="#71717a"

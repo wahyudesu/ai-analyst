@@ -2,13 +2,14 @@
 
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { MetricCard } from "@/components/dashboard/MetricCard";
+import { RefreshButton } from "@/components/dashboard/RefreshButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AreaChart, BarChart, LineChart } from "@/components/charts";
 import { FunnelChart } from "@/components/charts/FunnelChart";
 import { StackedAreaChart } from "@/components/charts/StackedAreaChart";
 import type { ChartConfig } from "@/components/charts/types";
 import { DollarSign, Users, TrendingUp, Repeat } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 interface RevenueData {
   metrics: {
@@ -31,25 +32,40 @@ interface RevenueData {
 export default function RevenuePage() {
   const [data, setData] = useState<RevenueData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const response = await fetch("/api/dashboard/revenue");
-        if (response.ok) {
-          const result = await response.json();
-          setData(result);
-        }
-      } catch (error) {
-        console.error("Failed to fetch revenue data:", error);
-      } finally {
-        setLoading(false);
-      }
+  const fetchData = useCallback(async (isRefresh = false) => {
+    if (isRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setLoading(true);
     }
-    fetchData();
+
+    try {
+      const response = await fetch("/api/dashboard/revenue");
+      if (response.ok) {
+        const result = await response.json();
+        setData(result);
+        setLastRefresh(new Date());
+      }
+    } catch (error) {
+      console.error("Failed to fetch revenue data:", error);
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
   }, []);
 
-  const mrrByPlanConfig: ChartConfig | null = data ? {
+  const handleRefresh = useCallback(() => {
+    return fetchData(true);
+  }, [fetchData]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+    const mrrByPlanConfig: ChartConfig | null = data && data.charts.mrrByPlan.length > 0 ? {
     chartType: "area",
     title: "MRR by Plan Type",
     data: {
@@ -70,7 +86,7 @@ export default function RevenuePage() {
     },
   } : null;
 
-  const funnelConfig: ChartConfig | null = data ? {
+    const funnelConfig: ChartConfig | null = data && data.charts.funnel.length > 0 ? {
     chartType: "bar",
     title: "Customer Funnel",
     data: {
@@ -92,46 +108,53 @@ export default function RevenuePage() {
     },
   } : null;
 
-    const engagementConfig: ChartConfig | null = data ? {
-      chartType: "area",
-      title: "Product Engagement",
-      data: {
-        series: [
-          {
-            name: "Conversations",
-            data: data.charts.engagement.labels.map((label, i) => ({
-              x: label,
-              y: data.charts.engagement.conversations[i],
-            })),
-            color: "#14B8A6",
-          },
-          {
-            name: "Messages",
-            data: data.charts.engagement.labels.map((label, i) => ({
-              x: label,
-              y: data.charts.engagement.messages[i],
-            })),
-            color: "#10B981",
-          },
-        ],
-      },
-      xAxis: { label: "Week", type: "category" },
-      yAxis: [{ label: "Count" }],
-      options: { legend: true, stacked: false, horizontal: false, showDataLabels: false, showGrid: false },
-      colors: { palette: ["#14B8A6", "#10B981"] },
-      metadata: {
-        dataSourceRowCount: data.charts.engagement.labels.length,
-        displayedPointCount: data.charts.engagement.labels.length,
-        generatedAt: new Date().toISOString(),
-      },
-    } : null;
+      const engagementConfig: ChartConfig | null = data && data.charts.engagement.labels.length > 0 && data.charts.engagement.conversations?.length > 0 ? {
+    chartType: "area",
+    title: "Product Engagement",
+    data: {
+      series: [
+        {
+          name: "Conversations",
+          data: data.charts.engagement.labels.map((label, i) => ({
+            x: label,
+            y: data.charts.engagement.conversations[i],
+          })),
+          color: "#14B8A6",
+        },
+        {
+          name: "Messages",
+          data: data.charts.engagement.labels.map((label, i) => ({
+            x: label,
+            y: data.charts.engagement.messages[i],
+          })),
+          color: "#10B981",
+        },
+      ],
+    },
+    xAxis: { label: "Week", type: "category" },
+    yAxis: [{ label: "Count" }],
+    options: { legend: true, stacked: false, horizontal: false, showDataLabels: false },
+    colors: { palette: ["#14B8A6", "#10B981"] },
+    metadata: {
+      dataSourceRowCount: data.charts.engagement.labels.length,
+      displayedPointCount: data.charts.engagement.labels.length,
+      generatedAt: new Date().toISOString(),
+    },
+  } : null;
 
-    return (
-      <div className="flex flex-col">
-        <DashboardHeader
-          title="Revenue & Monetization"
-          subtitle="Revenue metrics and monetization analytics"
-        />
+  return (
+    <div className="flex flex-col">
+      <DashboardHeader
+        title="Revenue & Monetization"
+        subtitle="Revenue metrics and monetization analytics"
+        actions={
+          <RefreshButton
+            onRefresh={handleRefresh}
+            isRefreshing={isRefreshing}
+            lastRefresh={lastRefresh}
+          />
+        }
+      />
 
         <main className="p-6">
         <div className="max-w-7xl mx-auto space-y-6">

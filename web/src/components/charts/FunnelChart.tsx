@@ -21,7 +21,7 @@ export function FunnelChart({ config, className }: FunnelChartProps) {
   const { data, colors } = config;
   const series = data.series || [];
 
-  if (series.length === 0) {
+  if (series.length === 0 || !series[0]?.data?.length) {
     return (
       <div className={`flex items-center justify-center h-64 text-zinc-500 ${className || ''}`}>
         No data available
@@ -29,14 +29,15 @@ export function FunnelChart({ config, className }: FunnelChartProps) {
     );
   }
 
-  const funnelData: FunnelStep[] = series[0].data.map((point, index) => ({
-    name: point.label || String(point.x),
-    value: point.y,
-    percentage: point.y / series[0].data[0].y * 100,
-    color: colors.palette[index % colors.palette.length],
-  }));
+    const firstValue = series[0].data[0]?.y || 1;
+    const funnelData: FunnelStep[] = series[0].data.map((point, index) => ({
+      name: point.label || String(point.x),
+      value: point.y,
+      percentage: firstValue > 0 ? (point.y / firstValue * 100) : 0,
+      color: colors.palette[index % colors.palette.length],
+    }));
 
-  const maxValue = Math.max(...funnelData.map((d) => d.value));
+    const maxValue = Math.max(...funnelData.map((d) => d.value), 1);
 
   return (
     <div className={className}>

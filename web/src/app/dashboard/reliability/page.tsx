@@ -43,7 +43,7 @@ export default function ReliabilityPage() {
     fetchData();
   }, []);
 
-  const uptimeConfig: ChartConfig | null = data ? {
+    const uptimeConfig: ChartConfig | null = data && data.charts.uptimeHistory.labels.length > 0 ? {
     chartType: "line",
     title: "Uptime Trend (6 Months)",
     data: {
@@ -69,7 +69,7 @@ export default function ReliabilityPage() {
     },
   } : null;
 
-  const deploymentsConfig: ChartConfig | null = data ? {
+    const deploymentsConfig: ChartConfig | null = data && data.charts.deploymentsHistory.labels.length > 0 ? {
     chartType: "bar",
     title: "Deployment Frequency",
     data: {
@@ -95,7 +95,7 @@ export default function ReliabilityPage() {
     },
   } : null;
 
-  const responseTimeConfig: ChartConfig | null = data ? {
+    const responseTimeConfig: ChartConfig | null = data && data.charts.responseTimeHistory.labels.length > 0 ? {
     chartType: "line",
     title: "Average Response Time",
     data: {
