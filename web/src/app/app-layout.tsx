@@ -4,9 +4,11 @@ import { SidebarNav } from "@/components/dashboard/SidebarNav";
 import { DashboardErrorBoundary } from "@/components/dashboard/ErrorBoundary";
 import { useAuth } from "@/lib/simple-auth";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AuthDialog } from "@/components/auth";
-import { User } from "lucide-react";
+import { SettingsDialog } from "@/components/SettingsDialog";
+import { User, Settings } from "lucide-react";
+import Link from "next/link";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +29,7 @@ export function AppLayout({
 }) {
   const { data: session, isPending, signOut } = useAuth();
   const router = useRouter();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   useEffect(() => {
     if (!isPending && !session?.user) {
@@ -112,21 +115,27 @@ export function AppLayout({
                     </div>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => signOut()}
-                  className="text-destructive focus:text-destructive"
-                >
-                  Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
+                <DropdownMenuContent align="start" className="w-56">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard">
+                        <User className="mr-2 h-4 w-4" />
+                        <span>Profile</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setIsSettingsOpen(true)}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => signOut()}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
             </DropdownMenu>
           </div>
       </aside>
@@ -138,12 +147,15 @@ export function AppLayout({
           </DashboardErrorBoundary>
         </div>
 
-      {/* Right Sidebar (optional) */}
-      {rightSidebar && (
-        <aside className="w-72 bg-card border-l border-border flex-shrink-0 flex flex-col">
-          {rightSidebar}
-        </aside>
-      )}
-    </div>
-  );
-}
+        {/* Right Sidebar (optional) */}
+        {rightSidebar && (
+          <aside className="w-72 bg-card border-l border-border flex-shrink-0 flex flex-col">
+            {rightSidebar}
+          </aside>
+        )}
+
+        {/* Settings Dialog */}
+        <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
+      </div>
+    );
+  }

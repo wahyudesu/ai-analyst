@@ -38,13 +38,13 @@ const navItems = [
     href: "/dashboard/reliability",
     icon: Shield,
   },
-  {
-    title: "AI Analyst",
-    href: "/chat",
-    icon: MessageSquare,
-    highlight: true,
-  },
-];
+    {
+      title: "AI Analyst",
+      href: "/chat",
+      icon: MessageSquare,
+      highlight: true,
+    },
+  ];
 
 interface SidebarNavProps {
   className?: string;

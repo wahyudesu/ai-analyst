@@ -4,8 +4,7 @@ import { ChatContent } from "@/components/chat/ChatContent";
 import { Suspense, useState, useEffect } from "react";
 import { AlertCircle, Database, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DatabaseSettings } from "@/components/DatabaseSettings";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { SettingsDialog } from "@/components/SettingsDialog";
 import { useSearchParams } from "next/navigation";
 
 const SERVER_CHECK_RETRIES = 3;
@@ -109,16 +108,13 @@ function ChatPage() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsSettingsOpen(true)}
-              >
-                <Settings className="w-4 h-4" />
-              </Button>
-              <ThemeToggle />
-            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsSettingsOpen(true)}
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
         </div>
       </header>
 
@@ -127,10 +123,10 @@ function ChatPage() {
         <ChatContent connectionString={connectionString} />
       </div>
 
-      <DatabaseSettings
-        open={isSettingsOpen}
-        onOpenChange={setIsSettingsOpen}
-      />
+        <SettingsDialog
+          open={isSettingsOpen}
+          onOpenChange={setIsSettingsOpen}
+        />
     </div>
   );
 }
