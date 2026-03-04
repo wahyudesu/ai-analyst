@@ -160,7 +160,7 @@ export default function OverviewPage() {
             x: label,
             y: data.charts.newUsersOverTime.values[i],
           })),
-          color: "hsl(var(--primary))",
+          color: "var(--primary)",
         },
       ],
     },
@@ -180,7 +180,7 @@ export default function OverviewPage() {
       showDataLabels: false,
     },
     colors: {
-      palette: ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))"],
+      palette: ["var(--primary)", "var(--secondary)", "var(--accent)"],
     },
     metadata: {
       dataSourceRowCount: data.charts.newUsersOverTime.labels.length,
@@ -200,7 +200,7 @@ export default function OverviewPage() {
             x: label,
             y: data.charts.conversationsOverTime.values[i],
           })),
-          color: "hsl(var(--chart-2))",
+          color: "var(--secondary)",
         },
       ],
     },
@@ -220,7 +220,7 @@ export default function OverviewPage() {
       showDataLabels: false,
     },
     colors: {
-      palette: ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))"],
+      palette: ["var(--primary)", "var(--secondary)", "var(--accent)"],
     },
     metadata: {
       dataSourceRowCount: data.charts.conversationsOverTime.labels.length,
@@ -240,7 +240,7 @@ export default function OverviewPage() {
             x: label,
             y: data.charts.messagesOverTime.values[i],
           })),
-          color: "hsl(var(--chart-3))",
+          color: "var(--accent)",
         },
       ],
     },
@@ -260,7 +260,7 @@ export default function OverviewPage() {
       showDataLabels: false,
     },
     colors: {
-      palette: ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))"],
+      palette: ["var(--primary)", "var(--secondary)", "var(--accent)"],
     },
     metadata: {
       dataSourceRowCount: data.charts.messagesOverTime.labels.length,
@@ -280,7 +280,7 @@ export default function OverviewPage() {
             x: item.model,
             y: item.count,
           })),
-          color: "hsl(var(--primary))",
+          color: "var(--primary)",
         },
       ],
     },
@@ -300,7 +300,7 @@ export default function OverviewPage() {
       showDataLabels: false,
     },
     colors: {
-      palette: ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))"],
+      palette: ["var(--primary)", "var(--secondary)", "var(--accent)"],
     },
     metadata: {
       dataSourceRowCount: data.charts.agentsByModel.length,
@@ -320,7 +320,7 @@ export default function OverviewPage() {
             x: item.plan,
             y: item.count,
           })),
-          color: "hsl(var(--chart-4))",
+          color: "var(--chart-4)",
         },
       ],
     },
@@ -340,7 +340,7 @@ export default function OverviewPage() {
       showDataLabels: false,
     },
     colors: {
-      palette: ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))"],
+      palette: ["var(--primary)", "var(--secondary)", "var(--accent)", "var(--chart-4)"],
     },
     metadata: {
       dataSourceRowCount: data.charts.subscriptionsByPlan.length,

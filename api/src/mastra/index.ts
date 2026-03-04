@@ -16,6 +16,8 @@ import { chatMemory, dataAnalystMemory, casualChatMemory } from "./memory"
 import * as threads from "./routes/threads"
 import { customChatRoute } from "./routes/chat"
 import { sqlRoute } from "./routes/sql"
+import { loginRoute, checkAuthRoute } from "./routes/auth"
+import { modelsRoute, modelCheckRoute } from "./routes/models"
 import { CloudflareDeployer } from "@mastra/deployer-cloudflare"
 
 /**
@@ -64,6 +66,12 @@ export const mastra = new Mastra({
   }),
   server: {
     apiRoutes: [
+      // Authentication routes (no auth required for login itself)
+      loginRoute,
+      checkAuthRoute,
+      // Model configuration routes
+      modelsRoute,
+      modelCheckRoute,
       // Direct SQL execution route for dashboard (bypasses agent reasoning)
       sqlRoute,
       // Custom chat route with dynamic model selection

@@ -1,11 +1,17 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import { validateSQLQuery, sanitizeSQLQuery } from './sql-validator';
+import { validateSQLQueryV2, sanitizeSQLQueryV2, type ValidationResult } from './sql-validator-v2.js';
 import { connectionManager } from '../../../db/connection-manager.ts';
+import { getDatabaseUrl } from '../../lib/request-context.js';
+import {
+  createDatabaseError,
+  createSQLError,
+  formatErrorForAgent,
+} from '../../lib/errors.js';
 
 export const executeSQLTool = createTool({
   id: 'execute-sql',
-  description: `Execute a SQL query on PostgreSQL database. Use for SELECT queries only.
+  description: `Execute a SQL query on PostgreSQL database. Use for SELECT queries only. The database connection is automatically provided - do not ask the user for it.
 
 IMPORTANT SECURITY RULES:
 - Only SELECT queries are allowed (INSERT, UPDATE, DELETE, DROP, etc. are blocked)
@@ -19,23 +25,31 @@ CONNECTION MANAGEMENT:
 
 Returns columns, rows, execution time, and any validation warnings.`,
   inputSchema: z.object({
-    connectionString: z.string().default(process.env.DATABASE_URL || '').describe('PostgreSQL connection string (optional - uses DATABASE_URL from env if not provided)'),
     query: z.string().describe('SQL query to execute (SELECT only)'),
   }),
-  execute: async ({ connectionString = process.env.DATABASE_URL || '', query }) => {
+  execute: async ({ query }) => {
+    // Get connection string from secure request context (not from LLM)
+    const connectionString = getDatabaseUrl() || process.env.DATABASE_URL || '';
+
     // Check if DATABASE_URL is set
     if (!connectionString) {
       throw new Error('DATABASE_URL environment variable is not set. Please configure your PostgreSQL connection string.');
     }
 
-    // Validate and sanitize query
-    const validation = validateSQLQuery(query);
+    // Validate and sanitize query with enhanced security
+    const validation: ValidationResult = validateSQLQueryV2(query);
 
     if (!validation.isValid) {
-      throw new Error(`SQL Query Validation Failed: ${validation.error}`);
+      // Structured error response
+      const errorDetail = {
+        code: validation.code || 'SQL_VALIDATION_ERROR',
+        message: validation.error || 'Query validation failed',
+        suggestions: validation.suggestions || [],
+      };
+      throw new Error(`SQL Query Validation Failed [${errorDetail.code}]: ${errorDetail.message}${errorDetail.suggestions.length > 0 ? '\nSuggestions: ' + errorDetail.suggestions.join(', ') : ''}`);
     }
 
-    const sanitizedQuery = sanitizeSQLQuery(query);
+    const sanitizedQuery = sanitizeSQLQueryV2(query);
     const startTime = Date.now();
 
     // Get pool from connection manager (reuses existing connections)
@@ -56,44 +70,20 @@ Returns columns, rows, execution time, and any validation warnings.`,
         rowCount: result.rowCount || 0,
         executionTime: Date.now() - startTime,
         warnings: validation.warnings,
+        complexityScore: validation.complexityScore,
+        suggestions: validation.suggestions,
       };
     } catch (error) {
-      // Enhanced error handling with more details
-      let message = 'Unknown error'
-      let code = ''
+      // Use structured error responses
+      const errorResponse = createDatabaseError(error);
 
-      if (error instanceof Error) {
-        message = error.message || 'No error message'
-        code = (error as any).code || ''
-      } else if (typeof error === 'string') {
-        message = error
-      } else if (error && typeof error === 'object') {
-        message = (error as any).message || (error as any).toString?.() || JSON.stringify(error)
-        code = (error as any).code || ''
+      // Check if it's a SQL query error (not connection)
+      if (error instanceof Error && error.message.includes('query')) {
+        const sqlError = createSQLError(error, sanitizedQuery);
+        throw new Error(formatErrorForAgent(sqlError));
       }
 
-      // Provide helpful error messages for common issues
-      if (code === 'ETIMEDOUT' || message.includes('ETIMEDOUT') || message.includes('timeout') || message.includes('TIMEOUT')) {
-        throw new Error(`Database connection timeout. This usually means:\n` +
-          `1. The database server is not reachable (check network/firewall)\n` +
-          `2. The database is in sleep mode (try accessing it directly to wake it up)\n` +
-          `3. IPv6 connectivity issues (trying to force IPv4)\n` +
-          `Original error: ${message}`);
-      }
-
-      if (code === 'ENOTFOUND' || message.includes('ENOTFOUND') || message.includes('getaddrinfo')) {
-        throw new Error(`Database host not found. Check the hostname in your DATABASE_URL.\nOriginal error: ${message}`);
-      }
-
-      if (code === 'ECONNREFUSED' || message.includes('ECONNREFUSED')) {
-        throw new Error(`Connection refused. Check if the database is running and accessible.\nOriginal error: ${message}`);
-      }
-
-      if (code === '3D000' || message.includes('database') && message.includes('does not exist')) {
-        throw new Error(`Database does not exist. Check the database name in your DATABASE_URL.\nOriginal error: ${message}`);
-      }
-
-      throw new Error(`Query execution failed: ${message}${code ? ` (code: ${code})` : ''}`);
+      throw new Error(formatErrorForAgent(errorResponse));
     }
     // Note: pool is NOT closed here - connection manager handles pooling
     // finally { await pool.end(); }  // REMOVED - let manager handle it

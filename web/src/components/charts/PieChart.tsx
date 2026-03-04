@@ -8,6 +8,7 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
+import { getChartColor } from './colors';
 import type { ChartConfig } from './types';
 
 interface PieChartProps {
@@ -70,7 +71,7 @@ export function PieChart({ config, className }: PieChartProps) {
             {slices.map((slice, index) => (
               <Cell
                 key={`cell-${index}`}
-                fill={slice.color || colors.palette[index % colors.palette.length]}
+                fill={getChartColor(index)}
               />
             ))}
           </Pie>

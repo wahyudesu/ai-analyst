@@ -1,5 +1,6 @@
 'use client';
 
+import { getChartColor } from './colors';
 import type { ChartConfig } from './types';
 
 interface FunnelChartProps {
@@ -34,7 +35,7 @@ export function FunnelChart({ config, className }: FunnelChartProps) {
       name: point.label || String(point.x),
       value: point.y,
       percentage: firstValue > 0 ? (point.y / firstValue * 100) : 0,
-      color: colors.palette[index % colors.palette.length],
+      color: getChartColor(index),
     }));
 
     const maxValue = Math.max(...funnelData.map((d) => d.value), 1);
@@ -64,7 +65,7 @@ export function FunnelChart({ config, className }: FunnelChartProps) {
                 className="absolute inset-y-0 left-0 rounded flex items-center justify-end pr-3"
                 style={{
                   width: `${(step.value / maxValue) * 100}%`,
-                  backgroundColor: step.color || colors.palette[index % colors.palette.length],
+                  backgroundColor: getChartColor(index),
                 }}
               >
                 <span className="text-xs font-semibold text-white drop-shadow">

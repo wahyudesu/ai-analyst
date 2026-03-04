@@ -38,7 +38,6 @@ export function DatabaseSettings({
 }: DatabaseSettingsProps) {
   const { databaseUrl, setDatabaseUrl, clearDatabaseUrl } = useDatabaseConfig();
   const [inputUrl, setInputUrl] = useState("");
-  const [hasChanges, setHasChanges] = useState(false);
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("disconnected");
   const [testStatus, setTestStatus] = useState<TestStatus>("idle");
@@ -49,7 +48,6 @@ export function DatabaseSettings({
   useEffect(() => {
     if (open) {
       setInputUrl(databaseUrl);
-      setHasChanges(false);
       setConnectionStatus(databaseUrl ? "connected" : "disconnected");
       setTestStatus("idle");
       setTestError(null);
@@ -57,10 +55,8 @@ export function DatabaseSettings({
     }
   }, [open, databaseUrl]);
 
-  // Track changes to enable/disable buttons
-  useEffect(() => {
-    setHasChanges(inputUrl !== databaseUrl);
-  }, [inputUrl, databaseUrl]);
+  // Derive hasChanges during render instead of using state
+  const hasChanges = inputUrl !== databaseUrl;
 
   const handleTestConnection = useCallback(async () => {
     if (!inputUrl.trim()) {
@@ -102,7 +98,6 @@ export function DatabaseSettings({
   const handleSave = () => {
     setDatabaseUrl(inputUrl);
     setConnectionStatus(inputUrl ? "connected" : "disconnected");
-    setHasChanges(false);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2000);
   };
@@ -110,14 +105,12 @@ export function DatabaseSettings({
   const handleCancel = () => {
     // Revert to original value
     setInputUrl(databaseUrl);
-    setHasChanges(false);
     setTestStatus("idle");
     setTestError(null);
   };
 
   const handleClear = () => {
     setInputUrl("");
-    setHasChanges(true);
     setTestStatus("idle");
     setTestError(null);
   };

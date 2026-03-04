@@ -10,6 +10,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { getChartColor } from './colors';
 import type { ChartConfig } from './types';
 
 interface AreaChartProps {
@@ -101,8 +102,8 @@ export function AreaChart({ config, className }: AreaChartProps) {
               type="monotone"
               dataKey={s.name}
               name={s.name}
-              stroke={s.color || colors.palette[seriesIndex % colors.palette.length]}
-              fill={s.color || colors.palette[seriesIndex % colors.palette.length]}
+              stroke={getChartColor(seriesIndex)}
+              fill={getChartColor(seriesIndex)}
               fillOpacity={0.6}
               strokeWidth={2}
               stackId={options.stacked ? 'stack' : undefined}

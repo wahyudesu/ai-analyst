@@ -11,6 +11,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { getChartColor } from './colors';
 import type { ChartConfig } from './types';
 
 interface DualAxisChartProps {
@@ -108,7 +109,7 @@ export function DualAxisChart({
               yAxisId="left"
               dataKey={barSeries.name}
               name={barSeries.name}
-              fill={barSeries.color || colors.palette[0]}
+              fill={getChartColor(0)}
             />
           )}
           {lineSeries && (
@@ -117,9 +118,9 @@ export function DualAxisChart({
               type="monotone"
               dataKey={lineSeries.name}
               name={lineSeries.name}
-              stroke={lineSeries.color || colors.palette[1]}
+              stroke={getChartColor(1)}
               strokeWidth={2}
-              dot={{ fill: lineSeries.color || colors.palette[1] }}
+              dot={{ fill: getChartColor(1) }}
             />
           )}
         </ComposedChart>

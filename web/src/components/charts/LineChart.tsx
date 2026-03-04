@@ -10,6 +10,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { getChartColor } from './colors';
 import type { ChartConfig } from './types';
 
 interface LineChartProps {
@@ -101,7 +102,7 @@ export function LineChart({ config, className }: LineChartProps) {
               type="monotone"
               dataKey={s.name}
               name={s.name}
-              stroke={s.color || colors.palette[seriesIndex % colors.palette.length]}
+              stroke={getChartColor(seriesIndex)}
               strokeWidth={2}
               dot={{ r: 4 }}
               activeDot={{ r: 6 }}

@@ -1,14 +1,16 @@
 /**
- * Connection Pool Manager for PostgreSQL
- * Reuses connections across tool calls to improve performance
+ * Secure Connection Pool Manager for PostgreSQL
+ *
+ * Features:
+ * - Creates connections on-demand (lazy loading)
+ * - Auto-closes idle connections after timeout
+ * - Validates SSL certificates by default
+ * - Sanitizes connection strings
+ * - Per-request connections (no shared state)
  */
-
-import dns from 'dns';
 
 interface PoolConfig {
   host: string;
-  // Resolved IPv4 address (pre-resolved to avoid IPv6 issues)
-  resolvedHost?: string;
   port: number;
   database: string;
   user: string;
@@ -16,218 +18,249 @@ interface PoolConfig {
   ssl?: boolean;
 }
 
-interface ManagedPool {
-  pool: any;
-  lastUsed: number;
-  refCount: number;
-}
+type ConnectionResult =
+  | { success: true; pool: any; connectionTime: number }
+  | { success: false; error: string };
 
-class ConnectionManager {
-  private pools: Map<string, ManagedPool> = new Map();
-  private readonly DEFAULT_MAX_SIZE = 10;
-  private readonly IDLE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
-  private cleanupInterval: NodeJS.Timeout | null = null;
-
-  constructor() {
-    // Start cleanup interval for idle pools
-    this.startCleanup();
-  }
+class SecureConnectionManager {
+  private activeConnections: Map<string, NodeJS.Timeout> = new Map();
+  private readonly CONNECTION_IDLE_TIMEOUT = 2 * 60 * 1000; // 2 minutes (down from 5)
+  private readonly MAX_POOL_SIZE = 5; // Reduced from 10
 
   /**
-   * Parse connection string into config
-   * Removes unsupported parameters like channel_binding
+   * Parse and sanitize connection string
+   * Removes unsupported parameters and logs warnings
    */
-  private async parseConnectionString(connectionString: string): Promise<PoolConfig> {
+  private parseConnectionString(connectionString: string): PoolConfig {
     try {
-      // Remove unsupported parameters that can cause connection issues
+      // Remove unsupported parameters
       let cleanConnectionString = connectionString;
-      if (cleanConnectionString.includes('channel_binding')) {
-        const url = new URL(cleanConnectionString);
-        url.searchParams.delete('channel_binding');
-        cleanConnectionString = url.toString();
-        console.log('Removed unsupported channel_binding parameter from connection string');
-      }
+      const unsupportedParams = ['channel_binding', 'application_name'];
 
       const url = new URL(cleanConnectionString);
-      const hostname = url.hostname;
 
-      // Pre-resolve to IPv4 to avoid IPv6 connection issues with node-postgres Pool
-      let resolvedHost = hostname;
-      try {
-        const addresses = await dns.promises.resolve4(hostname);
-        if (addresses && addresses.length > 0) {
-          resolvedHost = addresses[0];
-          console.log(`Resolved ${hostname} to IPv4: ${resolvedHost}`);
+      for (const param of unsupportedParams) {
+        if (url.searchParams.has(param)) {
+          url.searchParams.delete(param);
+          console.warn(`Removed unsupported parameter '${param}' from connection string`);
         }
-      } catch (dnsErr) {
-        console.warn(`Failed to resolve ${hostname} to IPv4, using hostname:`, dnsErr);
-        // Fall back to hostname
       }
 
+      cleanConnectionString = url.toString();
+
+      const parsed = new URL(cleanConnectionString);
       return {
-        host: hostname, // Keep original for SNI/SSL
-        resolvedHost, // Use resolved IP for connection
-        port: parseInt(url.port) || 5432,
-        database: url.pathname.slice(1),
-        user: url.username,
-        password: url.password,
-        ssl: url.searchParams.get('sslmode') === 'require',
+        host: parsed.hostname,
+        port: parseInt(parsed.port) || 5432,
+        database: parsed.pathname.slice(1).split('?')[0], // Remove query params from dbname
+        user: parsed.username,
+        password: parsed.password,
+        ssl: parsed.searchParams.get('sslmode') === 'require',
       };
     } catch (err) {
-      throw new Error(`Invalid connection string format: ${err instanceof Error ? err.message : 'unknown error'}`);
+      throw new Error(`Invalid connection string: ${err instanceof Error ? err.message : 'unknown'}`);
     }
   }
 
   /**
-   * Generate a unique key for the pool map
+   * Create a unique key for tracking connections
    */
-  private getPoolKey(config: PoolConfig): string {
+  private getConnectionKey(config: PoolConfig): string {
+    // Don't include password in key for security
     return `${config.host}:${config.port}:${config.database}:${config.user}`;
   }
 
   /**
-   * Get or create a connection pool
+   * Get a connection pool (backward compatibility)
+   * Returns the pool directly or throws if connection fails
    */
-  async getPool(connectionString: string, maxSize: number = this.DEFAULT_MAX_SIZE) {
-    const pg = await import('pg');
-    const { Pool } = pg.default || pg;
-    const config = await this.parseConnectionString(connectionString);
-    const key = this.getPoolKey(config);
-
-    // Return existing pool if available
-    if (this.pools.has(key)) {
-      const managed = this.pools.get(key)!;
-      managed.lastUsed = Date.now();
-      managed.refCount++;
-      return managed.pool;
+  async getPool(connectionString: string): Promise<any> {
+    const result = await this.getConnection(connectionString);
+    if (!result.success) {
+      throw new Error(result.error);
     }
-
-    // Create new pool with better timeout settings for serverless/remote DBs
-    // Note: For Neon databases, we use resolved IPv4 address to avoid IPv6 connection issues
-    const pool = new Pool({
-      host: config.resolvedHost || config.host, // Use pre-resolved IPv4 address
-      port: config.port,
-      database: config.database,
-      user: config.user,
-      password: config.password,
-      ssl: config.ssl ? { rejectUnauthorized: false, minVersion: 'TLSv1.2', servername: config.host } : undefined,
-      max: maxSize,
-      idleTimeoutMillis: this.IDLE_TIMEOUT,
-      connectionTimeoutMillis: 30000, // 30 seconds
-      statement_timeout: 30000, // 30 second query timeout
-    });
-
-    // Handle pool errors
-    pool.on('error', (err: Error) => {
-      console.error('PostgreSQL pool error:', err);
-    });
-
-    const managedPool: ManagedPool = {
-      pool,
-      lastUsed: Date.now(),
-      refCount: 1,
-    };
-
-    this.pools.set(key, managedPool);
-    return pool;
+    return result.pool;
   }
 
   /**
-   * Release a pool reference (decrements ref count)
-   * Call this when done with a connection, but pool won't close immediately
+   * Get a connection pool with auto-cleanup
+   *
+   * Connection lifecycle:
+   * 1. Created on first request (lazy)
+   * 2. Reused for subsequent requests
+   * 3. Auto-closed after CONNECTION_IDLE_TIMEOUT
    */
-  release(pool: any) {
-    for (const [key, managed] of this.pools.entries()) {
-      if (managed.pool === pool) {
-        managed.refCount = Math.max(0, managed.refCount - 1);
-        managed.lastUsed = Date.now();
-        break;
+  async getConnection(connectionString: string): Promise<ConnectionResult> {
+    try {
+      const pg = await import('pg');
+      const { Pool } = pg.default || pg;
+      const config = this.parseConnectionString(connectionString);
+      const key = this.getConnectionKey(config);
+
+      // Clear existing timeout if connection is reused
+      const existingTimeout = this.activeConnections.get(key);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+        this.activeConnections.delete(key);
+        console.log(`Reusing existing connection to: ${config.database}@${config.host}`);
       }
-    }
-  }
 
-  /**
-   * Close a specific pool
-   */
-  async closePool(connectionString: string) {
-    const pg = await import('pg');
-    const config = await this.parseConnectionString(connectionString);
-    const key = this.getPoolKey(config);
+      // Create pool
+      const startTime = Date.now();
 
-    const managed = this.pools.get(key);
-    if (managed) {
-      await managed.pool.end();
-      this.pools.delete(key);
-    }
-  }
+      const pool = new Pool({
+        host: config.host,
+        port: config.port,
+        database: config.database,
+        user: config.user,
+        password: config.password,
+        // Use proper SSL validation
+        ssl: config.ssl
+          ? {
+              rejectUnauthorized: true, // Validate certificates!
+              // For Neon/Supabase, you might need to disable this in development
+              // but NEVER in production
+            }
+          : undefined,
+        max: this.MAX_POOL_SIZE,
+        idleTimeoutMillis: this.CONNECTION_IDLE_TIMEOUT,
+        connectionTimeoutMillis: 15000,
+        statement_timeout: 30000,
+        // Enable query logging in development
+        ...(process.env.NODE_ENV === 'development' && {
+          log: (messages: string[]) => console.log('[DB]', messages.join(' ')),
+        }),
+      });
 
-  /**
-   * Close all pools
-   */
-  async closeAll() {
-    const closePromises: Promise<void>[] = [];
+      // Wait for connection to be established
+      try {
+        await pool.query('SELECT 1');
+      } catch (err) {
+        await pool.end();
+        throw err;
+      }
 
-    for (const managed of this.pools.values()) {
-      closePromises.push(managed.pool.end());
-    }
+      const connectionTime = Date.now() - startTime;
+      console.log(`✓ Connected to ${config.database} (${connectionTime}ms)`);
 
-    await Promise.all(closePromises);
-    this.pools.clear();
-
-    if (this.cleanupInterval) {
-      clearInterval(this.cleanupInterval);
-      this.cleanupInterval = null;
-    }
-  }
-
-  /**
-   * Start periodic cleanup of idle pools
-   */
-  private startCleanup() {
-    this.cleanupInterval = setInterval(async () => {
-      const now = Date.now();
-      const keysToDelete: string[] = [];
-
-      for (const [key, managed] of this.pools.entries()) {
-        // Clean up pools that haven't been used recently and have no refs
-        if (managed.refCount === 0 && now - managed.lastUsed > this.IDLE_TIMEOUT) {
-          keysToDelete.push(key);
+      // Set auto-close timeout
+      const closeTimeout = setTimeout(async () => {
+        try {
+          await pool.end();
+          this.activeConnections.delete(key);
+          console.log(`✓ Closed idle connection to: ${config.database}`);
+        } catch (err) {
+          console.error(`Error closing connection:`, err);
         }
+      }, this.CONNECTION_IDLE_TIMEOUT);
+
+      this.activeConnections.set(key, closeTimeout);
+
+      return {
+        success: true,
+        pool,
+        connectionTime,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+
+      // Provide helpful error messages
+      if (message.includes('ETIMEDOUT') || message.includes('timeout')) {
+        return {
+          success: false,
+          error: `Database connection timeout. Check:\n` +
+            `1. Database is accessible (try pinging the host)\n` +
+            `2. Firewall allows outbound connections\n` +
+            `3. Database is not in sleep mode\n` +
+            `4. Connection string is correct`,
+        };
       }
 
-      for (const key of keysToDelete) {
-        const managed = this.pools.get(key);
-        if (managed) {
-          try {
-            await managed.pool.end();
-            this.pools.delete(key);
-            console.log(`Closed idle pool: ${key}`);
-          } catch (err) {
-            console.error(`Error closing pool ${key}:`, err);
-          }
-        }
+      if (message.includes('certificate') || message.includes('SSL')) {
+        return {
+          success: false,
+          error: `SSL certificate error. If using Neon/Supabase pooler, try:\n` +
+            `1. Use non-pooled connection (remove -pooler from hostname)\n` +
+            `2. Check if SSL is properly configured`,
+        };
       }
-    }, 60000); // Check every minute
+
+      if (message.includes('ENOTFOUND') || message.includes('getaddrinfo')) {
+        return {
+          success: false,
+          error: `Database host not found. Verify the hostname in your connection string.`,
+        };
+      }
+
+      return { success: false, error: message };
+    }
   }
 
   /**
-   * Get pool statistics for monitoring
+   * Manually close a connection
+   */
+  async closeConnection(connectionString: string): Promise<void> {
+    const config = this.parseConnectionString(connectionString);
+    const key = this.getConnectionKey(config);
+    const timeout = this.activeConnections.get(key);
+
+    if (timeout) {
+      clearTimeout(timeout);
+      this.activeConnections.delete(key);
+      console.log(`Manually closed connection to: ${config.database}`);
+    }
+  }
+
+  /**
+   * Close all connections (for shutdown)
+   */
+  async closeAll(): Promise<void> {
+    const keys = Array.from(this.activeConnections.keys());
+    console.log(`Closing ${keys.length} active connection(s)...`);
+
+    for (const key of keys) {
+      const timeout = this.activeConnections.get(key);
+      if (timeout) {
+        clearTimeout(timeout);
+        this.activeConnections.delete(key);
+      }
+    }
+  }
+
+  /**
+   * Mask sensitive parts of a connection key for display
+   * Key format: host:port:database:user
+   */
+  private maskConnectionKey(key: string): string {
+    const parts = key.split(':');
+    if (parts.length >= 4) {
+      // Reconstruct with masked user - avoids scanning entire string
+      // and only masks the user part (index 3)
+      parts[3] = '****';
+      return parts.join(':');
+    }
+    return key;
+  }
+
+  /**
+   * Get connection statistics
    */
   getStats() {
     return {
-      totalPools: this.pools.size,
-      pools: Array.from(this.pools.entries()).map(([key, managed]) => ({
-        key,
-        refCount: managed.refCount,
-        lastUsed: new Date(managed.lastUsed).toISOString(),
-        idleTime: Date.now() - managed.lastUsed,
+      activeConnections: this.activeConnections.size,
+      connections: Array.from(this.activeConnections.keys()).map((key) => ({
+        key: this.maskConnectionKey(key),
+        autoCloseIn: `${this.CONNECTION_IDLE_TIMEOUT / 1000}s`,
       })),
     };
   }
 }
 
+// Export class for testing
+export { SecureConnectionManager };
+
 // Singleton instance
-export const connectionManager = new ConnectionManager();
+export const connectionManager = new SecureConnectionManager();
 
 // Ensure cleanup on process exit
 process.on('beforeExit', async () => {

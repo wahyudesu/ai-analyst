@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
     "dev": "mastra dev",
     "build": "mastra build",
     "start": "mastra start",
@@ -21,6 +24,8 @@
   },
   "dependencies": {
     "@composio/core": "^0.6.3",
+    "@hono/node-server": "^1.14.1",
+    "hono": "^4.6.16",
     "@composio/mastra": "^0.6.3",
     "@mastra/ai-sdk": "^1.0.3",
     "@mastra/core": "^1.2.0",
@@ -39,8 +44,11 @@
   "devDependencies": {
     "@types/node": "^25.2.0",
     "@types/pg": "^8.12.0",
+    "@vitest/coverage-v8": "^4.0.18",
+    "@vitest/ui": "^4.0.18",
     "mastra": "^1.1.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   }
 }

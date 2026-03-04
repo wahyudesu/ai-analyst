@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTheme } from "next-themes";
+import { useMutation } from "@tanstack/react-query";
 import {
   Database as DatabaseIcon,
   Check,
@@ -27,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { useDatabaseConfig } from "@/lib/use-database-config";
 import { cn } from "@/lib/utils";
 import { maskDatabaseUrl } from "@/lib/utils/database";
+import { API_ENDPOINTS, ERROR_MESSAGES } from "@/lib/api/constants";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -41,7 +43,6 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [mounted, setMounted] = useState(false);
   const { databaseUrl, setDatabaseUrl, clearDatabaseUrl } = useDatabaseConfig();
   const [inputUrl, setInputUrl] = useState("");
-  const [hasChanges, setHasChanges] = useState(false);
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("disconnected");
   const [testStatus, setTestStatus] = useState<TestStatus>("idle");
@@ -57,7 +58,6 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   useEffect(() => {
     if (open) {
       setInputUrl(databaseUrl);
-      setHasChanges(false);
       setConnectionStatus(databaseUrl ? "connected" : "disconnected");
       setTestStatus("idle");
       setTestError(null);
@@ -65,66 +65,63 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     }
   }, [open, databaseUrl]);
 
-  // Track changes to enable/disable buttons
-  useEffect(() => {
-    setHasChanges(inputUrl !== databaseUrl);
-  }, [inputUrl, databaseUrl]);
+  // Derive hasChanges during render instead of using state
+  const hasChanges = inputUrl !== databaseUrl;
 
-  const handleTestConnection = useCallback(async () => {
+  // Test connection mutation
+  const testConnectionMutation = useMutation({
+    mutationFn: async (connectionString: string) => {
+      const response = await fetch(API_ENDPOINTS.DATABASE_TEST_CONNECTION, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connectionString }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || ERROR_MESSAGES.DATABASE_CONNECTION_FAILED);
+      }
+      return data;
+    },
+    onMutate: () => {
+      setTestStatus("loading");
+      setTestError(null);
+    },
+    onSuccess: () => {
+      setTestStatus("success");
+      setTestError(null);
+      setConnectionStatus("connected");
+    },
+    onError: (error) => {
+      setTestStatus("error");
+      setTestError(error instanceof Error ? error.message : ERROR_MESSAGES.DATABASE_TEST_FAILED);
+      setConnectionStatus("error");
+    },
+  });
+
+  const handleTestConnection = useCallback(() => {
     if (!inputUrl.trim()) {
-      setTestError("Please enter a connection URL first");
+      setTestError(ERROR_MESSAGES.DATABASE_URL_REQUIRED);
       setTestStatus("error");
       return;
     }
-
-    setTestStatus("loading");
-    setTestError(null);
-
-    try {
-      const response = await fetch("/api/database/test-connection", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ connectionString: inputUrl }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setTestStatus("success");
-        setTestError(null);
-        setConnectionStatus("connected");
-      } else {
-        setTestStatus("error");
-        setTestError(data.error || "Connection failed");
-        setConnectionStatus("error");
-      }
-    } catch (error) {
-      setTestStatus("error");
-      setTestError(
-        error instanceof Error ? error.message : "Failed to test connection"
-      );
-      setConnectionStatus("error");
-    }
-  }, [inputUrl]);
+    testConnectionMutation.mutate(inputUrl);
+  }, [inputUrl, testConnectionMutation]);
 
   const handleSave = () => {
     setDatabaseUrl(inputUrl);
     setConnectionStatus(inputUrl ? "connected" : "disconnected");
-    setHasChanges(false);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2000);
   };
 
   const handleCancel = () => {
     setInputUrl(databaseUrl);
-    setHasChanges(false);
     setTestStatus("idle");
     setTestError(null);
   };
 
   const handleClear = () => {
     setInputUrl("");
-    setHasChanges(true);
     setTestStatus("idle");
     setTestError(null);
   };
@@ -166,7 +163,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   };
 
   const getTestButtonState = () => {
-    if (testStatus === "loading") {
+    const isLoading = testConnectionMutation.isPending;
+    if (isLoading) {
       return {
         disabled: true,
         icon: <Loader2 className="w-4 h-4 animate-spin" />,

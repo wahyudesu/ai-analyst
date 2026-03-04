@@ -1,13 +1,13 @@
 import { createTool } from "@mastra/core/tools"
 import { z } from "zod"
 import { connectionManager } from "../../../db/connection-manager.ts"
+import { getDatabaseUrl } from "../../lib/request-context.js"
 
 export const getTableTool = createTool({
   id: "get-table",
   description:
-    "Get detailed schema information for one or several specific tables including columns, data types, and constraints. Use this after get-schema to understand the structure of specific tables you want to query. Connections are pooled and reused for better performance.",
+    "Get detailed schema information for one or several specific tables including columns, data types, and constraints. Use this after get-schema to understand the structure of specific tables you want to query. The database connection is automatically provided - do not ask the user for it.",
   inputSchema: z.object({
-    connectionString: z.string().default(process.env.DATABASE_URL || '').describe("PostgreSQL connection string (optional - uses DATABASE_URL from env if not provided)"),
     tableNames: z
       .array(z.string())
       .min(1)
@@ -17,7 +17,10 @@ export const getTableTool = createTool({
       .default("public")
       .describe("Schema name (default: public)"),
   }),
-  execute: async ({ connectionString = process.env.DATABASE_URL || '', tableNames, schema = "public" }) => {
+  execute: async ({ tableNames, schema = "public" }) => {
+    // Get connection string from secure request context (not from LLM)
+    const connectionString = getDatabaseUrl() || process.env.DATABASE_URL || '';
+
     if (!connectionString) {
       throw new Error('DATABASE_URL environment variable is not set. Please configure your PostgreSQL connection string.');
     }

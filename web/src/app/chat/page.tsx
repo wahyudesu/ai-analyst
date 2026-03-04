@@ -1,57 +1,35 @@
 "use client";
 
 import { ChatContent } from "@/components/chat/ChatContent";
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useMemo } from "react";
 import { AlertCircle, Database, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { useSearchParams } from "next/navigation";
-
-const SERVER_CHECK_RETRIES = 3;
-const SERVER_RETRY_DELAY = 1500;
+import { useServerHealth } from "@/lib/api/queries";
 
 type ServerStatus = "loading" | "ready" | "error";
 
 function ChatPage() {
   const searchParams = useSearchParams();
   const connectionString = searchParams.get("connection") ?? undefined;
-  const [status, setStatus] = useState<ServerStatus>("loading");
-  const [error, setError] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  useEffect(() => {
-    async function checkServer() {
-      for (let i = 0; i < SERVER_CHECK_RETRIES; i++) {
-        try {
-          const response = await fetch("/api/agents");
+  // Server health check using shared query hook with built-in retry
+  const { isLoading, isError, error: queryError } = useServerHealth();
 
-          if (response.status === 503 && i < SERVER_CHECK_RETRIES - 1) {
-            await new Promise((resolve) =>
-              setTimeout(resolve, SERVER_RETRY_DELAY),
-            );
-            continue;
-          }
+  // Derive status and error from query state
+  const status = useMemo(() => {
+    if (isLoading) return "loading";
+    if (isError) return "error";
+    return "ready";
+  }, [isLoading, isError]);
 
-          if (response.ok) {
-            setStatus("ready");
-            setError(null);
-            return;
-          }
-        } catch (err) {
-          if (i === SERVER_CHECK_RETRIES - 1) {
-            setError(
-              err instanceof Error
-                ? err.message
-                : "Failed to connect to Mastra server",
-            );
-          }
-        }
-      }
-      setStatus("error");
-    }
-
-    checkServer();
-  }, []);
+  const error = useMemo(() => {
+    if (queryError instanceof Error) return queryError.message;
+    if (queryError) return "Failed to connect to Mastra server";
+    return null;
+  }, [queryError]);
 
   if (status === "loading") {
     return (

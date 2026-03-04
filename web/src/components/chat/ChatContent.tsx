@@ -17,17 +17,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAgents, useMessages, type Agent } from "@/lib/api/queries";
 
 interface ChatContentProps {
   agentId?: string;
   connectionString?: string;
   className?: string;
-}
-
-interface Agent {
-  id: string;
-  name: string;
-  description?: string;
 }
 
 interface ModelOption {
@@ -67,7 +62,6 @@ export function ChatContent({
   const [input, setInput] = useState("");
   const [currentAgentId, setCurrentAgentId] = useState<string>(DEFAULT_AGENT_ID);
   const [currentModelId, setCurrentModelId] = useState<string>(DEFAULT_MODEL_ID);
-  const [allAgents, setAllAgents] = useState<Agent[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { databaseUrl } = useDatabaseConfig();
 
@@ -77,21 +71,8 @@ export function ChatContent({
 
   const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
 
-  // Fetch all agents on mount
-  useEffect(() => {
-    const fetchAgents = async () => {
-      try {
-        const response = await fetch("/api/agents");
-        if (response.ok) {
-          const agents: Agent[] = await response.json();
-          setAllAgents(agents);
-        }
-      } catch (error) {
-        console.error("Failed to fetch agents:", error);
-      }
-    };
-    fetchAgents();
-  }, []);
+  // Fetch all agents using shared query hook
+  const { data: allAgents = [] } = useAgents();
 
   const transportParamsRef = useRef({
     agentId: currentAgentId,
@@ -145,33 +126,15 @@ export function ChatContent({
     [allAgents, currentAgentId],
   );
 
-  const lastFetchRef = useRef<string | undefined>(undefined);
+  // Fetch message history using shared query hook
+  const { data: fetchedMessages } = useMessages(threadId, currentAgentId);
 
+  // Update messages when fetched data changes
   useEffect(() => {
-    const fetchKey = `${threadId}-${currentAgentId}`;
-
-    if (lastFetchRef.current === fetchKey) return;
-    if (!threadId || !currentAgentId) return;
-
-    const fetchMessageHistory = async () => {
-      try {
-        const response = await fetch(
-          `/api/chat/messages?threadId=${threadId}&agentId=${currentAgentId}`,
-        );
-        if (response.ok) {
-          const data = await response.json();
-          if (data.messages && data.messages.length > 0) {
-            setMessages(data.messages);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch message history:", error);
-      }
-    };
-
-    fetchMessageHistory();
-    lastFetchRef.current = fetchKey;
-  }, [currentAgentId, threadId, setMessages]);
+    if (fetchedMessages) {
+      setMessages(fetchedMessages);
+    }
+  }, [fetchedMessages, setMessages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

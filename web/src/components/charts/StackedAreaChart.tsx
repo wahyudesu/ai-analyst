@@ -10,6 +10,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { getChartColor } from './colors';
 import type { ChartConfig } from './types';
 
 interface StackedAreaChartProps {
@@ -86,8 +87,8 @@ export function StackedAreaChart({ config, className }: StackedAreaChartProps) {
               dataKey={s.name}
               name={s.name}
               stackId="stack"
-              stroke={s.color || colors.palette[seriesIndex % colors.palette.length]}
-              fill={s.color || colors.palette[seriesIndex % colors.palette.length]}
+              stroke={getChartColor(seriesIndex)}
+              fill={getChartColor(seriesIndex)}
               fillOpacity={0.6}
             />
           ))}

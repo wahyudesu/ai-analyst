@@ -6,6 +6,7 @@ import { AxisBottom, AxisLeft } from '@visx/axis';
 import { useTooltip, Tooltip, defaultStyles } from '@visx/tooltip';
 import { localPoint } from '@visx/event';
 import { motion } from 'motion/react';
+import { getChartColor } from './colors';
 import type { ChartConfig } from './types';
 
 interface HorizontalBarChartProps {
@@ -71,14 +72,6 @@ export function HorizontalBarChart({ config, className }: HorizontalBarChartProp
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
 
-  // Chart colors from CSS variables
-  const chartColors = [
-    'hsl(var(--chart-1))',
-    'hsl(var(--chart-2))',
-    'hsl(var(--chart-3))',
-    'hsl(var(--chart-4))',
-    'hsl(var(--chart-5))',
-  ];
 
   const yScale = useMemo(
     () =>
@@ -108,7 +101,7 @@ export function HorizontalBarChart({ config, className }: HorizontalBarChartProp
             const barHeight = yScale.bandwidth();
             const y = yScale(d.name) ?? 0;
             const barWidth = xScale(d.value) ?? 0;
-            const color = chartColors[i % chartColors.length];
+            const color = getChartColor(i);
             const isHovered = hoveredBar === i;
 
             return (

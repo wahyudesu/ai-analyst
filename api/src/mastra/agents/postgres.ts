@@ -3,6 +3,7 @@ import { POSTGRES_DATA_ANALYST_INSTRUCTIONS } from "./prompt/prompt-postgres";
 import { postgresTools } from "../tools/postgres";
 import { chartTools } from "../tools/charts";
 import { dataAnalystMemory } from "../memory";
+import { DEFAULT_MODEL_ID } from "../config/models.js";
 
 // Create a data analyst agent for PostgreSQL database with memory
 export const sqlagent = new Agent({
@@ -11,8 +12,7 @@ export const sqlagent = new Agent({
   description:
     "AI Data analyst specialized in querying, analyzing, and visualizing data stored in PostgreSQL databases",
   instructions: POSTGRES_DATA_ANALYST_INSTRUCTIONS,
-  model: "openai/gpt-5-mini",
-  // model: "zai-coding-plan/glm-4.5",
+  model: DEFAULT_MODEL_ID,
   tools: { ...postgresTools, ...chartTools },
   memory: dataAnalystMemory,
 });

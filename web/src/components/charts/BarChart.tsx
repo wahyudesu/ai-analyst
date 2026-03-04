@@ -6,6 +6,7 @@ import { AxisBottom, AxisLeft } from '@visx/axis';
 import { useTooltip, Tooltip, defaultStyles } from '@visx/tooltip';
 import { localPoint } from '@visx/event';
 import { motion } from 'motion/react';
+import { getChartColor } from './colors';
 import type { ChartConfig } from './types';
 
 // Format date strings to readable format
@@ -118,17 +119,9 @@ export function BarChart({ config, className }: BarChartProps) {
       [innerWidth, innerHeight, maxY, isHorizontal]
     );
 
-  // Chart colors from CSS variables
-  const chartColors = [
-    'hsl(var(--chart-1))',
-    'hsl(var(--chart-2))',
-    'hsl(var(--chart-3))',
-    'hsl(var(--chart-4))',
-    'hsl(var(--chart-5))',
-  ];
-
   const getBarColor = (seriesIndex: number) => {
-    return series[seriesIndex]?.color || chartColors[seriesIndex % chartColors.length];
+    // Always use CSS variables for consistent colors
+    return getChartColor(seriesIndex);
   };
 
     if (series.length === 0 || chartData.length === 0 || !series[0]?.data?.length) {

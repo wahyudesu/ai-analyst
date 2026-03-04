@@ -37,17 +37,27 @@ The system uses multiple specialized agents that work together to transform natu
 **Tools**:
 - `get-schema` - Get overview of all tables in database
 - `get-table` - Get detailed schema for specific tables
+- `explain-query` - Explain SQL query in natural language
 - `execute-sql` - Execute SQL queries
+- `analyze-results` - Analyze results and detect patterns
 - `generate-chart` - Generate single chart visualization
 - `suggest-charts` - Get multiple chart suggestions
 
-**Model**: `zai-coding-plan/glm-4.5`
+**Model**: `zai-coding-plan/glm-4.5` (configurable)
 
-**Workflow**:
+**Enhanced Workflow**:
 1. Use `get-schema` to understand available tables
 2. Use `get-table` to understand specific table structures
-3. Use `execute-sql` to run queries
-4. Use chart tools to visualize results
+3. Use `explain-query` (optional) to explain query plan
+4. Use `execute-sql` to run queries
+5. Use `analyze-results` (optional) for automatic insights
+6. Use chart tools to visualize results
+
+**Security Features**:
+- Connection strings stored in AsyncLocalStorage (not exposed to LLM)
+- Enhanced SQL injection protection
+- Query complexity validation
+- Structured error handling
 
 ---
 
@@ -145,12 +155,61 @@ await executeSql({
 })
 ```
 
-**Returns**: 
+**Returns**:
 ```typescript
 {
   columns: string[],
   rows: any[][],
-  rowCount: number
+  rowCount: number,
+  executionTime: number,
+  complexityScore: number,
+  suggestions?: string[]
+}
+```
+
+---
+
+#### `explain-query`
+Explain what a SQL query does in natural language.
+
+**Parameters**:
+- `query` (string) - SQL query to explain
+
+**Usage**:
+```typescript
+await explainQuery({
+  query: "SELECT status, COUNT(*) FROM orders GROUP BY status"
+})
+```
+
+**Returns**: Natural language explanation of the query
+
+---
+
+#### `analyze-results`
+Analyze query results and detect patterns, outliers, and insights.
+
+**Parameters**:
+- `data` - Query result from execute-sql
+
+**Usage**:
+```typescript
+await analyzeResults({
+  data: sqlResult
+})
+```
+
+**Returns**:
+```typescript
+{
+  insights: string[],
+  patterns: string[],
+  outliers: string[],
+  summary: {
+    rowCount: number,
+    columnCount: number,
+    numericColumns: string[]
+  }
 }
 ```
 

@@ -25,17 +25,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useAgents, useMessages, type Agent } from "@/lib/api/queries";
+import { fetchModels, type ModelConfig } from "@/lib/api/models";
 
 interface ChatProps {
   agentId?: string;
   connectionString?: string;
   className?: string;
-}
-
-interface Agent {
-  id: string;
-  name: string;
-  description?: string;
 }
 
 interface ChatSession {
@@ -57,8 +53,8 @@ interface ModelOption {
 // Constants
 const DEFAULT_AGENT_ID = "data-analyst";
 
-// Model options
-const MODEL_OPTIONS: ModelOption[] = [
+// Model options - fetched from API, with fallback defaults
+const FALLBACK_MODEL_OPTIONS: ModelOption[] = [
   { id: "zai-coding-plan/glm-4.5", name: "ZAI GLM 4.5", provider: "zai" },
   { id: "zai-coding-plan/glm-4.5-flash", name: "ZAI GLM 4.5 Flash", provider: "zai" },
   { id: "openai/gpt-4o-mini", name: "GPT-4o Mini", provider: "openai" },
@@ -66,7 +62,7 @@ const MODEL_OPTIONS: ModelOption[] = [
   { id: "openai/o1-mini", name: "O1 Mini", provider: "openai" },
 ];
 
-const DEFAULT_MODEL_ID = MODEL_OPTIONS[0].id;
+const DEFAULT_MODEL_ID = FALLBACK_MODEL_OPTIONS[0].id;
 
 // Agent icons mapping - stable outside component
 const AGENT_ICONS: Record<string, React.ElementType> = {
@@ -89,7 +85,8 @@ export function Chat({
     useState<string>(DEFAULT_AGENT_ID);
   const [currentModelId, setCurrentModelId] =
     useState<string>(DEFAULT_MODEL_ID);
-  const [allAgents, setAllAgents] = useState<Agent[]>([]);
+  const [modelOptions, setModelOptions] =
+    useState<ModelOption[]>(FALLBACK_MODEL_OPTIONS);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { databaseUrl } = useDatabaseConfig();
 
@@ -97,7 +94,6 @@ export function Chat({
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
   // Delete confirmation dialog state
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -139,21 +135,8 @@ export function Chat({
 
   const resourceId = threadsClient.getResourceId();
 
-  // Fetch all agents on mount
-  useEffect(() => {
-    const fetchAgents = async () => {
-      try {
-        const response = await fetch("/api/agents");
-        if (response.ok) {
-          const agents: Agent[] = await response.json();
-          setAllAgents(agents);
-        }
-      } catch (error) {
-        console.error("Failed to fetch agents:", error);
-      }
-    };
-    fetchAgents();
-  }, []);
+  // Fetch all agents using shared query hook
+  const { data: allAgents = [] } = useAgents();
 
   // Memoize transport to prevent useChat from re-initializing
   // Use a ref to track current values without triggering re-creation
@@ -234,7 +217,22 @@ export function Chat({
       }
     };
 
+    const loadModels = async () => {
+      try {
+        const data = await fetchModels();
+        setModelOptions(data.models);
+        // Set default model if not already set
+        if (data.default && !currentModelId) {
+          setCurrentModelId(data.default);
+        }
+      } catch (error) {
+        console.error("Failed to fetch models, using fallback:", error);
+        // Keep using fallback options
+      }
+    };
+
     loadSessions();
+    loadModels();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -247,40 +245,17 @@ export function Chat({
     }
   }, [threadId]);
 
-  // Track last fetched combination to avoid duplicate fetches
-  const lastFetchRef = useRef<string | undefined>(undefined);
+  // Fetch message history using shared query hook
+  const { data: fetchedMessages, isLoading: isLoadingMessagesQuery } = useMessages(threadId, currentAgentId);
 
-  // Fetch message history - only when threadId or agentId changes
+  // Update messages when fetched data changes
   useEffect(() => {
-    const fetchKey = `${threadId}-${currentAgentId}`;
+    if (fetchedMessages) {
+      setMessages(fetchedMessages);
+    }
+  }, [fetchedMessages]);
 
-    // Skip if we already fetched this combination
-    if (lastFetchRef.current === fetchKey) return;
-    if (!threadId || !currentAgentId) return;
-
-    const fetchMessageHistory = async () => {
-      setIsLoadingMessages(true);
-      try {
-        const response = await fetch(
-          `/api/chat/messages?threadId=${threadId}&agentId=${currentAgentId}`,
-        );
-        if (response.ok) {
-          const data = await response.json();
-          if (data.messages && data.messages.length > 0) {
-            setMessages(data.messages);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch message history:", error);
-      } finally {
-        setIsLoadingMessages(false);
-      }
-    };
-
-    fetchMessageHistory();
-    lastFetchRef.current = fetchKey;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentAgentId, threadId]);
+  const isLoadingMessages = isLoadingMessagesQuery;
 
   // Auto-scroll
   useEffect(() => {
@@ -366,23 +341,7 @@ export function Chat({
       const agentToUse = sessionAgentId || DEFAULT_AGENT_ID;
       setCurrentAgentId(agentToUse);
 
-      setIsLoadingMessages(true);
-      try {
-        const response = await fetch(
-          `/api/chat/messages?threadId=${sessionId}&agentId=${agentToUse}`,
-        );
-        if (response.ok) {
-          const data = await response.json();
-          setMessages(data.messages || []);
-        } else {
-          setMessages([]);
-        }
-      } catch (error) {
-        console.error("Failed to fetch message history:", error);
-        setMessages([]);
-      } finally {
-        setIsLoadingMessages(false);
-      }
+      // useMessages hook will handle fetching when threadId/agentId changes
       titleUpdateRef.current = undefined;
     },
     [],
@@ -765,10 +724,15 @@ export function Chat({
             </>
           )}
           {(isLoading || isLoadingMessages) && (
-            <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
-              <div className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce" />
-              <div className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce delay-100" />
-              <div className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce delay-200" />
+            <div className="flex flex-col items-center gap-3 py-8">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce" />
+                <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce delay-100" />
+                <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce delay-200" />
+              </div>
+              <span className="text-sm text-zinc-600 dark:text-zinc-400 animate-pulse">
+                {isLoading ? "AI is working on your query..." : "Loading messages..."}
+              </span>
             </div>
           )}
         </div>
@@ -788,7 +752,7 @@ export function Chat({
                   disabled={isLoading}
                 >
                   <span className="text-sm truncate">
-                    {MODEL_OPTIONS.find(m => m.id === currentModelId)?.name || "Select Model"}
+                    {modelOptions.find(m => m.id === currentModelId)?.name || "Select Model"}
                   </span>
                   <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform ${modelSelectorOpen ? "rotate-180" : ""}`} />
                 </button>
@@ -797,7 +761,7 @@ export function Chat({
                 <div className="px-2 py-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                   ZAI Models
                 </div>
-                {MODEL_OPTIONS.filter(m => m.provider === "zai").map((model) => (
+                {modelOptions.filter(m => m.provider === "zai").map((model) => (
                   <DropdownMenuItem
                     key={model.id}
                     onClick={() => setCurrentModelId(model.id)}
@@ -813,7 +777,7 @@ export function Chat({
                 <div className="px-2 py-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                   OpenAI Models
                 </div>
-                {MODEL_OPTIONS.filter(m => m.provider === "openai").map((model) => (
+                {modelOptions.filter(m => m.provider === "openai").map((model) => (
                   <DropdownMenuItem
                     key={model.id}
                     onClick={() => setCurrentModelId(model.id)}
