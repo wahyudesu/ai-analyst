@@ -1,61 +1,74 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { queryNeon } from "@/lib/db";
 
 // Cache for 5 minutes (300 seconds)
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  return await POST(request);
+}
+
+export async function POST(request: NextRequest) {
   try {
+    // Get custom database URL from request body (for POST) or query param (for GET)
+    let databaseUrl: string | undefined;
+    if (request.method === "POST") {
+      const body = await request.json().catch(() => ({}));
+      databaseUrl = body.databaseUrl;
+    } else {
+      databaseUrl = request.nextUrl.searchParams.get("databaseUrl") || undefined;
+    }
+
     // Get total users
     const totalUsersResult = await queryNeon(`
       SELECT COUNT(*) as count FROM profiles
-    `);
+    `, [], databaseUrl);
     const totalUsers = parseInt(totalUsersResult[0]?.count) || 0;
 
     // Get total agents
     const totalAgentsResult = await queryNeon(`
       SELECT COUNT(*) as count FROM agents
-    `);
+    `, [], databaseUrl);
     const totalAgents = parseInt(totalAgentsResult[0]?.count) || 0;
 
     // Get total conversations
     const totalConversationsResult = await queryNeon(`
       SELECT COUNT(*) as count FROM conversations
-    `);
+    `, [], databaseUrl);
     const totalConversations = parseInt(totalConversationsResult[0]?.count) || 0;
 
     // Get total messages
     const totalMessagesResult = await queryNeon(`
       SELECT COUNT(*) as count FROM messages
-    `);
+    `, [], databaseUrl);
     const totalMessages = parseInt(totalMessagesResult[0]?.count) || 0;
 
     // Get active subscriptions
     const activeSubscriptionsResult = await queryNeon(`
       SELECT COUNT(*) as count FROM billing_plan_subscriptions
       WHERE status = 'active'
-    `);
+    `, [], databaseUrl);
     const activeSubscriptions = parseInt(activeSubscriptionsResult[0]?.count) || 0;
 
     // Get messages in last 30 days
     const messagesLast30DaysResult = await queryNeon(`
       SELECT COUNT(*) as count FROM messages
       WHERE created_at >= NOW() - INTERVAL '30 days'
-    `);
+    `, [], databaseUrl);
     const messagesLast30Days = parseInt(messagesLast30DaysResult[0]?.count) || 0;
 
     // Get conversations in last 30 days
     const conversationsLast30DaysResult = await queryNeon(`
       SELECT COUNT(*) as count FROM conversations
       WHERE created_at >= NOW() - INTERVAL '30 days'
-    `);
+    `, [], databaseUrl);
     const conversationsLast30Days = parseInt(conversationsLast30DaysResult[0]?.count) || 0;
 
     // Get users with conversations (activated users)
     const activatedUsersResult = await queryNeon(`
       SELECT COUNT(DISTINCT profile_id) as count FROM conversations
-    `);
+    `, [], databaseUrl);
     const activatedUsers = parseInt(activatedUsersResult[0]?.count) || 0;
 
     // Get user growth (last 30 days vs previous 30 days)
@@ -74,7 +87,7 @@ export async function GET() {
       SELECT
         (SELECT count FROM user_periods WHERE period = 'current') as current_period,
         (SELECT count FROM user_periods WHERE period = 'previous') as previous_period
-    `);
+    `, [], databaseUrl);
     const currentPeriodUsers = parseInt(userGrowthResult[0]?.current_period) || 0;
     const previousPeriodUsers = parseInt(userGrowthResult[0]?.previous_period) || 1;
     const userGrowthRate = previousPeriodUsers > 0
@@ -91,7 +104,7 @@ export async function GET() {
       GROUP BY DATE_TRUNC('week', created_at)::date
       ORDER BY date DESC
       LIMIT 12
-    `);
+    `, [], databaseUrl);
 
     // Get conversations over time (last 12 weeks)
     const conversationsOverTimeResult = await queryNeon(`
@@ -103,7 +116,7 @@ export async function GET() {
       GROUP BY DATE_TRUNC('week', created_at)::date
       ORDER BY date DESC
       LIMIT 12
-    `);
+    `, [], databaseUrl);
 
     // Get messages over time (last 12 weeks)
     const messagesOverTimeResult = await queryNeon(`
@@ -115,7 +128,7 @@ export async function GET() {
       GROUP BY DATE_TRUNC('week', created_at)::date
       ORDER BY date DESC
       LIMIT 12
-    `);
+    `, [], databaseUrl);
 
     // Get agent distribution by model
     const agentsByModelResult = await queryNeon(`
@@ -123,7 +136,7 @@ export async function GET() {
       FROM agents
       GROUP BY model
       ORDER BY count DESC
-    `);
+    `, [], databaseUrl);
 
     // Get subscription distribution by plan
     const subscriptionsByPlanResult = await queryNeon(`
@@ -132,7 +145,7 @@ export async function GET() {
       WHERE status = 'active'
       GROUP BY plan_key
       ORDER BY count DESC
-    `);
+    `, [], databaseUrl);
 
     return NextResponse.json(
       {

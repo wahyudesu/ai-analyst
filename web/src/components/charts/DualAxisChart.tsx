@@ -36,7 +36,7 @@ export function DualAxisChart({
 
     if (series.length === 0 || !series[0]?.data?.length) {
       return (
-        <div className={`flex items-center justify-center h-64 text-zinc-500 ${className || ''}`}>
+          <div className={`flex items-center justify-center h-64 text-muted-foreground ${className || ''}`}>
           No data available
         </div>
       );
@@ -69,41 +69,42 @@ export function DualAxisChart({
           data={chartData}
           margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-zinc-800" />
-          <XAxis
-            dataKey="_x"
-            stroke="#71717a"
-            className="text-xs"
-            tick={{ fill: '#71717a' }}
-            tickLine={{ stroke: '#71717a' }}
-          />
-          <YAxis
-            yAxisId="left"
-            stroke="#71717a"
-            className="text-xs"
-            tick={{ fill: '#71717a' }}
-            tickLine={{ stroke: '#71717a' }}
-            label={{ value: leftAxisLabel, angle: -90, position: 'insideLeft' }}
-          />
-          <YAxis
-            yAxisId="right"
-            orientation="right"
-            stroke="#71717a"
-            className="text-xs"
-            tick={{ fill: '#71717a' }}
-            tickLine={{ stroke: '#71717a' }}
-            label={{ value: rightAxisLabel, angle: 90, position: 'insideRight' }}
-          />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: '#ffffff',
-              border: '1px solid #e5e7eb',
-              borderRadius: '0.5rem',
-            }}
-            itemStyle={{ color: '#18181b' }}
-            labelStyle={{ color: '#71717a' }}
-          />
-          {options.legend && <Legend />}
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+            <XAxis
+              dataKey="_x"
+              stroke="var(--muted-foreground)"
+              className="text-xs"
+              tick={{ fill: 'currentColor', className: 'text-muted-foreground text-[10px]' }}
+              tickLine={{ stroke: 'var(--muted-foreground)' }}
+            />
+            <YAxis
+              yAxisId="left"
+              stroke="var(--muted-foreground)"
+              className="text-xs"
+              tick={{ fill: 'currentColor', className: 'text-muted-foreground text-[10px]' }}
+              tickLine={{ stroke: 'var(--muted-foreground)' }}
+              label={{ value: leftAxisLabel, angle: -90, position: 'insideLeft', className: 'fill-muted-foreground text-[10px]' }}
+            />
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              stroke="var(--muted-foreground)"
+              className="text-xs"
+              tick={{ fill: 'currentColor', className: 'text-muted-foreground text-[10px]' }}
+              tickLine={{ stroke: 'var(--muted-foreground)' }}
+              label={{ value: rightAxisLabel, angle: 90, position: 'insideRight', className: 'fill-muted-foreground text-[10px]' }}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: 'var(--popover)',
+                border: '1px solid var(--border)',
+                borderRadius: '0.5rem',
+                color: 'var(--popover-foreground)',
+              }}
+              itemStyle={{ color: 'var(--foreground)' }}
+              labelStyle={{ color: 'var(--muted-foreground)' }}
+            />
+            {options.legend && <Legend wrapperStyle={{ color: 'var(--foreground)' }} />}
           {barSeries && (
             <Bar
               yAxisId="left"

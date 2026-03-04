@@ -1,12 +1,25 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { queryNeon } from "@/lib/db";
 
 // Cache for 2 minutes (120 seconds)
 export const revalidate = 120;
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  return await POST(request);
+}
+
+export async function POST(request: NextRequest) {
   try {
+    // Get custom database URL from request body (for POST) or query param (for GET)
+    let databaseUrl: string | undefined;
+    if (request.method === "POST") {
+      const body = await request.json().catch(() => ({}));
+      databaseUrl = body.databaseUrl;
+    } else {
+      databaseUrl = request.nextUrl.searchParams.get("databaseUrl") || undefined;
+    }
+
     // DAU - last 7 days (using messages table for more accurate activity)
     const dauResult = await queryNeon(`
       SELECT
@@ -16,7 +29,7 @@ export async function GET() {
       WHERE created_at >= NOW() - INTERVAL '7 days'
       GROUP BY DATE_TRUNC('day', created_at)::date
       ORDER BY date
-    `);
+    `, [], databaseUrl);
 
     const avgDAU = dauResult.length > 0
       ? dauResult.reduce((sum: number, r: any) => sum + (parseInt(r.daily_users) || 0), 0) / dauResult.length
@@ -27,7 +40,7 @@ export async function GET() {
       SELECT COUNT(DISTINCT profile_id) as monthly_users
       FROM messages
       WHERE created_at >= NOW() - INTERVAL '30 days'
-    `);
+    `, [], databaseUrl);
     const mau = parseInt((mauResult as any[])[0]?.monthly_users) || 1;
 
     // DAU/MAU Ratio
@@ -44,7 +57,7 @@ export async function GET() {
       WHERE created_at >= NOW() - INTERVAL '30 days'
       GROUP BY source_type
       ORDER BY conversations DESC
-    `);
+    `, [], databaseUrl);
 
     const sourceUsage = sourceUsageResult.map((r: any) => ({
       source: r.source_type || "Unknown",
@@ -65,7 +78,7 @@ export async function GET() {
       WHERE m.created_at >= NOW() - INTERVAL '30 days'
       GROUP BY DATE_TRUNC('day', m.created_at)::date
       ORDER BY date
-    `);
+    `, [], databaseUrl);
 
     // Agent adoption (total agents and unique creators)
     const agentResult = await queryNeon(`
@@ -73,7 +86,7 @@ export async function GET() {
         COUNT(*) as total_agents,
         COUNT(DISTINCT profile_id) as unique_creators
       FROM agents
-    `);
+    `, [], databaseUrl);
     const totalAgents = parseInt((agentResult as any[])[0]?.total_agents) || 0;
     const uniqueCreators = parseInt((agentResult as any[])[0]?.unique_creators) || 0;
 
@@ -82,7 +95,7 @@ export async function GET() {
       SELECT COUNT(*) as recent_agents
       FROM agents
       WHERE created_at >= NOW() - INTERVAL '30 days'
-    `);
+    `, [], databaseUrl);
     const recentAgents = parseInt((recentAgentsResult as any[])[0]?.recent_agents) || 0;
 
     return NextResponse.json(

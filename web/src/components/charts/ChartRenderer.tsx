@@ -107,43 +107,43 @@ export function ChartRenderer({ config, className }: ChartRendererProps) {
     downloadChartAsImage(chartRef.current, filename);
   };
 
-  return (
-    <div className={className}>
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          {title && <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{title}</h3>}
-          {subtitle && <p className="text-sm text-zinc-600 dark:text-zinc-400">{subtitle}</p>}
+    return (
+      <div className={className}>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            {title && <h3 className="text-lg font-semibold text-foreground">{title}</h3>}
+            {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+          </div>
+          <button
+            onClick={handleDownload}
+            className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted rounded-lg transition-colors"
+            title="Download chart as image"
+          >
+            <Download className="w-4 h-4" />
+            <span>Download</span>
+          </button>
         </div>
-        <button
-          onClick={handleDownload}
-          className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors"
-          title="Download chart as image"
-        >
-          <Download className="w-4 h-4" />
-          <span>Download</span>
-        </button>
-      </div>
 
-      <div ref={chartRef}>
-        {(() => {
-          switch (chartType) {
-            case 'bar':
-              return <BarChart config={config} />;
-            case 'line':
-              return <LineChart config={config} />;
-            case 'area':
-              return <AreaChart config={config} />;
-            case 'pie':
-              return <PieChart config={config} />;
-            default:
-              return (
-                <div className="flex items-center justify-center h-64 text-zinc-500">
-                  Unknown chart type: {chartType}
-                </div>
-              );
-          }
-        })()}
+        <div ref={chartRef}>
+          {(() => {
+            switch (chartType) {
+              case 'bar':
+                return <BarChart config={config} />;
+              case 'line':
+                return <LineChart config={config} />;
+              case 'area':
+                return <AreaChart config={config} />;
+              case 'pie':
+                return <PieChart config={config} />;
+              default:
+                return (
+                  <div className="flex items-center justify-center h-64 text-muted-foreground">
+                    Unknown chart type: {chartType}
+                  </div>
+                );
+            }
+          })()}
+        </div>
       </div>
-    </div>
-  );
+    );
 }

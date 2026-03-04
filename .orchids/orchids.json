@@ -6,5 +6,7 @@
     "pnpm install; pnpm --filter api dev",
     "pnpm --filter web dev"
   ],
-  "templateId": "any"
+  "templateId": "any",
+  "vercelProjectId": "prj_LF7M82aIsUGiB8GxcxXGb2csU9wT",
+  "deployedWithUserToken": false
 }

@@ -8,6 +8,7 @@ import { AreaChart, BarChart, LineChart } from "@/components/charts";
 import { FunnelChart } from "@/components/charts/FunnelChart";
 import { StackedAreaChart } from "@/components/charts/StackedAreaChart";
 import type { ChartConfig } from "@/components/charts/types";
+import { useDatabaseConfig } from "@/lib/use-database-config";
 import { DollarSign, Users, TrendingUp, Repeat } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 
@@ -34,6 +35,7 @@ export default function RevenuePage() {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const { databaseUrl } = useDatabaseConfig();
 
   const fetchData = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
@@ -43,7 +45,11 @@ export default function RevenuePage() {
     }
 
     try {
-      const response = await fetch("/api/dashboard/revenue");
+      const response = await fetch("/api/dashboard/revenue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ databaseUrl: databaseUrl || undefined }),
+      });
       if (response.ok) {
         const result = await response.json();
         setData(result);
@@ -55,7 +61,7 @@ export default function RevenuePage() {
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
+  }, [databaseUrl]);
 
   const handleRefresh = useCallback(() => {
     return fetchData(true);

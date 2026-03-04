@@ -1,12 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* Configured for pnpm monorepo - single lockfile at root */
-  experimental: {
-    turbopack: {
-      root: __dirname,
-    },
-  },
+  /* Turbopack is enabled by default in Next.js 16+ */
 };
 
 export default nextConfig;

@@ -32,7 +32,7 @@ export function PieChart({ config, className }: PieChartProps) {
 
   if (slices.length === 0) {
     return (
-      <div className={`flex items-center justify-center h-64 text-zinc-500 ${className || ''}`}>
+        <div className={`flex items-center justify-center h-64 text-muted-foreground ${className || ''}`}>
         No data available
       </div>
     );
@@ -52,22 +52,35 @@ export function PieChart({ config, className }: PieChartProps) {
     <div className={className}>
       <ResponsiveContainer width="100%" height={300}>
         <RechartsPieChart margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-          <Pie
-            data={chartData}
-            cx="50%"
-            cy="50%"
-            labelLine={false}
-            label={(entry) => {
-              if (options.showDataLabels) {
-                const percent = total > 0 ? ((entry.value || 0) / total * 100).toFixed(1) : '0';
-                return `${entry.name}: ${percent}%`;
-              }
-              return entry.name;
-            }}
-            outerRadius={80}
-            fill="#8884d8"
-            dataKey="value"
-          >
+            <Pie
+              data={chartData}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              label={({ cx, cy, midAngle, innerRadius, outerRadius, name, value }) => {
+                const RADIAN = Math.PI / 180;
+                const radius = innerRadius + (outerRadius - innerRadius) * 1.4;
+                const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                const percent = total > 0 ? ((value || 0) / total * 100).toFixed(1) : '0';
+                const labelText = options.showDataLabels ? `${name}: ${percent}%` : name;
+                return (
+                    <text
+                      x={x}
+                      y={y}
+                      className="text-foreground text-[10px]"
+                      fill="currentColor"
+                      textAnchor={x > cx ? 'start' : 'end'}
+                      dominantBaseline="central"
+                    >
+                      {labelText}
+                    </text>
+                );
+              }}
+              outerRadius={80}
+              fill="#8884d8"
+              dataKey="value"
+            >
             {slices.map((slice, index) => (
               <Cell
                 key={`cell-${index}`}
@@ -75,21 +88,22 @@ export function PieChart({ config, className }: PieChartProps) {
               />
             ))}
           </Pie>
-          <Tooltip
-            contentStyle={{
-              backgroundColor: '#ffffff',
-              border: '1px solid #e5e7eb',
-              borderRadius: '0.5rem',
-            }}
-            itemStyle={{ color: '#18181b' }}
-            labelStyle={{ color: '#71717a' }}
-            formatter={(value?: number) => {
+            <Tooltip
+              contentStyle={{
+                backgroundColor: 'var(--popover)',
+                border: '1px solid var(--border)',
+                borderRadius: '0.5rem',
+                color: 'var(--popover-foreground)',
+              }}
+              itemStyle={{ color: 'var(--foreground)' }}
+              labelStyle={{ color: 'var(--muted-foreground)' }}
+              formatter={(value?: number) => {
               if (value === undefined) return ['', ''];
               const percent = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
               return [`${value} (${percent}%)`, ''];
             }}
           />
-          {options.legend && <Legend />}
+            {options.legend && <Legend wrapperStyle={{ color: 'var(--foreground)' }} />}
         </RechartsPieChart>
       </ResponsiveContainer>
     </div>

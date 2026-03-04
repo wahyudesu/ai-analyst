@@ -2,10 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
-  const client = await createClient();
-
   try {
-    const { sql, params = [] } = await request.json();
+    const { sql, params = [], databaseUrl } = await request.json();
+
+    if (!sql || typeof sql !== "string") {
+      return NextResponse.json(
+        { error: "SQL query is required" },
+        { status: 400 }
+      );
+    }
+
+    const client = await createClient(databaseUrl);
 
     if (!sql || typeof sql !== "string") {
       return NextResponse.json(

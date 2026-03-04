@@ -12,6 +12,7 @@ import {
   ChartSkeleton,
 } from "@/components/dashboard/Skeleton";
 import { useDashboardCache } from "@/hooks/useDashboardCache";
+import { useDatabaseConfig } from "@/lib/use-database-config";
 import { Users, Bot, MessageSquare, Send, CreditCard, TrendingUp, AlertCircle, Zap } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 
@@ -51,6 +52,7 @@ export default function OverviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const { databaseUrl } = useDatabaseConfig();
 
   const {
     getCachedData,
@@ -64,7 +66,13 @@ export default function OverviewPage() {
     try {
       setError(null);
       const response = await fetch("/api/dashboard/overview", {
-        // Add cache-busting parameter when bypassing cache
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          databaseUrl: databaseUrl || undefined,
+        }),
         cache: bypassCache ? "no-store" : "default",
       });
       if (!response.ok) {
@@ -81,7 +89,7 @@ export default function OverviewPage() {
       setError(errorMessage);
       return null;
     }
-  }, []);
+  }, [databaseUrl]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -95,7 +103,7 @@ export default function OverviewPage() {
     } finally {
       setIsRefreshing(false);
     }
-  }, [fetchFromAPI, setCachedData]);
+  }, [fetchFromAPI, setCachedData, databaseUrl]);
 
   useEffect(() => {
     async function loadData() {
@@ -466,29 +474,29 @@ export default function OverviewPage() {
                   <CardHeader>
                     <CardTitle>New Users (12 Weeks)</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    {usersChartConfig ? (
-                      <LineChart config={usersChartConfig} />
-                    ) : (
-                      <div className="h-64 flex items-center justify-center">
-                        <p className="text-zinc-500">No data available</p>
-                      </div>
-                    )}
-                  </CardContent>
+                    <CardContent>
+                      {usersChartConfig ? (
+                        <LineChart config={usersChartConfig} />
+                      ) : (
+                        <div className="h-64 flex items-center justify-center">
+                          <p className="text-muted-foreground">No data available</p>
+                        </div>
+                      )}
+                    </CardContent>
                 </Card>
                 <Card>
                   <CardHeader>
                     <CardTitle>Conversations (12 Weeks)</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    {conversationsChartConfig ? (
-                      <BarChart config={conversationsChartConfig} />
-                    ) : (
-                      <div className="h-64 flex items-center justify-center">
-                        <p className="text-zinc-500">No data available</p>
-                      </div>
-                    )}
-                  </CardContent>
+                    <CardContent>
+                      {conversationsChartConfig ? (
+                        <BarChart config={conversationsChartConfig} />
+                      ) : (
+                        <div className="h-64 flex items-center justify-center">
+                          <p className="text-muted-foreground">No data available</p>
+                        </div>
+                      )}
+                    </CardContent>
                 </Card>
               </div>
 
@@ -497,15 +505,15 @@ export default function OverviewPage() {
                 <CardHeader>
                   <CardTitle>Messages (12 Weeks)</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  {messagesChartConfig ? (
-                    <LineChart config={messagesChartConfig} />
-                  ) : (
-                    <div className="h-64 flex items-center justify-center">
-                      <p className="text-zinc-500">No data available</p>
-                    </div>
-                  )}
-                </CardContent>
+                  <CardContent>
+                    {messagesChartConfig ? (
+                      <LineChart config={messagesChartConfig} />
+                    ) : (
+                      <div className="h-64 flex items-center justify-center">
+                        <p className="text-muted-foreground">No data available</p>
+                      </div>
+                    )}
+                  </CardContent>
               </Card>
 
               {/* Distribution Charts */}
@@ -518,9 +526,9 @@ export default function OverviewPage() {
                     {agentsChartConfig ? (
                       <BarChart config={agentsChartConfig} />
                     ) : (
-                      <div className="h-48 flex items-center justify-center">
-                        <p className="text-zinc-500 text-sm">No agent data available</p>
-                      </div>
+                        <div className="h-48 flex items-center justify-center">
+                          <p className="text-muted-foreground text-sm">No agent data available</p>
+                        </div>
                     )}
                   </CardContent>
                 </Card>
@@ -532,9 +540,9 @@ export default function OverviewPage() {
                     {subscriptionsChartConfig ? (
                       <BarChart config={subscriptionsChartConfig} />
                     ) : (
-                      <div className="h-48 flex items-center justify-center">
-                        <p className="text-zinc-500 text-sm">No subscription data available</p>
-                      </div>
+                        <div className="h-48 flex items-center justify-center">
+                          <p className="text-muted-foreground text-sm">No subscription data available</p>
+                        </div>
                     )}
                   </CardContent>
                 </Card>

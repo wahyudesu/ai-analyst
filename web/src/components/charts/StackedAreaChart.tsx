@@ -27,7 +27,7 @@ export function StackedAreaChart({ config, className }: StackedAreaChartProps) {
 
   if (series.length === 0 || !series[0]?.data?.length) {
     return (
-      <div className={`flex items-center justify-center h-64 text-zinc-500 ${className || ''}`}>
+        <div className={`flex items-center justify-center h-64 text-muted-foreground ${className || ''}`}>
         No data available
       </div>
     );
@@ -56,30 +56,31 @@ export function StackedAreaChart({ config, className }: StackedAreaChartProps) {
           data={chartData}
           margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-zinc-800" />
-          <XAxis
-            dataKey="_x"
-            stroke="#71717a"
-            className="text-xs"
-            tick={{ fill: '#71717a' }}
-            tickLine={{ stroke: '#71717a' }}
-          />
-          <YAxis
-            stroke="#71717a"
-            className="text-xs"
-            tick={{ fill: '#71717a' }}
-            tickLine={{ stroke: '#71717a' }}
-          />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: '#ffffff',
-              border: '1px solid #e5e7eb',
-              borderRadius: '0.5rem',
-            }}
-            itemStyle={{ color: '#18181b' }}
-            labelStyle={{ color: '#71717a' }}
-          />
-          {options.legend && <Legend />}
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+            <XAxis
+              dataKey="_x"
+              stroke="var(--muted-foreground)"
+              className="text-xs"
+              tick={{ fill: 'currentColor', className: 'text-muted-foreground text-[10px]' }}
+              tickLine={{ stroke: 'var(--muted-foreground)' }}
+            />
+            <YAxis
+              stroke="var(--muted-foreground)"
+              className="text-xs"
+              tick={{ fill: 'currentColor', className: 'text-muted-foreground text-[10px]' }}
+              tickLine={{ stroke: 'var(--muted-foreground)' }}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: 'var(--popover)',
+                border: '1px solid var(--border)',
+                borderRadius: '0.5rem',
+                color: 'var(--popover-foreground)',
+              }}
+              itemStyle={{ color: 'var(--foreground)' }}
+              labelStyle={{ color: 'var(--muted-foreground)' }}
+            />
+            {options.legend && <Legend wrapperStyle={{ color: 'var(--foreground)' }} />}
           {series.map((s, seriesIndex) => (
             <Area
               key={s.name}

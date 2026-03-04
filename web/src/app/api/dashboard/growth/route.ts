@@ -1,12 +1,25 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { queryNeon } from "@/lib/db";
 
 // Cache for 5 minutes (300 seconds)
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  return await POST(request);
+}
+
+export async function POST(request: NextRequest) {
   try {
+    // Get custom database URL from request body (for POST) or query param (for GET)
+    let databaseUrl: string | undefined;
+    if (request.method === "POST") {
+      const body = await request.json().catch(() => ({}));
+      databaseUrl = body.databaseUrl;
+    } else {
+      databaseUrl = request.nextUrl.searchParams.get("databaseUrl") || undefined;
+    }
+
     // Get CAC (Customer Acquisition Cost) - simplified
     const cac = 45;
 
@@ -20,7 +33,7 @@ export async function GET() {
           WHERE status = 'completed'
           GROUP BY profile_id
         ) user_spending
-    `);
+    `, [], databaseUrl);
     const ltv = parseFloat(ltvResult[0]?.avg_ltv) || 792;
     const ltvCacRatio = ltv / cac;
 
@@ -35,7 +48,7 @@ export async function GET() {
       FROM profiles
       WHERE created_at >= NOW() - INTERVAL '90 days'
       GROUP BY channel
-    `);
+    `, [], databaseUrl);
 
     const channels = channelResult.map((r: any) => ({
       name: r.channel,
@@ -51,7 +64,7 @@ export async function GET() {
       LEFT JOIN billing_plan_subscriptions bps ON p.id = bps.profile_id
         AND bps.status IN ('active', 'past_due')
       WHERE p.created_at >= NOW() - INTERVAL '90 days'
-    `);
+    `, [], databaseUrl);
     const totalUsers = parseInt(payingResult[0]?.total_users) || 1;
     const payingUsers = parseInt(payingResult[0]?.paying_users) || 0;
     const payingRate = totalUsers > 0 ? (payingUsers / totalUsers) * 100 : 0;
@@ -66,7 +79,7 @@ export async function GET() {
         ) as retained_subscribers
       FROM billing_plan_subscriptions
       WHERE created_at <= NOW() - INTERVAL '30 days'
-    `);
+    `, [], databaseUrl);
     const totalSubscribers = parseInt(retentionResult[0]?.total_subscribers) || 1;
     const retainedSubscribers = parseInt(retentionResult[0]?.retained_subscribers) || 0;
     const retentionRate = totalSubscribers > 0 ? (retainedSubscribers / totalSubscribers) * 100 : 0;
@@ -80,7 +93,7 @@ export async function GET() {
       WHERE created_at >= NOW() - INTERVAL '12 weeks'
       GROUP BY DATE_TRUNC('week', created_at)::date
       ORDER BY week
-    `);
+    `, [], databaseUrl);
 
     // Get referral statistics
     const referralResult = await queryNeon(`
@@ -89,7 +102,7 @@ export async function GET() {
         COUNT(*) as total_users
       FROM profiles
       WHERE created_at >= NOW() - INTERVAL '90 days'
-    `);
+    `, [], databaseUrl);
     const referredUsers = parseInt(referralResult[0]?.referred_users) || 0;
     const totalUsers90 = parseInt(referralResult[0]?.total_users) || 1;
     const referralRate = totalUsers90 > 0 ? (referredUsers / totalUsers90) * 100 : 0;

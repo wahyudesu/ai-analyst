@@ -6,6 +6,7 @@ import { RefreshButton } from "@/components/dashboard/RefreshButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, BarChart } from "@/components/charts";
 import type { ChartConfig } from "@/components/charts/types";
+import { useDatabaseConfig } from "@/lib/use-database-config";
 import { DollarSign, TrendingUp, Percent, Users } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 
@@ -28,6 +29,7 @@ export default function GrowthPage() {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const { databaseUrl } = useDatabaseConfig();
 
   const fetchData = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
@@ -37,7 +39,11 @@ export default function GrowthPage() {
     }
 
     try {
-      const response = await fetch("/api/dashboard/growth");
+      const response = await fetch("/api/dashboard/growth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ databaseUrl: databaseUrl || undefined }),
+      });
       if (response.ok) {
         const result = await response.json();
         setData(result);
@@ -49,7 +55,7 @@ export default function GrowthPage() {
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
+  }, [databaseUrl]);
 
   const handleRefresh = useCallback(() => {
     return fetchData(true);

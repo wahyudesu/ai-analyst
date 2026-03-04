@@ -174,25 +174,31 @@ export function BarChart({ config, className }: BarChartProps) {
                   }
                 }
 
-                const isHovered = hoveredBar === barKey;
+                  const isHovered = hoveredBar === barKey;
 
-                return (
-                  <g key={barKey}>
-                    <motion.rect
-                      x={x}
-                      y={y}
-                      width={barWidthValue}
-                      height={barHeight}
-                      fill={color}
-                      rx={isHorizontal ? 4 : 2}
-                      opacity={isHovered ? 1 : hoveredBar ? 0.5 : 1}
-                      initial={isHorizontal ? { width: 0 } : { height: 0 }}
-                      animate={{ width: barWidthValue, height: barHeight }}
-                      transition={{
-                        duration: 0.5,
-                        ease: [0.85, 0, 0.15, 1],
-                        delay: dataIndex * 0.02,
-                      }}
+                  // Ensure all values are valid numbers
+                  const safeX = Number.isFinite(x) ? x : 0;
+                  const safeY = Number.isFinite(y) ? y : 0;
+                  const safeWidth = Number.isFinite(barWidthValue) ? Math.max(barWidthValue, 0) : 0;
+                  const safeHeight = Number.isFinite(barHeight) ? Math.max(barHeight, 0) : 0;
+
+                  return (
+                    <g key={barKey}>
+                      <motion.rect
+                        x={safeX}
+                        y={safeY}
+                        width={safeWidth}
+                        height={safeHeight}
+                        fill={color}
+                        rx={isHorizontal ? 4 : 2}
+                        opacity={isHovered ? 1 : hoveredBar ? 0.5 : 1}
+                        initial={isHorizontal ? { width: 0 } : { height: 0 }}
+                        animate={{ width: safeWidth, height: safeHeight }}
+                        transition={{
+                          duration: 0.5,
+                          ease: [0.85, 0, 0.15, 1],
+                          delay: dataIndex * 0.02,
+                        }}
                       onMouseEnter={(event) => {
                         setHoveredBar(barKey);
                         const coords = localPoint(event);
@@ -223,7 +229,7 @@ export function BarChart({ config, className }: BarChartProps) {
                       <motion.text
                         x={(x + barWidthValue + 8)}
                         y={y + barHeight / 2}
-                        fill="hsl(var(--foreground))"
+                        className="text-foreground" fill="currentColor"
                         fontSize={12}
                         fontWeight={500}
                         textAnchor="start"
@@ -241,53 +247,55 @@ export function BarChart({ config, className }: BarChartProps) {
               });
             })}
 
-          {/* X Axis */}
-          {isHorizontal ? (
-            <AxisLeft
-              scale={xScale}
-              stroke="hsl(var(--border))"
-              tickStroke="hsl(var(--border))"
-              tickLabelProps={() => ({
-                fill: 'hsl(var(--foreground))',
-                fontSize: 12,
-                fontWeight: 500,
-                textAnchor: 'end',
-                dx: -8,
-                dy: 3,
-              })}
-            />
-            ) : (
-              <g transform={`translate(0, ${innerHeight})`}>
-                <AxisBottom
-                  scale={xScale}
-                  stroke="hsl(var(--muted-foreground) / 0.3)"
-                  tickStroke="hsl(var(--muted-foreground) / 0.5)"
-                  tickFormat={(value) => formatXLabel(String(value))}
-                  tickLabelProps={() => ({
-                    fill: 'hsl(var(--muted-foreground))',
-                    fontSize: 11,
-                    textAnchor: 'middle',
-                    dy: 3,
-                  })}
-                />
-              </g>
-            )}
-
-            {/* Y Axis */}
-            {!isHorizontal && (
+            {/* X Axis */}
+            {isHorizontal ? (
               <AxisLeft
-                scale={yScale}
-                stroke="hsl(var(--muted-foreground) / 0.3)"
-                tickStroke="hsl(var(--muted-foreground) / 0.5)"
+                scale={xScale}
+                stroke="var(--border)"
+                tickStroke="var(--border)"
                 tickLabelProps={() => ({
-                  fill: 'hsl(var(--muted-foreground))',
+                  className: 'text-foreground font-medium',
+                  fill: 'currentColor',
                   fontSize: 11,
                   textAnchor: 'end',
-                  dx: -5,
+                  dx: -8,
                   dy: 3,
                 })}
               />
-            )}
+              ) : (
+                <g transform={`translate(0, ${innerHeight})`}>
+                  <AxisBottom
+                    scale={xScale}
+                    stroke="var(--border)"
+                    tickStroke="var(--border)"
+                    tickFormat={(value) => formatXLabel(String(value))}
+                    tickLabelProps={() => ({
+                      className: 'text-muted-foreground',
+                      fill: 'currentColor',
+                      fontSize: 10,
+                      textAnchor: 'middle',
+                      dy: 3,
+                    })}
+                  />
+                </g>
+              )}
+
+              {/* Y Axis */}
+              {!isHorizontal && (
+                <AxisLeft
+                  scale={yScale}
+                  stroke="var(--border)"
+                  tickStroke="var(--border)"
+                  tickLabelProps={() => ({
+                    className: 'text-muted-foreground',
+                    fill: 'currentColor',
+                    fontSize: 10,
+                    textAnchor: 'end',
+                    dx: -5,
+                    dy: 3,
+                  })}
+                />
+              )}
         </g>
       </svg>
 
@@ -296,11 +304,11 @@ export function BarChart({ config, className }: BarChartProps) {
         <Tooltip
           style={{
             ...defaultStyles,
-            backgroundColor: 'hsl(var(--popover))',
-            border: '1px solid hsl(var(--border))',
+            backgroundColor: 'var(--popover)',
+            border: '1px solid var(--border)',
             borderRadius: '8px',
-            color: 'hsl(var(--popover-foreground))',
-            boxShadow: 'hsl(var(--shadow))',
+            color: 'var(--popover-foreground)',
+            boxShadow: 'var(--shadow)',
             fontSize: '12px',
             padding: '8px 12px',
           }}

@@ -1,18 +1,31 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { queryNeon } from "@/lib/db";
 
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  return await POST(request);
+}
+
+export async function POST(request: NextRequest) {
   try {
+    // Get custom database URL from request body (for POST) or query param (for GET)
+    let databaseUrl: string | undefined;
+    if (request.method === "POST") {
+      const body = await request.json().catch(() => ({}));
+      databaseUrl = body.databaseUrl;
+    } else {
+      databaseUrl = request.nextUrl.searchParams.get("databaseUrl") || undefined;
+    }
+
     // Gross bookings from prepaid purchases (use price_usd)
     const bookingsResult = await queryNeon(`
       SELECT COALESCE(SUM(price_usd), 0) as gross_bookings
       FROM billing_prepaid_purchases
       WHERE created_at >= NOW() - INTERVAL '30 days'
         AND status = 'completed'
-    `);
+    `, [], databaseUrl);
     const grossBookings = parseFloat(bookingsResult[0]?.gross_bookings) || 0;
 
     // MAU: distinct profiles with conversations in last 30 days
@@ -20,7 +33,7 @@ export async function GET() {
       SELECT COUNT(DISTINCT profile_id) as mau
       FROM conversations
       WHERE created_at >= NOW() - INTERVAL '30 days'
-    `);
+    `, [], databaseUrl);
     const mau = parseInt(mauResult[0]?.mau) || 0;
 
     // ARPU annualized
@@ -38,7 +51,7 @@ export async function GET() {
       WHERE status = 'active'
       GROUP BY plan_key
       ORDER BY plan_key
-    `);
+    `, [], databaseUrl);
 
     const mrrByPlan = subscriptionsResult.map((r: any) => ({
       plan: r.plan_key,
@@ -58,7 +71,7 @@ export async function GET() {
       LEFT JOIN billing_plan_subscriptions bps ON p.id = bps.profile_id
         AND bps.status IN ('active', 'past_due')
       WHERE p.created_at >= NOW() - INTERVAL '30 days'
-    `);
+    `, [], databaseUrl);
     const fd = funnelResult[0] || {};
     const funnel = [
       { name: "Signups", value: parseInt(fd.signups) || 0 },
@@ -76,7 +89,7 @@ export async function GET() {
       WHERE created_at >= NOW() - INTERVAL '12 weeks'
       GROUP BY DATE_TRUNC('week', created_at)::date
       ORDER BY week
-    `);
+    `, [], databaseUrl);
 
     return NextResponse.json(
       {

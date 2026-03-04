@@ -104,35 +104,37 @@ export function HorizontalBarChart({ config, className }: HorizontalBarChartProp
             const color = getChartColor(i);
             const isHovered = hoveredBar === i;
 
-            return (
-              <g key={i}>
-                {/* Label */}
-                <text
-                  x={0}
-                  y={y + barHeight / 2}
-                  fill="hsl(var(--foreground))"
-                  fontSize={11}
-                  textAnchor="start"
-                  dominantBaseline="middle"
-                  style={{ pointerEvents: 'none' }}
-                >
-                  {d.name}
-                </text>
+              return (
+                <g key={i}>
+                  {/* Label */}
+                  <text
+                    x={0}
+                    y={y + barHeight / 2}
+                    className="text-foreground"
+                    fill="currentColor"
+                    fontSize={11}
+                    textAnchor="start"
+                    dominantBaseline="middle"
+                    style={{ pointerEvents: 'none' }}
+                  >
+                    {d.name}
+                  </text>
 
-                {/* Bar */}
-                <motion.rect
-                  x={4}
-                  y={y}
-                  height={barHeight}
-                  fill={color}
-                  opacity={isHovered ? 1 : hoveredBar !== null ? 0.5 : 1}
-                  initial={{ width: 0 }}
-                  animate={{ width: barWidth }}
-                  transition={{
-                    duration: 0.5,
-                    ease: [0.85, 0, 0.15, 1],
-                    delay: i * 0.02,
-                  }}
+                  {/* Bar */}
+                  <motion.rect
+                    x={4}
+                    y={y}
+                    height={Number.isFinite(barHeight) ? barHeight : 0}
+                    width={Number.isFinite(barWidth) ? barWidth : 0}
+                    fill={color}
+                    opacity={isHovered ? 1 : hoveredBar !== null ? 0.5 : 1}
+                    initial={{ width: 0 }}
+                    animate={{ width: Number.isFinite(barWidth) ? barWidth : 0 }}
+                    transition={{
+                      duration: 0.5,
+                      ease: [0.85, 0, 0.15, 1],
+                      delay: i * 0.02,
+                    }}
                   onMouseEnter={(event) => {
                     setHoveredBar(i);
                     const coords = localPoint(event);
@@ -163,7 +165,8 @@ export function HorizontalBarChart({ config, className }: HorizontalBarChartProp
                 <motion.text
                   x={barWidth + 8}
                   y={y + barHeight / 2}
-                  fill="hsl(var(--muted-foreground))"
+                  className="text-muted-foreground"
+                  fill="currentColor"
                   fontSize={10}
                   textAnchor="start"
                   dominantBaseline="middle"
@@ -185,11 +188,11 @@ export function HorizontalBarChart({ config, className }: HorizontalBarChartProp
         <Tooltip
           style={{
             ...defaultStyles,
-            backgroundColor: 'hsl(var(--popover))',
-            border: '1px solid hsl(var(--border))',
+            backgroundColor: 'var(--popover)',
+            border: '1px solid var(--border)',
             borderRadius: '8px',
-            color: 'hsl(var(--popover-foreground))',
-            boxShadow: 'hsl(var(--shadow))',
+            color: 'var(--popover-foreground)',
+            boxShadow: 'var(--shadow)',
             fontSize: '12px',
             padding: '8px 12px',
           }}

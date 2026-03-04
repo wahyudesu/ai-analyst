@@ -7,7 +7,10 @@ import {
   X,
   Loader2,
   RefreshCw,
-  AlertCircle,
+    AlertCircle,
+    Eye,
+  EyeOff,
+  Layout,
 } from "lucide-react";
 import {
   Dialog,
@@ -20,7 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useDatabaseConfig } from "@/lib/use-database-config";
+import { useDatabaseConfig, DatabaseProvider } from "@/lib/use-database-config";
 import { cn } from "@/lib/utils";
 import { maskDatabaseUrl } from "@/lib/utils/database";
 
@@ -36,27 +39,36 @@ export function DatabaseSettings({
   open,
   onOpenChange,
 }: DatabaseSettingsProps) {
-  const { databaseUrl, setDatabaseUrl, clearDatabaseUrl } = useDatabaseConfig();
+  const { 
+    databaseUrl, 
+    setDatabaseUrl, 
+    databaseProvider,
+    setDatabaseProvider,
+    clearDatabaseUrl 
+  } = useDatabaseConfig();
   const [inputUrl, setInputUrl] = useState("");
+  const [inputProvider, setInputProvider] = useState<DatabaseProvider>("postgres");
+  const [showUrl, setShowUrl] = useState(false);
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("disconnected");
   const [testStatus, setTestStatus] = useState<TestStatus>("idle");
   const [testError, setTestError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Initialize input with saved URL when dialog opens
+  // Initialize input with saved values when dialog opens
   useEffect(() => {
     if (open) {
       setInputUrl(databaseUrl);
+      setInputProvider(databaseProvider);
       setConnectionStatus(databaseUrl ? "connected" : "disconnected");
       setTestStatus("idle");
       setTestError(null);
       setSaveSuccess(false);
     }
-  }, [open, databaseUrl]);
+  }, [open, databaseUrl, databaseProvider]);
 
   // Derive hasChanges during render instead of using state
-  const hasChanges = inputUrl !== databaseUrl;
+  const hasChanges = inputUrl !== databaseUrl || inputProvider !== databaseProvider;
 
   const handleTestConnection = useCallback(async () => {
     if (!inputUrl.trim()) {
@@ -97,6 +109,7 @@ export function DatabaseSettings({
 
   const handleSave = () => {
     setDatabaseUrl(inputUrl);
+    setDatabaseProvider(inputProvider);
     setConnectionStatus(inputUrl ? "connected" : "disconnected");
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2000);
@@ -105,15 +118,18 @@ export function DatabaseSettings({
   const handleCancel = () => {
     // Revert to original value
     setInputUrl(databaseUrl);
+    setInputProvider(databaseProvider);
     setTestStatus("idle");
     setTestError(null);
   };
 
   const handleClear = () => {
     setInputUrl("");
+    setInputProvider("postgres");
     setTestStatus("idle");
     setTestError(null);
   };
+
 
   const handleOpenChange = (newOpen: boolean) => {
     if (hasChanges && !newOpen) {
@@ -205,14 +221,128 @@ export function DatabaseSettings({
               <div className="mt-1">{getConnectionBadge()}</div>
             </div>
           </div>
-          <DialogDescription className="pt-2">
-            Configure your PostgreSQL database connection to enable AI-powered
-            data analysis.
-          </DialogDescription>
-          {/* Show masked URL when connected and not editing */}
+            <DialogDescription className="pt-2">
+              Configure your PostgreSQL database connection to enable AI-powered
+              data analysis.
+            </DialogDescription>
+
+            {/* Provider Selection */}
+            <div className="space-y-2 mt-4">
+              <label className="text-sm font-medium">Database Provider</label>
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  type="button"
+                  variant={inputProvider === "neon" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setInputProvider("neon")}
+                  className={cn(
+                    "gap-2",
+                    inputProvider === "neon" && "bg-[#00e599] hover:bg-[#00e599]/90 text-black border-none"
+                  )}
+                >
+                  <div className={cn(
+                    "w-4 h-4 rounded-sm flex items-center justify-center",
+                    inputProvider === "neon" ? "bg-black" : "bg-[#00e599]"
+                  )}>
+                    <svg viewBox="0 0 24 24" className={cn("w-2.5 h-2.5 fill-current", inputProvider === "neon" ? "text-[#00e599]" : "text-black")}>
+                      <path d="M12 0L24 12L12 24L0 12L12 0Z" />
+                    </svg>
+                  </div>
+                  Neon
+                </Button>
+                <Button
+                  type="button"
+                  variant={inputProvider === "supabase" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setInputProvider("supabase")}
+                  className={cn(
+                    "gap-2",
+                    inputProvider === "supabase" && "bg-[#3ecf8e] hover:bg-[#3ecf8e]/90 text-white border-none"
+                  )}
+                >
+                  <div className={cn(
+                    "w-4 h-4 rounded-sm flex items-center justify-center",
+                    inputProvider === "supabase" ? "bg-white" : "bg-[#3ecf8e]"
+                  )}>
+                    <svg viewBox="0 0 24 24" className={cn("w-2.5 h-2.5 fill-current", inputProvider === "supabase" ? "text-[#3ecf8e]" : "text-white")}>
+                      <path d="M21.362 9.354H12V.396L2.638 14.646H12v8.958l9.362-14.25z" />
+                    </svg>
+                  </div>
+                  Supabase
+                </Button>
+                <Button
+                  type="button"
+                  variant={inputProvider === "postgres" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setInputProvider("postgres")}
+                  className="gap-2"
+                >
+                  <DatabaseIcon className="w-4 h-4" />
+                  Postgres
+                </Button>
+              </div>
+            </div>
+
+            {/* Neon Connection Helper */}
+            {inputProvider === "neon" && (
+              <div className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-lg p-3 space-y-2 mt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 bg-[#00e599] rounded-sm flex items-center justify-center">
+                      <svg viewBox="0 0 24 24" className="w-3 h-3 text-black fill-current">
+                        <path d="M12 0L24 12L12 24L0 12L12 0Z" />
+                      </svg>
+                    </div>
+                    <span className="text-xs font-semibold">Connect with Neon</span>
+                  </div>
+                  <a
+                    href="https://neon.tech/docs/guides/nextjs"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 underline underline-offset-2"
+                  >
+                    View Guide
+                  </a>
+                </div>
+                <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                  Get your connection string from the Neon Console and paste it below. 
+                  Make sure to include <code className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded">?sslmode=require</code>.
+                </p>
+              </div>
+            )}
+
+            {/* Supabase Helper */}
+            {inputProvider === "supabase" && (
+              <div className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-lg p-3 space-y-2 mt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 bg-[#3ecf8e] rounded-sm flex items-center justify-center">
+                      <svg viewBox="0 0 24 24" className="w-3 h-3 text-white fill-current">
+                        <path d="M21.362 9.354H12V.396L2.638 14.646H12v8.958l9.362-14.25z" />
+                      </svg>
+                    </div>
+                    <span className="text-xs font-semibold">Connect with Supabase</span>
+                  </div>
+                  <a
+                    href="https://supabase.com/docs/guides/database/connecting-to-postgres"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 underline underline-offset-2"
+                  >
+                    View Guide
+                  </a>
+                </div>
+                <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                  Use your project's **Connection string** (URI) from Database Settings.
+                  Typically starts with <code className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded">postgresql://postgres...</code>.
+                </p>
+              </div>
+            )}
+
+            {/* Show masked URL when connected and not editing */}
           {databaseUrl && !hasChanges && (
-            <div className="text-xs font-mono text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-2 rounded-md mt-2">
-              <span className="text-zinc-400 dark:text-zinc-500 mr-2">
+            <div className="text-xs font-mono text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-2 rounded-md mt-2 break-all">
+              <span className="text-zinc-400 dark:text-zinc-500 mr-2 shrink-0">
                 Current:
               </span>
               {maskDatabaseUrl(databaseUrl)}
@@ -233,27 +363,43 @@ export function DatabaseSettings({
                 </span>
               )}
             </div>
-            <Input
-              id="database-url"
-              type="text"
-              placeholder="postgresql://user:password@host:port/database"
-              value={inputUrl}
-              onChange={(e) => {
-                setInputUrl(e.target.value);
-                setTestStatus("idle");
-                setTestError(null);
-              }}
-              className={cn(
-                "font-mono text-sm",
-                saveSuccess && "border-emerald-500 focus-visible:border-emerald-500",
-                testError && "border-red-500 focus-visible:border-red-500"
-              )}
-            />
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Format: postgresql://[user[:password]@][host][:port][/database]
-            </p>
+              <div className="relative group">
+                <Input
+                  id="database-url"
+                  type={showUrl ? "text" : "password"}
+                  placeholder="postgresql://user:password@host:port/database"
+                  value={inputUrl}
+                  onChange={(e) => {
+                    setInputUrl(e.target.value);
+                    setTestStatus("idle");
+                    setTestError(null);
+                  }}
+                  className={cn(
+                    "font-mono text-sm pr-10",
+                    saveSuccess &&
+                      "border-emerald-500 focus-visible:border-emerald-500",
+                    testError && "border-red-500 focus-visible:border-red-500"
+                  )}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
+                  onClick={() => setShowUrl(!showUrl)}
+                >
+                  {showUrl ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                  <span className="sr-only">
+                    {showUrl ? "Hide" : "Show"} URL
+                  </span>
+                </Button>
+              </div>
 
-            {/* Test Connection Button */}
+              {/* Test Connection Button */}
             <Button
               type="button"
               variant={testButtonState.variant}
@@ -270,9 +416,9 @@ export function DatabaseSettings({
 
             {/* Test Error Message */}
             {testError && (
-              <div className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-md">
+              <div className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-md break-words">
                 <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                <span>{testError}</span>
+                <span className="flex-1 min-w-0">{testError}</span>
               </div>
             )}
 

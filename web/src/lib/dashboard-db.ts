@@ -1,9 +1,6 @@
 /**
- * Dashboard database utilities for Neon PostgreSQL
+ * Dashboard database utilities for PostgreSQL
  */
-
-const NEON_CONNECTION_STRING = process.env.NEON_DATABASE_URL ||
-  "postgresql://neondb_owner:npoul_A_WzgURl:ZOOpcK2RpL1EpB@ep-proud-mouse-aijyu7tu-pooler.c-4.us-east-1.aws.neon.tech/neondb";
 
 export interface MetricRow {
   [key: string]: any;
@@ -11,8 +8,11 @@ export interface MetricRow {
 
 /**
  * Execute SQL query against Neon PostgreSQL database
+ * @param sql - SQL query string
+ * @param params - Query parameters
+ * @param databaseUrl - Optional custom database URL (from UI settings)
  */
-export async function queryNeon(sql: string, params: any[] = []): Promise<any[]> {
+export async function queryNeon(sql: string, params: any[] = [], databaseUrl?: string): Promise<any[]> {
   try {
     // Use the internal API route to query the database
     const response = await fetch("/api/dashboard/query", {
@@ -20,7 +20,7 @@ export async function queryNeon(sql: string, params: any[] = []): Promise<any[]>
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ sql, params }),
+      body: JSON.stringify({ sql, params, databaseUrl }),
     });
 
     if (!response.ok) {
