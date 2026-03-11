@@ -56,6 +56,7 @@ interface MessageRendererProps {
   onDelete?: () => void
   sessionId?: string
   compact?: boolean
+  skipAnimation?: boolean
 }
 
 // Helper functions outside component for stability
@@ -165,7 +166,7 @@ function getToolName(part: MessagePart): string {
  * Supports text, tool calls, and chart visualizations
  * Pattern based on Vercel AI SDK Generative UI
  */
-function MessageRenderer({ message, agentInfo, onRename, onPin, onDelete, sessionId, compact = false }: MessageRendererProps) {
+function MessageRenderer({ message, agentInfo, onRename, onPin, onDelete, sessionId, compact = false, skipAnimation }: MessageRendererProps) {
   const isUser = message.role === "user"
   const [copied, setCopied] = useState(false)
   const [liked, setLiked] = useState(false)
@@ -370,12 +371,12 @@ function MessageRenderer({ message, agentInfo, onRename, onPin, onDelete, sessio
         {/* Chart rendering */}
         {multipleChartsConfig && !isUser && (
           <div className="min-h-[5rem]">
-            <CollapsibleMultipleCharts config={multipleChartsConfig} defaultOpen={false} />
+            <CollapsibleMultipleCharts config={multipleChartsConfig} defaultOpen={false} skipAnimation={skipAnimation} />
           </div>
         )}
         {chartConfig && !isUser && (
           <div className="bg-white dark:bg-zinc-900 rounded-lg p-4 min-h-[20rem]">
-            <ChartRenderer config={chartConfig} />
+            <ChartRenderer config={chartConfig} skipAnimation={skipAnimation} />
           </div>
         )}
       </div>

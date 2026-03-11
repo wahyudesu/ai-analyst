@@ -126,6 +126,9 @@ export function ChatContent({
     [allAgents, currentAgentId],
   );
 
+  // Track seen message IDs to skip chart animation for already-rendered messages
+  const seenMessageIdsRef = useRef<Set<string>>(new Set());
+
   // Fetch message history using shared query hook
   const { data: fetchedMessages } = useMessages(threadId, currentAgentId);
 
@@ -133,8 +136,17 @@ export function ChatContent({
   useEffect(() => {
     if (fetchedMessages) {
       setMessages(fetchedMessages);
+      // Mark all fetched messages as seen (skip chart animation for these)
+      fetchedMessages.forEach((m: { id?: string }) => {
+        if (m.id) seenMessageIdsRef.current.add(m.id);
+      });
     }
   }, [fetchedMessages, setMessages]);
+
+  // Clear seen message IDs when switching sessions
+  useEffect(() => {
+    seenMessageIdsRef.current.clear();
+  }, [threadId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -238,14 +250,22 @@ export function ChatContent({
           </div>
         ) : (
           <>
-            {messages.map((message, index) => (
-              <MessageRenderer
-                key={message.id || index}
-                message={message as any}
-                agentInfo={currentAgentInfo}
-                sessionId={threadId}
-              />
-            ))}
+            {messages.map((message, index) => {
+              // Skip animation for messages that were already seen (loaded from history)
+              const isNewMessage = message.id && !seenMessageIdsRef.current.has(message.id);
+              if (message.id && isNewMessage) {
+                seenMessageIdsRef.current.add(message.id);
+              }
+              return (
+                <MessageRenderer
+                  key={message.id || index}
+                  message={message as any}
+                  agentInfo={currentAgentInfo}
+                  sessionId={threadId}
+                  skipAnimation={!isNewMessage}
+                />
+              );
+            })}
             {error && (
               <div className="p-4 bg-destructive/10 text-destructive rounded-lg">
                 Error: {error.message}

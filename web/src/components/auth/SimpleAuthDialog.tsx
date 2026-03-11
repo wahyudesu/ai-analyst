@@ -11,8 +11,8 @@ interface SimpleAuthDialogProps {
 
 export function SimpleAuthDialog({ onSuccess }: SimpleAuthDialogProps) {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("admin@example.com");
+  const [password, setPassword] = useState("admin123");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);

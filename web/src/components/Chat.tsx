@@ -196,6 +196,8 @@ export function Chat({
 
   // Title update ref - must be before other hooks
   const titleUpdateRef = useRef<string | undefined>(undefined);
+  // Track seen message IDs to skip chart animation for already-rendered messages
+  const seenMessageIdsRef = useRef<Set<string>>(new Set());
 
   // Helper functions - declared early, stable dependencies
   const saveSessions = useCallback((updatedSessions: ChatSession[]) => {
@@ -252,8 +254,17 @@ export function Chat({
   useEffect(() => {
     if (fetchedMessages) {
       setMessages(fetchedMessages);
+      // Mark all fetched messages as seen (skip chart animation for these)
+      fetchedMessages.forEach((m: { id?: string }) => {
+        if (m.id) seenMessageIdsRef.current.add(m.id);
+      });
     }
   }, [fetchedMessages]);
+
+  // Clear seen message IDs when switching sessions
+  useEffect(() => {
+    seenMessageIdsRef.current.clear();
+  }, [threadId]);
 
   const isLoadingMessages = isLoadingMessagesQuery;
 
@@ -704,17 +715,25 @@ export function Chat({
             </div>
           ) : (
             <>
-              {messages.map((message, index) => (
-                <MessageRenderer
-                  key={message.id || index}
-                  message={message as any}
-                  agentInfo={currentAgentInfo}
-                  sessionId={currentSessionId || undefined}
-                  onRename={() => currentSessionId && openRenameDialog(currentSessionId)}
-                  onPin={() => currentSessionId && pinSession(currentSessionId)}
-                  onDelete={() => currentSessionId && confirmDeleteSession(currentSessionId, { stopPropagation: () => {} } as any)}
-                />
-              ))}
+              {messages.map((message, index) => {
+                // Skip animation for messages that were already seen (loaded from history)
+                const isNewMessage = message.id && !seenMessageIdsRef.current.has(message.id);
+                if (message.id && isNewMessage) {
+                  seenMessageIdsRef.current.add(message.id);
+                }
+                return (
+                  <MessageRenderer
+                    key={message.id || index}
+                    message={message as any}
+                    agentInfo={currentAgentInfo}
+                    sessionId={currentSessionId || undefined}
+                    onRename={() => currentSessionId && openRenameDialog(currentSessionId)}
+                    onPin={() => currentSessionId && pinSession(currentSessionId)}
+                    onDelete={() => currentSessionId && confirmDeleteSession(currentSessionId, { stopPropagation: () => {} } as any)}
+                    skipAnimation={!isNewMessage}
+                  />
+                );
+              })}
               {error && (
                 <div className="p-3 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg">
                   Error: {error.message}

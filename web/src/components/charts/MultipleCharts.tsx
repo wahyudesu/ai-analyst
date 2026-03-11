@@ -7,9 +7,10 @@ import { ChartRenderer } from './ChartRenderer';
 
 interface MultipleChartsProps {
   config: MultipleChartsConfig;
+  skipAnimation?: boolean;
 }
 
-export function MultipleCharts({ config }: MultipleChartsProps) {
+export function MultipleCharts({ config, skipAnimation }: MultipleChartsProps) {
   const { charts, layout = 'grid', title, description } = config;
   const [activeTab, setActiveTab] = useState(0);
 
@@ -22,7 +23,7 @@ export function MultipleCharts({ config }: MultipleChartsProps) {
     }
 
   if (charts.length === 1) {
-    return <ChartRenderer config={charts[0]} />;
+    return <ChartRenderer config={charts[0]} skipAnimation={skipAnimation} />;
   }
 
     // Tabs layout
@@ -61,7 +62,7 @@ export function MultipleCharts({ config }: MultipleChartsProps) {
             </nav>
           </div>
           <div className="mt-4">
-            <ChartRenderer key={activeTab} config={charts[activeTab]} />
+            <ChartRenderer key={activeTab} config={charts[activeTab]} skipAnimation={skipAnimation} />
           </div>
         </div>
       );
@@ -85,7 +86,7 @@ export function MultipleCharts({ config }: MultipleChartsProps) {
           )}
           {charts.map((chart, index) => (
             <div key={index} className="bg-card rounded-lg p-4">
-              <ChartRenderer config={chart} />
+              <ChartRenderer config={chart} skipAnimation={skipAnimation} />
             </div>
           ))}
         </div>
@@ -118,7 +119,7 @@ export function MultipleCharts({ config }: MultipleChartsProps) {
         >
           {charts.map((chart, index) => (
             <div key={index} className="bg-card rounded-lg p-4">
-              <ChartRenderer config={chart} />
+              <ChartRenderer config={chart} skipAnimation={skipAnimation} />
             </div>
           ))}
         </div>
@@ -134,6 +135,7 @@ interface CollapsibleMultipleChartsProps extends MultipleChartsProps {
 export function CollapsibleMultipleCharts({
   config,
   defaultOpen = false,
+  skipAnimation,
 }: CollapsibleMultipleChartsProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
@@ -157,7 +159,7 @@ export function CollapsibleMultipleCharts({
       </button>
       {isOpen && (
         <div className="p-4 bg-card">
-          <MultipleCharts config={config} />
+          <MultipleCharts config={config} skipAnimation={skipAnimation} />
         </div>
       )}
     </div>

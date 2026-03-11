@@ -16,6 +16,7 @@ import type { ChartConfig } from './types';
 interface LineChartProps {
   config: ChartConfig;
   className?: string;
+  skipAnimation?: boolean;
 }
 
 // Format date strings to readable format
@@ -36,7 +37,7 @@ function formatXLabel(value: string): string {
  * Line chart component using Recharts
  * Supports multiple series for trends over time
  */
-export function LineChart({ config, className }: LineChartProps) {
+export function LineChart({ config, className, skipAnimation }: LineChartProps) {
   const { data, options, colors } = config;
   const series = data.series || [];
 

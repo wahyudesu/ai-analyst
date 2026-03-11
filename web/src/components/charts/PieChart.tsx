@@ -14,6 +14,7 @@ import type { ChartConfig } from './types';
 interface PieChartProps {
   config: ChartConfig;
   className?: string;
+  skipAnimation?: boolean;
 }
 
 interface PieDataItem {
@@ -26,7 +27,7 @@ interface PieDataItem {
  * Pie chart component using Recharts
  * Shows proportions of a whole with customizable slices
  */
-export function PieChart({ config, className }: PieChartProps) {
+export function PieChart({ config, className, skipAnimation }: PieChartProps) {
   const { data, colors, options } = config;
   const slices = data.slices || [];
 

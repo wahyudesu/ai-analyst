@@ -48,12 +48,6 @@ interface OverviewData {
 }
 
 export default function OverviewPage() {
-  const [data, setData] = useState<OverviewData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const { databaseUrl } = useDatabaseConfig();
-
   const {
     getCachedData,
     setCachedData,
@@ -61,6 +55,16 @@ export default function OverviewPage() {
     clearCache,
     getLastRefreshTime,
   } = useDashboardCache<OverviewData>({ ttl: 24 * 60 * 60 * 1000 }); // 1 day TTL
+
+  // Check cache IMMEDIATELY (before useEffect) to avoid loading flash
+  const cachedData = getCachedData();
+  const cacheValid = isCacheValid();
+
+  const [data, setData] = useState<OverviewData | null>(cachedData && cacheValid ? cachedData : null);
+  const [loading, setLoading] = useState(!cachedData || !cacheValid);
+  const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { databaseUrl } = useDatabaseConfig();
 
   const fetchFromAPI = useCallback(async (bypassCache = false): Promise<OverviewData | null> => {
     try {
@@ -106,19 +110,13 @@ export default function OverviewPage() {
   }, [fetchFromAPI, setCachedData, databaseUrl]);
 
   useEffect(() => {
+    // Only fetch if we don't have valid cached data from initialization
+    if (cachedData && cacheValid) {
+      return; // Already have cached data, no need to fetch
+    }
+
     async function loadData() {
-      // First, try to get data from cache
-      const cachedData = getCachedData();
-      const cacheValid = isCacheValid();
-
-      if (cachedData && cacheValid) {
-        // Use cached data if valid
-        setData(cachedData);
-        setLoading(false);
-        return;
-      }
-
-      // If no valid cache, fetch from API
+      // Fetch from API (no cache check needed, already done during init)
       const freshData = await fetchFromAPI();
       if (freshData) {
         setData(freshData);
@@ -127,7 +125,8 @@ export default function OverviewPage() {
       setLoading(false);
     }
     loadData();
-  }, [getCachedData, isCacheValid, fetchFromAPI, setCachedData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount, dependencies handled by initialization
 
       if (error) {
         return (

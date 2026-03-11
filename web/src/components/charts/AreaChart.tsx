@@ -16,6 +16,7 @@ import type { ChartConfig } from './types';
 interface AreaChartProps {
   config: ChartConfig;
   className?: string;
+  skipAnimation?: boolean;
 }
 
 // Format date strings to readable format
@@ -36,7 +37,7 @@ function formatXLabel(value: string): string {
  * Area chart component using Recharts
  * Supports multiple series for showing magnitude over time
  */
-export function AreaChart({ config, className }: AreaChartProps) {
+export function AreaChart({ config, className, skipAnimation }: AreaChartProps) {
   const { data, options, colors } = config;
   const series = data.series || [];
 

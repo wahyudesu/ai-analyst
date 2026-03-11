@@ -26,6 +26,7 @@ function formatXLabel(value: string): string {
 interface BarChartProps {
   config: ChartConfig;
   className?: string;
+  skipAnimation?: boolean;
 }
 
 interface TooltipData {
@@ -35,7 +36,7 @@ interface TooltipData {
   color: string;
 }
 
-export function BarChart({ config, className }: BarChartProps) {
+export function BarChart({ config, className, skipAnimation }: BarChartProps) {
   const { data, xAxis, yAxis, options, colors } = config;
   const series = data.series || [];
   const containerRef = useRef<HTMLDivElement>(null);
@@ -192,9 +193,9 @@ export function BarChart({ config, className }: BarChartProps) {
                         fill={color}
                         rx={isHorizontal ? 4 : 2}
                         opacity={isHovered ? 1 : hoveredBar ? 0.5 : 1}
-                        initial={isHorizontal ? { width: 0 } : { height: 0 }}
+                        initial={skipAnimation ? undefined : (isHorizontal ? { width: 0 } : { height: 0 })}
                         animate={{ width: safeWidth, height: safeHeight }}
-                        transition={{
+                        transition={skipAnimation ? { duration: 0 } : {
                           duration: 0.5,
                           ease: [0.85, 0, 0.15, 1],
                           delay: dataIndex * 0.02,
@@ -234,9 +235,9 @@ export function BarChart({ config, className }: BarChartProps) {
                         fontWeight={500}
                         textAnchor="start"
                         dominantBaseline="middle"
-                        initial={{ opacity: 0 }}
+                        initial={skipAnimation ? undefined : { opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        transition={{ delay: dataIndex * 0.02 + 0.3 }}
+                        transition={skipAnimation ? { duration: 0 } : { delay: dataIndex * 0.02 + 0.3 }}
                         style={{ pointerEvents: 'none' }}
                       >
                         {value.toLocaleString()}

@@ -11,6 +11,7 @@ import type { ChartConfig } from './types';
 interface ChartRendererProps {
   config: ChartConfig;
   className?: string;
+  skipAnimation?: boolean;
 }
 
 /**
@@ -98,7 +99,7 @@ async function downloadChartAsImage(
  * Main chart renderer component that switches based on chartType
  * Use this component to render any chart type from the backend configuration
  */
-export function ChartRenderer({ config, className }: ChartRendererProps) {
+export function ChartRenderer({ config, className, skipAnimation }: ChartRendererProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const { chartType, title, subtitle } = config;
 
@@ -128,13 +129,13 @@ export function ChartRenderer({ config, className }: ChartRendererProps) {
           {(() => {
             switch (chartType) {
               case 'bar':
-                return <BarChart config={config} />;
+                return <BarChart config={config} skipAnimation={skipAnimation} />;
               case 'line':
-                return <LineChart config={config} />;
+                return <LineChart config={config} skipAnimation={skipAnimation} />;
               case 'area':
-                return <AreaChart config={config} />;
+                return <AreaChart config={config} skipAnimation={skipAnimation} />;
               case 'pie':
-                return <PieChart config={config} />;
+                return <PieChart config={config} skipAnimation={skipAnimation} />;
               default:
                 return (
                   <div className="flex items-center justify-center h-64 text-muted-foreground">
