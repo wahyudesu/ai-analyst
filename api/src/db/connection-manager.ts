@@ -128,7 +128,7 @@ class SecureConnectionManager {
         statement_timeout: 30000,
         // Enable query logging in development
         ...(process.env.NODE_ENV === 'development' && {
-          log: (messages: string[]) => console.log('[DB]', messages.join(' ')),
+          log: (message: string) => console.log('[DB]', message),
         }),
       });
 
