@@ -220,7 +220,7 @@ export function Chat({
     const loadModels = async () => {
       try {
         const data = await fetchModels();
-        setModelOptions(data.models);
+        setModelOptions(data.models as ModelOption[]);
         // Set default model if not already set
         if (data.default && !currentModelId) {
           setCurrentModelId(data.default);

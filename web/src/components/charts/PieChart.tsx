@@ -60,8 +60,8 @@ export function PieChart({ config, className }: PieChartProps) {
               label={({ cx, cy, midAngle, innerRadius, outerRadius, name, value }) => {
                 const RADIAN = Math.PI / 180;
                 const radius = innerRadius + (outerRadius - innerRadius) * 1.4;
-                const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                const x = cx + radius * Math.cos(-(midAngle ?? 0) * RADIAN);
+                const y = cy + radius * Math.sin(-(midAngle ?? 0) * RADIAN);
                 const percent = total > 0 ? ((value || 0) / total * 100).toFixed(1) : '0';
                 const labelText = options.showDataLabels ? `${name}: ${percent}%` : name;
                 return (

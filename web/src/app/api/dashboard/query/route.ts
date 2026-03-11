@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
+  let client: Awaited<ReturnType<typeof createClient>> | null = null;
+
   try {
     const { sql, params = [], databaseUrl } = await request.json();
 
@@ -12,20 +14,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const client = await createClient(databaseUrl);
-
-    if (!sql || typeof sql !== "string") {
-      return NextResponse.json(
-        { error: "SQL query is required" },
-        { status: 400 }
-      );
-    }
-
+    client = await createClient(databaseUrl);
     await client.connect();
 
     try {
       const result = await client.query(sql, params);
       await client.end();
+      client = null;
 
       return NextResponse.json({
         rows: result.rows,
@@ -33,11 +28,15 @@ export async function POST(request: NextRequest) {
         columns: result.fields.map((f: any) => f.name),
       });
     } catch (queryError) {
-      await client.end();
+      if (client) {
+        await client.end();
+      }
       throw queryError;
     }
   } catch (error) {
-    try { await client.end(); } catch {}
+    if (client) {
+      try { await client.end(); } catch {}
+    }
     console.error("Database query error:", error);
     return NextResponse.json(
       {
