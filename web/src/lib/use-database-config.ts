@@ -5,7 +5,7 @@
  * Provides functions to get, set, and clear the database URL.
  */
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 const URL_STORAGE_KEY = "database-url"
 const PROVIDER_STORAGE_KEY = "database-provider"
@@ -23,18 +23,25 @@ export type DatabaseProvider = "neon" | "supabase" | "postgres" | "other"
  *   - clearDatabaseUrl: Function to remove the database URL and provider from localStorage
  */
 export function useDatabaseConfig() {
-  const [databaseUrl, setDatabaseUrlState] = useState<string>("")
-  const [databaseProvider, setDatabaseProviderState] = useState<DatabaseProvider>("postgres")
-  const [isMounted, setIsMounted] = useState(false)
+  // Initialize state from localStorage synchronously to avoid timing issues
+  // This ensures the value is available on first render, preventing race conditions
+  const [databaseUrl, setDatabaseUrlState] = useState<string>(() => {
+    if (typeof window === "undefined") return ""
+    try {
+      return localStorage.getItem(URL_STORAGE_KEY) || ""
+    } catch {
+      return ""
+    }
+  })
 
-  // Initialize state from localStorage after component mounts
-  useEffect(() => {
-    setIsMounted(true)
-    const storedUrl = localStorage.getItem(URL_STORAGE_KEY) || ""
-    const storedProvider = (localStorage.getItem(PROVIDER_STORAGE_KEY) as DatabaseProvider) || "postgres"
-    setDatabaseUrlState(storedUrl)
-    setDatabaseProviderState(storedProvider)
-  }, [])
+  const [databaseProvider, setDatabaseProviderState] = useState<DatabaseProvider>(() => {
+    if (typeof window === "undefined") return "postgres"
+    try {
+      return (localStorage.getItem(PROVIDER_STORAGE_KEY) as DatabaseProvider) || "postgres"
+    } catch {
+      return "postgres"
+    }
+  })
 
   /**
    * Set/save a new database URL to localStorage
@@ -42,16 +49,18 @@ export function useDatabaseConfig() {
   function setDatabaseUrl(url: string): void {
     if (typeof window === "undefined") return
 
-    if (url) {
-      localStorage.setItem(URL_STORAGE_KEY, url)
-    } else {
-      localStorage.removeItem(URL_STORAGE_KEY)
+    try {
+      if (url) {
+        localStorage.setItem(URL_STORAGE_KEY, url)
+      } else {
+        localStorage.removeItem(URL_STORAGE_KEY)
+      }
+    } catch (e) {
+      console.warn("Failed to save database URL to localStorage:", e)
     }
 
-    // Update state if component is mounted
-    if (isMounted) {
-      setDatabaseUrlState(url)
-    }
+    // Always update state immediately
+    setDatabaseUrlState(url)
   }
 
   /**
@@ -60,12 +69,14 @@ export function useDatabaseConfig() {
   function setDatabaseProvider(provider: DatabaseProvider): void {
     if (typeof window === "undefined") return
 
-    localStorage.setItem(PROVIDER_STORAGE_KEY, provider)
-
-    // Update state if component is mounted
-    if (isMounted) {
-      setDatabaseProviderState(provider)
+    try {
+      localStorage.setItem(PROVIDER_STORAGE_KEY, provider)
+    } catch (e) {
+      console.warn("Failed to save database provider to localStorage:", e)
     }
+
+    // Always update state immediately
+    setDatabaseProviderState(provider)
   }
 
   /**
@@ -73,14 +84,17 @@ export function useDatabaseConfig() {
    */
   function clearDatabaseUrl(): void {
     if (typeof window === "undefined") return
-    localStorage.removeItem(URL_STORAGE_KEY)
-    localStorage.removeItem(PROVIDER_STORAGE_KEY)
 
-    // Update state if component is mounted
-    if (isMounted) {
-      setDatabaseUrlState("")
-      setDatabaseProviderState("postgres")
+    try {
+      localStorage.removeItem(URL_STORAGE_KEY)
+      localStorage.removeItem(PROVIDER_STORAGE_KEY)
+    } catch (e) {
+      console.warn("Failed to clear database config from localStorage:", e)
     }
+
+    // Always update state immediately
+    setDatabaseUrlState("")
+    setDatabaseProviderState("postgres")
   }
 
   return {

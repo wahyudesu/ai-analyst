@@ -170,8 +170,9 @@ export function Chat({
                 resource: transportParamsRef.current.resourceId,
               }),
             },
-            ...(transportParamsRef.current.databaseUrl && {
-              databaseUrl: transportParamsRef.current.databaseUrl,
+            // Always include databaseUrl from current ref value
+            ...(databaseUrl && {
+              databaseUrl: databaseUrl,
             }),
             ...(transportParamsRef.current.modelId && {
               modelId: transportParamsRef.current.modelId,
@@ -179,7 +180,7 @@ export function Chat({
           },
         }),
       }),
-    [currentAgentId, currentModelId],
+    [currentAgentId, currentModelId, databaseUrl],
   );
 
   const { messages, status, sendMessage, error, setMessages } = useChat({
