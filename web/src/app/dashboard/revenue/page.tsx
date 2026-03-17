@@ -10,7 +10,7 @@ import { StackedAreaChart } from "@/components/charts/StackedAreaChart";
 import type { ChartConfig } from "@/components/charts/types";
 import { useDatabaseConfig } from "@/lib/use-database-config";
 import { DollarSign, Users, TrendingUp, Repeat } from "lucide-react";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 
 interface RevenueData {
   metrics: {
@@ -37,6 +37,10 @@ export default function RevenuePage() {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const { databaseUrl } = useDatabaseConfig();
 
+  // Use ref to avoid recreating fetchData when databaseUrl changes
+  const databaseUrlRef = useRef(databaseUrl);
+  databaseUrlRef.current = databaseUrl;
+
   const fetchData = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
       setIsRefreshing(true);
@@ -48,7 +52,7 @@ export default function RevenuePage() {
       const response = await fetch("/api/dashboard/revenue", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ databaseUrl: databaseUrl || undefined }),
+        body: JSON.stringify({ databaseUrl: databaseUrlRef.current || undefined }),
       });
       if (response.ok) {
         const result = await response.json();
@@ -61,7 +65,7 @@ export default function RevenuePage() {
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, [databaseUrl]);
+  }, []);
 
   const handleRefresh = useCallback(() => {
     return fetchData(true);
@@ -71,82 +75,91 @@ export default function RevenuePage() {
     fetchData();
   }, [fetchData]);
 
-    const mrrByPlanConfig: ChartConfig | null = data && data.charts.mrrByPlan.length > 0 ? {
-    chartType: "area",
-    title: "MRR by Plan Type",
-    data: {
-      series: data.charts.mrrByPlan.map((p) => ({
-        name: p.plan.charAt(0).toUpperCase() + p.plan.slice(1),
-        data: [{ x: p.plan, y: p.mrr }],
-        color: p.plan === "starter" ? "#14B8A6" : p.plan === "pro" ? "#10B981" : "#F97316",
-      })),
-    },
-    xAxis: { label: "Plan", type: "category" },
-    yAxis: [{ label: "MRR ($)" }],
-    options: { legend: true, stacked: true, horizontal: false, showDataLabels: false },
-    colors: { palette: ["#14B8A6", "#10B981", "#F97316"] },
-    metadata: {
-      dataSourceRowCount: data.charts.mrrByPlan.length,
-      displayedPointCount: data.charts.mrrByPlan.length,
-      generatedAt: new Date().toISOString(),
-    },
-  } : null;
+  const mrrByPlanConfig: ChartConfig | null = useMemo(() => {
+    if (!data || data.charts.mrrByPlan.length === 0) return null;
+    return {
+      chartType: "area",
+      title: "MRR by Plan Type",
+      data: {
+        series: data.charts.mrrByPlan.map((p) => ({
+          name: p.plan.charAt(0).toUpperCase() + p.plan.slice(1),
+          data: [{ x: p.plan, y: p.mrr }],
+          color: p.plan === "starter" ? "#14B8A6" : p.plan === "pro" ? "#10B981" : "#F97316",
+        })),
+      },
+      xAxis: { label: "Plan", type: "category" },
+      yAxis: [{ label: "MRR ($)" }],
+      options: { legend: true, stacked: true, horizontal: false, showDataLabels: false },
+      colors: { palette: ["#14B8A6", "#10B981", "#F97316"] },
+      metadata: {
+        dataSourceRowCount: data.charts.mrrByPlan.length,
+        displayedPointCount: data.charts.mrrByPlan.length,
+        generatedAt: new Date().toISOString(),
+      },
+    };
+  }, [data?.charts.mrrByPlan]);
 
-    const funnelConfig: ChartConfig | null = data && data.charts.funnel.length > 0 ? {
-    chartType: "bar",
-    title: "Customer Funnel",
-    data: {
-      series: [
-        {
-          name: "Users",
-          data: data.charts.funnel.map((f) => ({ x: f.name, y: f.value })),
-        },
-      ],
-    },
-    xAxis: { label: "Stage", type: "category" },
-    yAxis: [{ label: "Users" }],
-    options: { legend: false, stacked: false, horizontal: true, showDataLabels: true },
-    colors: { palette: ["#14B8A6", "#10B981", "#F97316"] },
-    metadata: {
-      dataSourceRowCount: data.charts.funnel.length,
-      displayedPointCount: data.charts.funnel.length,
-      generatedAt: new Date().toISOString(),
-    },
-  } : null;
+  const funnelConfig: ChartConfig | null = useMemo(() => {
+    if (!data || data.charts.funnel.length === 0) return null;
+    return {
+      chartType: "bar",
+      title: "Customer Funnel",
+      data: {
+        series: [
+          {
+            name: "Users",
+            data: data.charts.funnel.map((f) => ({ x: f.name, y: f.value })),
+          },
+        ],
+      },
+      xAxis: { label: "Stage", type: "category" },
+      yAxis: [{ label: "Users" }],
+      options: { legend: false, stacked: false, horizontal: true, showDataLabels: true },
+      colors: { palette: ["#14B8A6", "#10B981", "#F97316"] },
+      metadata: {
+        dataSourceRowCount: data.charts.funnel.length,
+        displayedPointCount: data.charts.funnel.length,
+        generatedAt: new Date().toISOString(),
+      },
+    };
+  }, [data?.charts.funnel]);
 
-      const engagementConfig: ChartConfig | null = data && data.charts.engagement.labels.length > 0 && data.charts.engagement.conversations?.length > 0 ? {
-    chartType: "area",
-    title: "Product Engagement",
-    data: {
-      series: [
-        {
-          name: "Conversations",
-          data: data.charts.engagement.labels.map((label, i) => ({
-            x: label,
-            y: data.charts.engagement.conversations[i],
-          })),
-          color: "#14B8A6",
-        },
-        {
-          name: "Messages",
-          data: data.charts.engagement.labels.map((label, i) => ({
-            x: label,
-            y: data.charts.engagement.messages[i],
-          })),
-          color: "#10B981",
-        },
-      ],
-    },
-    xAxis: { label: "Week", type: "category" },
-    yAxis: [{ label: "Count" }],
-    options: { legend: true, stacked: false, horizontal: false, showDataLabels: false },
-    colors: { palette: ["#14B8A6", "#10B981"] },
-    metadata: {
-      dataSourceRowCount: data.charts.engagement.labels.length,
-      displayedPointCount: data.charts.engagement.labels.length,
-      generatedAt: new Date().toISOString(),
-    },
-  } : null;
+  const engagementConfig: ChartConfig | null = useMemo(() => {
+    if (!data || data.charts.engagement.labels.length === 0 || !data.charts.engagement.conversations?.length) return null;
+    return {
+      chartType: "area",
+      title: "Product Engagement",
+      data: {
+        series: [
+          {
+            name: "Conversations",
+            data: data.charts.engagement.labels.map((label, i) => ({
+              x: label,
+              y: data.charts.engagement.conversations[i],
+            })),
+            color: "#14B8A6",
+          },
+          {
+            name: "Messages",
+            data: data.charts.engagement.labels.map((label, i) => ({
+              x: label,
+              y: data.charts.engagement.messages[i],
+            })),
+            color: "#10B981",
+          },
+        ],
+      },
+      xAxis: { label: "Week", type: "category" },
+      yAxis: [{ label: "Count" }],
+      options: { legend: true, stacked: false, horizontal: false, showDataLabels: false },
+      colors: { palette: ["#14B8A6", "#10B981"] },
+      metadata: {
+        dataSourceRowCount: data.charts.engagement.labels.length,
+        displayedPointCount: data.charts.engagement.labels.length,
+        generatedAt: new Date().toISOString(),
+      },
+    };
+  }, [data?.charts.engagement.labels, data?.charts.engagement.conversations, data?.charts.engagement.messages]);
 
   return (
     <div className="flex flex-col">
@@ -279,7 +292,7 @@ export default function RevenuePage() {
                     </div>
                   </div>
                   <p className="text-2xl font-bold text-green-900 dark:text-green-100">
-                    {data?.metrics.nrr.value || 0}%
+                    {(data?.metrics.nrr.value || 0).toFixed(2)}%
                   </p>
                 </div>
 

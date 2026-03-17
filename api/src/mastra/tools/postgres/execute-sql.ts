@@ -1,7 +1,7 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { validateSQLQueryV2, sanitizeSQLQueryV2, type ValidationResult } from './sql-validator-v2.js';
-import { connectionManager } from '../../../db/connection-manager.ts';
+import { connectionManager } from '../../../db/connection-manager.js';
 import { getDatabaseUrl } from '../../lib/request-context.js';
 import {
   createDatabaseError,

@@ -95,7 +95,7 @@ Use this after executeSQL to provide automatic insights about the data.`,
         const uniqueCount = sorted.length;
 
         if (topValue && uniqueCount < rowCount) {
-          const percentage = ((topValue[1] / rowCount) * 100).toFixed(1);
+          const percentage = ((topValue[1] / rowCount) * 100).toFixed(2);
           insights.push(`\n**Column: ${col}** (categorical)`);
           insights.push(`- Most common: "${topValue[0]}" (${topValue[1]}x, ${percentage}%)`);
           insights.push(`- Unique values: ${uniqueCount}`);
@@ -107,7 +107,7 @@ Use this after executeSQL to provide automatic insights about the data.`,
         if (sorted.length > 1) {
           const topPercent = (sorted[0][1] / rowCount) * 100;
           if (topPercent > 70) {
-            patterns.push(`**Skewed distribution in ${col}:** Top value accounts for ${topPercent.toFixed(1)}%`);
+            patterns.push(`**Skewed distribution in ${col}:** Top value accounts for ${topPercent.toFixed(2)}%`);
           }
         }
       }
@@ -143,8 +143,8 @@ Use this after executeSQL to provide automatic insights about the data.`,
     for (const col of columns) {
       const nullCount = rows.filter(r => r[col] === null || r[col] === undefined).length;
       if (nullCount > 0) {
-        const nullPercent = ((nullCount / rowCount) * 100).toFixed(1);
-        if (nullPercent > 10) {
+        const nullPercent = ((nullCount / rowCount) * 100).toFixed(2);
+        if (parseFloat(nullPercent) > 10) {
           insights.push(`⚠️ **"${col}" has ${nullCount} null values (${nullPercent}%)`);
         }
       }

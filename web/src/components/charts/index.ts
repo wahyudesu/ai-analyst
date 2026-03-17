@@ -13,3 +13,17 @@ export { StackedAreaChart } from './StackedAreaChart';
 export { HorizontalBarChart } from './HorizontalBarChart';
 export { DualAxisChart } from './DualAxisChart';
 export type { ChartConfig, MultipleChartsConfig, ChartsLayout } from './types';
+
+// Dynamic imports for code-splitting
+export {
+  BarChart as DynamicBarChart,
+  LineChart as DynamicLineChart,
+  AreaChart as DynamicAreaChart,
+  PieChart as DynamicPieChart,
+  FunnelChart as DynamicFunnelChart,
+  StackedAreaChart as DynamicStackedAreaChart,
+  HorizontalBarChart as DynamicHorizontalBarChart,
+  DualAxisChart as DynamicDualAxisChart,
+  ChartSkeleton,
+} from './dynamic';
+export { ChartLoader } from './ChartLoader';

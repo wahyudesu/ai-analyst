@@ -5,6 +5,10 @@ import { queryNeon } from "@/lib/db";
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
 
+// Time range types
+type TimeRange = "7d" | "30d" | "90d" | "12w" | "all" | "custom";
+type ComparisonMode = "wow" | "mom" | "yoy";
+
 export async function GET(request: NextRequest) {
   return await POST(request);
 }
@@ -13,12 +17,63 @@ export async function POST(request: NextRequest) {
   try {
     // Get custom database URL from request body (for POST) or query param (for GET)
     let databaseUrl: string | undefined;
+    let timeRange: TimeRange = "30d";
+    let comparisonMode: ComparisonMode = "mom";
+    let customStartDate: string | undefined;
+    let customEndDate: string | undefined;
+
     if (request.method === "POST") {
       const body = await request.json().catch(() => ({}));
       databaseUrl = body.databaseUrl;
+      timeRange = body.timeRange || "30d";
+      comparisonMode = body.comparisonMode || "mom";
+      customStartDate = body.customStartDate;
+      customEndDate = body.customEndDate;
     } else {
       databaseUrl = request.nextUrl.searchParams.get("databaseUrl") || undefined;
+      timeRange = (request.nextUrl.searchParams.get("timeRange") as TimeRange) || "30d";
+      comparisonMode = (request.nextUrl.searchParams.get("comparisonMode") as ComparisonMode) || "mom";
+      customStartDate = request.nextUrl.searchParams.get("customStartDate") || undefined;
+      customEndDate = request.nextUrl.searchParams.get("customEndDate") || undefined;
     }
+
+    // Helper function to get interval based on time range
+    const getInterval = (range: TimeRange): string => {
+      switch (range) {
+        case "7d": return "7 days";
+        case "30d": return "30 days";
+        case "90d": return "90 days";
+        case "12w": return "84 days"; // 12 weeks
+        case "all": return "100 years"; // Effectively all time
+        case "custom": return "30 days"; // Fallback, actual dates used in query
+        default: return "30 days";
+      }
+    };
+
+    // Helper to get comparison interval based on mode
+    const getComparisonIntervals = (mode: ComparisonMode): { current: string; previous: string } => {
+      switch (mode) {
+        case "wow":
+          return { current: "7 days", previous: "14 days" };
+        case "mom":
+          return { current: "30 days", previous: "60 days" };
+        case "yoy":
+          return { current: "365 days", previous: "730 days" };
+        default:
+          return { current: "30 days", previous: "60 days" };
+      }
+    };
+
+    // Helper to build date filter for custom range
+    const getDateFilter = (range: TimeRange, interval: string): string => {
+      if (range === "custom" && customStartDate && customEndDate) {
+        return `created_at >= '${customStartDate}' AND created_at <= '${customEndDate}'`;
+      }
+      return `created_at >= NOW() - INTERVAL '${interval}'`;
+    };
+
+    const interval = getInterval(timeRange);
+    const comparisonIntervals = getComparisonIntervals(comparisonMode);
 
     // Get total users
     const totalUsersResult = await queryNeon(`
@@ -51,19 +106,45 @@ export async function POST(request: NextRequest) {
     `, [], databaseUrl);
     const activeSubscriptions = parseInt(activeSubscriptionsResult[0]?.count) || 0;
 
-    // Get messages in last 30 days
-    const messagesLast30DaysResult = await queryNeon(`
+    // Get messages in selected time range (current period)
+    const messagesCurrentResult = await queryNeon(`
       SELECT COUNT(*) as count FROM messages
-      WHERE created_at >= NOW() - INTERVAL '30 days'
+      WHERE ${getDateFilter(timeRange, interval)}
     `, [], databaseUrl);
-    const messagesLast30Days = parseInt(messagesLast30DaysResult[0]?.count) || 0;
+    const messagesCurrent = parseInt(messagesCurrentResult[0]?.count) || 0;
 
-    // Get conversations in last 30 days
-    const conversationsLast30DaysResult = await queryNeon(`
-      SELECT COUNT(*) as count FROM conversations
-      WHERE created_at >= NOW() - INTERVAL '30 days'
+    // Get messages in previous period (for comparison)
+    const messagesPreviousResult = await queryNeon(`
+      SELECT COUNT(*) as count FROM messages
+      WHERE created_at >= NOW() - INTERVAL '${comparisonIntervals.previous}'
+        AND created_at < NOW() - INTERVAL '${comparisonIntervals.current}'
     `, [], databaseUrl);
-    const conversationsLast30Days = parseInt(conversationsLast30DaysResult[0]?.count) || 0;
+    const messagesPrevious = parseInt(messagesPreviousResult[0]?.count) || 0;
+
+    // Calculate percentage change
+    const messagesChange = messagesPrevious > 0
+      ? ((messagesCurrent - messagesPrevious) / messagesPrevious) * 100
+      : 0;
+
+    // Get conversations in selected time range (current period)
+    const conversationsCurrentResult = await queryNeon(`
+      SELECT COUNT(*) as count FROM conversations
+      WHERE ${getDateFilter(timeRange, interval)}
+    `, [], databaseUrl);
+    const conversationsCurrent = parseInt(conversationsCurrentResult[0]?.count) || 0;
+
+    // Get conversations in previous period (for comparison)
+    const conversationsPreviousResult = await queryNeon(`
+      SELECT COUNT(*) as count FROM conversations
+      WHERE created_at >= NOW() - INTERVAL '${comparisonIntervals.previous}'
+        AND created_at < NOW() - INTERVAL '${comparisonIntervals.current}'
+    `, [], databaseUrl);
+    const conversationsPrevious = parseInt(conversationsPreviousResult[0]?.count) || 0;
+
+    // Calculate percentage change
+    const conversationsChange = conversationsPrevious > 0
+      ? ((conversationsCurrent - conversationsPrevious) / conversationsPrevious) * 100
+      : 0;
 
     // Get users with conversations (activated users)
     const activatedUsersResult = await queryNeon(`
@@ -71,17 +152,17 @@ export async function POST(request: NextRequest) {
     `, [], databaseUrl);
     const activatedUsers = parseInt(activatedUsersResult[0]?.count) || 0;
 
-    // Get user growth (last 30 days vs previous 30 days)
+    // Get user growth based on comparison mode
     const userGrowthResult = await queryNeon(`
       WITH user_periods AS (
         SELECT
           CASE
-            WHEN created_at >= NOW() - INTERVAL '30 days' THEN 'current'
-            WHEN created_at >= NOW() - INTERVAL '60 days' AND created_at < NOW() - INTERVAL '30 days' THEN 'previous'
+            WHEN created_at >= NOW() - INTERVAL '${comparisonIntervals.current}' THEN 'current'
+            WHEN created_at >= NOW() - INTERVAL '${comparisonIntervals.previous}' AND created_at < NOW() - INTERVAL '${comparisonIntervals.current}' THEN 'previous'
           END as period,
           COUNT(*) as count
         FROM profiles
-        WHERE created_at >= NOW() - INTERVAL '60 days'
+        WHERE created_at >= NOW() - INTERVAL '${comparisonIntervals.previous}'
         GROUP BY period
       )
       SELECT
@@ -150,19 +231,50 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         metrics: {
-          totalUsers: { value: totalUsers, format: "number", change: userGrowthRate },
+          totalUsers: {
+            value: totalUsers,
+            format: "number",
+            current: currentPeriodUsers,
+            previous: previousPeriodUsers,
+            change: userGrowthRate
+          },
           totalAgents: { value: totalAgents, format: "number" },
           totalConversations: { value: totalConversations, format: "number" },
           totalMessages: { value: totalMessages, format: "number" },
           activeSubscriptions: { value: activeSubscriptions, format: "number" },
-          messagesLast30Days: { value: messagesLast30Days, format: "number" },
-          conversationsLast30Days: { value: conversationsLast30Days, format: "number" },
+          messagesLast30Days: {
+            value: messagesCurrent,
+            format: "number",
+            current: messagesCurrent,
+            previous: messagesPrevious,
+            change: messagesChange
+          },
+          conversationsLast30Days: {
+            value: conversationsCurrent,
+            format: "number",
+            current: conversationsCurrent,
+            previous: conversationsPrevious,
+            change: conversationsChange
+          },
           activatedUsers: { value: activatedUsers, format: "number" },
-          userGrowthRate: { value: userGrowthRate, format: "percentage" },
+          userGrowthRate: {
+            value: userGrowthRate,
+            format: "percentage",
+            current: currentPeriodUsers,
+            previous: previousPeriodUsers,
+            change: userGrowthRate
+          },
           activationRate: {
             value: totalUsers > 0 ? (activatedUsers / totalUsers) * 100 : 0,
             format: "percentage"
           },
+        },
+        // Include current time range and comparison mode in response
+        meta: {
+          timeRange,
+          comparisonMode,
+          interval,
+          comparisonIntervals
         },
         charts: {
           newUsersOverTime: {

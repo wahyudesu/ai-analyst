@@ -6,18 +6,15 @@
  */
 
 import { sign, verify } from 'hono/jwt';
-import type { JWTPayload } from 'hono/jwt';
 
 // Configuration from environment
 const AUTH_EMAIL = process.env.AUTH_EMAIL || 'admin@ai-analyst.dev';
 const AUTH_PASSWORD = process.env.AUTH_PASSWORD || 'admin123';
 const JWT_SECRET = process.env.JWT_SECRET || 'ai-analyst-secret-key-change-in-production';
-const JWT_EXPIRY = '24h'; // Token expires in 24 hours
 
-export interface AuthPayload extends JWTPayload {
+export interface AuthPayload {
   email: string;
-  iat: number;
-  exp: number;
+  exp?: number;
 }
 
 export interface LoginRequest {
@@ -39,10 +36,9 @@ export async function login(credentials: LoginRequest): Promise<AuthResponse> {
 
   // Simple hardcoded check
   if (email === AUTH_EMAIL && password === AUTH_PASSWORD) {
-    const payload: AuthPayload = {
+    const payload = {
       email,
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours
+      exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours from now
     };
 
     const token = await sign(payload, JWT_SECRET);
@@ -64,8 +60,12 @@ export async function login(credentials: LoginRequest): Promise<AuthResponse> {
  */
 export async function verifyToken(token: string): Promise<AuthPayload | null> {
   try {
-    const payload = await verify(token, JWT_SECRET) as AuthPayload;
-    return payload;
+    const payload = await verify(token, JWT_SECRET, 'HS256') as unknown;
+    // Ensure the payload has the required email field
+    if (payload && typeof payload === 'object' && 'email' in payload) {
+      return { email: String(payload.email) };
+    }
+    return null;
   } catch (error) {
     return null;
   }

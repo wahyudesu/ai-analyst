@@ -187,7 +187,7 @@ export const TestResultsProgress = ({
             <span>
               {summary.passed}/{summary.total} tests passed
             </span>
-            <span>{passedPercent.toFixed(0)}%</span>
+            <span>{passedPercent.toFixed(2)}%</span>
           </div>
         </>
       )}

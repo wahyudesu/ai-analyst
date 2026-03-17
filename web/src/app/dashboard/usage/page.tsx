@@ -8,7 +8,7 @@ import { LineChart, BarChart } from "@/components/charts";
 import type { ChartConfig } from "@/components/charts/types";
 import { useDatabaseConfig } from "@/lib/use-database-config";
 import { Activity, Users, Zap, Target } from "lucide-react";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 
 interface UsageData {
   metrics: {
@@ -41,18 +41,22 @@ export default function UsagePage() {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const { databaseUrl } = useDatabaseConfig();
 
+  // Use ref to avoid recreating fetchData when databaseUrl changes
+  const databaseUrlRef = useRef(databaseUrl);
+  databaseUrlRef.current = databaseUrl;
+
   const fetchData = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
       setIsRefreshing(true);
     } else {
       setLoading(true);
     }
-    
+
     try {
       const response = await fetch("/api/dashboard/usage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ databaseUrl: databaseUrl || undefined }),
+        body: JSON.stringify({ databaseUrl: databaseUrlRef.current || undefined }),
       });
       if (response.ok) {
         const result = await response.json();
@@ -65,7 +69,7 @@ export default function UsagePage() {
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, [databaseUrl]);
+  }, []);
 
   const handleRefresh = useCallback(() => {
     return fetchData(true);
@@ -75,57 +79,63 @@ export default function UsagePage() {
     fetchData();
   }, [fetchData]);
 
-  const dailyTrendConfig: ChartConfig | null = data && data.charts.dailyTrend.labels.length > 0 ? {
-    chartType: "line",
-    title: "Daily Active Users (30 Days)",
-    data: {
-      series: [
-        {
-          name: "DAU",
-          data: data.charts.dailyTrend.labels.map((label, i) => ({
-            x: label,
-            y: data.charts.dailyTrend.dau[i],
-          })),
-          color: "#14B8A6",
-        },
-      ],
-    },
-    xAxis: { label: "Date", type: "category" },
-    yAxis: [{ label: "Users" }],
-    options: { legend: false, stacked: false, horizontal: false, showDataLabels: false },
-    colors: { palette: ["#14B8A6"] },
-    metadata: {
-      dataSourceRowCount: data.charts.dailyTrend.labels.length,
-      displayedPointCount: data.charts.dailyTrend.labels.length,
-      generatedAt: new Date().toISOString(),
-    },
-  } : null;
+  const dailyTrendConfig: ChartConfig | null = useMemo(() => {
+    if (!data || data.charts.dailyTrend.labels.length === 0) return null;
+    return {
+      chartType: "line",
+      title: "Daily Active Users (30 Days)",
+      data: {
+        series: [
+          {
+            name: "DAU",
+            data: data.charts.dailyTrend.labels.map((label, i) => ({
+              x: label,
+              y: data.charts.dailyTrend.dau[i],
+            })),
+            color: "#14B8A6",
+          },
+        ],
+      },
+      xAxis: { label: "Date", type: "category" },
+      yAxis: [{ label: "Users" }],
+      options: { legend: false, stacked: false, horizontal: false, showDataLabels: false },
+      colors: { palette: ["#14B8A6"] },
+      metadata: {
+        dataSourceRowCount: data.charts.dailyTrend.labels.length,
+        displayedPointCount: data.charts.dailyTrend.labels.length,
+        generatedAt: new Date().toISOString(),
+      },
+    };
+  }, [data?.charts.dailyTrend.labels, data?.charts.dailyTrend.dau]);
 
-  const sourceUsageConfig: ChartConfig | null = data && data.charts.sourceUsage.length > 0 ? {
-    chartType: "bar",
-    title: "Usage by Source",
-    data: {
-      series: [
-        {
-          name: "Conversations",
-          data: data.charts.sourceUsage.map((s) => ({
-            x: s.source,
-            y: s.conversations,
-          })),
-          color: "#14B8A6",
-        },
-      ],
-    },
-    xAxis: { label: "Source", type: "category" },
-    yAxis: [{ label: "Conversations" }],
-    options: { legend: false, stacked: false, horizontal: true, showDataLabels: false },
-    colors: { palette: ["#14B8A6", "#10B981", "#F97316", "#EF4444", "#8B5CF6"] },
-    metadata: {
-      dataSourceRowCount: data.charts.sourceUsage.length,
-      displayedPointCount: data.charts.sourceUsage.length,
-      generatedAt: new Date().toISOString(),
-    },
-  } : null;
+  const sourceUsageConfig: ChartConfig | null = useMemo(() => {
+    if (!data || data.charts.sourceUsage.length === 0) return null;
+    return {
+      chartType: "bar",
+      title: "Usage by Source",
+      data: {
+        series: [
+          {
+            name: "Conversations",
+            data: data.charts.sourceUsage.map((s) => ({
+              x: s.source,
+              y: s.conversations,
+            })),
+            color: "#14B8A6",
+          },
+        ],
+      },
+      xAxis: { label: "Source", type: "category" },
+      yAxis: [{ label: "Conversations" }],
+      options: { legend: false, stacked: false, horizontal: true, showDataLabels: false },
+      colors: { palette: ["#14B8A6", "#10B981", "#F97316", "#EF4444", "#8B5CF6"] },
+      metadata: {
+        dataSourceRowCount: data.charts.sourceUsage.length,
+        displayedPointCount: data.charts.sourceUsage.length,
+        generatedAt: new Date().toISOString(),
+      },
+    };
+  }, [data?.charts.sourceUsage]);
 
       return (
         <div className="flex flex-col">
@@ -205,7 +215,7 @@ export default function UsagePage() {
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
                       <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-                        {data?.metrics.dauMauRatio.value.toFixed(1) || 0}%
+                        {data?.metrics.dauMauRatio.value.toFixed(2) || 0}%
                       </p>
                       <p className="text-xs text-zinc-600 dark:text-zinc-400">
                         {(data?.metrics.dauMauRatio.value || 0) > 25 ? "Excellent" : (data?.metrics.dauMauRatio.value || 0) > 15 ? "Good" : "Fair"}

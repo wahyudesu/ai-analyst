@@ -55,7 +55,7 @@ export function FunnelChart({ config, className }: FunnelChartProps) {
                   </span>
                   {step.percentage !== undefined && (
                     <span className="text-xs text-muted-foreground">
-                      ({step.percentage.toFixed(1)}%)
+                      ({step.percentage.toFixed(2)}%)
                     </span>
                   )}
                 </div>
@@ -69,7 +69,7 @@ export function FunnelChart({ config, className }: FunnelChartProps) {
                 }}
               >
                 <span className="text-xs font-semibold text-white drop-shadow">
-                  {step.percentage?.toFixed(1)}%
+                  {step.percentage?.toFixed(2)}%
                 </span>
               </div>
             </div>

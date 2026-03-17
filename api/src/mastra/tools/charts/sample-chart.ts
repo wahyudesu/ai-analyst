@@ -5,7 +5,7 @@
 
 import { createTool } from "@mastra/core/tools"
 import { z } from "zod"
-import type { ChartConfig, GenerateChartOutput } from "./types.js"
+import type { GenerateChartOutput } from "./types.js"
 
 const sampleData = {
   // Sales by month

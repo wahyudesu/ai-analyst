@@ -1,6 +1,6 @@
 import { createTool } from "@mastra/core/tools"
 import { z } from "zod"
-import { connectionManager } from "../../../db/connection-manager.ts"
+import { connectionManager } from "../../../db/connection-manager.js"
 import { getDatabaseUrl } from "../../lib/request-context.js"
 
 export const getTableTool = createTool({

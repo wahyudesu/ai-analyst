@@ -8,7 +8,7 @@ import { PieChart, BarChart } from "@/components/charts";
 import type { ChartConfig } from "@/components/charts/types";
 import { useDatabaseConfig } from "@/lib/use-database-config";
 import { DollarSign, TrendingUp, Percent, Users } from "lucide-react";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 
 interface GrowthData {
   metrics: {
@@ -31,6 +31,10 @@ export default function GrowthPage() {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const { databaseUrl } = useDatabaseConfig();
 
+  // Use ref to avoid recreating fetchData when databaseUrl changes
+  const databaseUrlRef = useRef(databaseUrl);
+  databaseUrlRef.current = databaseUrl;
+
   const fetchData = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
       setIsRefreshing(true);
@@ -42,7 +46,7 @@ export default function GrowthPage() {
       const response = await fetch("/api/dashboard/growth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ databaseUrl: databaseUrl || undefined }),
+        body: JSON.stringify({ databaseUrl: databaseUrlRef.current || undefined }),
       });
       if (response.ok) {
         const result = await response.json();
@@ -55,7 +59,7 @@ export default function GrowthPage() {
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, [databaseUrl]);
+  }, []);
 
   const handleRefresh = useCallback(() => {
     return fetchData(true);
@@ -65,68 +69,69 @@ export default function GrowthPage() {
     fetchData();
   }, [fetchData]);
 
-    const channelChartConfig: ChartConfig | null = data && data.charts.channels.length > 0 ? {
-    chartType: "pie",
-    title: "Signups by Channel",
-    data: {
-      slices: data.charts.channels.map((c, i) => ({
-        name: c.name,
-        value: c.value,
-        percentage: (c.value / data.charts.channels.reduce((sum, ch) => sum + ch.value, 0)) * 100,
-        color: ["#14B8A6", "#10B981", "#F97316", "#EF4444"][i % 4],
-      })),
-    },
-    options: {
-      legend: true,
-      stacked: false,
-      horizontal: false,
-      showDataLabels: true,
-    },
-    colors: {
-      palette: ["#14B8A6", "#10B981", "#F97316", "#EF4444"],
-    },
-    metadata: {
-      dataSourceRowCount: data.charts.channels.length,
-      displayedPointCount: data.charts.channels.length,
-      generatedAt: new Date().toISOString(),
-    },
-  } : null;
+  const channelChartConfig: ChartConfig | null = useMemo(() => {
+    if (!data || data.charts.channels.length === 0) return null;
+    return {
+      chartType: "pie",
+      title: "Signups by Channel",
+      data: {
+        slices: data.charts.channels.map((c, i) => ({
+          name: c.name,
+          value: c.value,
+          percentage: (c.value / data.charts.channels.reduce((sum, ch) => sum + ch.value, 0)) * 100,
+          color: ["#14B8A6", "#10B981", "#F97316", "#EF4444"][i % 4],
+        })),
+      },
+      options: {
+        legend: true,
+        stacked: false,
+        horizontal: false,
+        showDataLabels: true,
+      },
+      colors: {
+        palette: ["#14B8A6", "#10B981", "#F97316", "#EF4444"],
+      },
+      metadata: {
+        dataSourceRowCount: data.charts.channels.length,
+        displayedPointCount: data.charts.channels.length,
+        generatedAt: new Date().toISOString(),
+      },
+    };
+  }, [data?.charts.channels]);
 
-    const weeklyTrendChartConfig: ChartConfig | null = data && data.charts.weeklyTrend.labels.length > 0 ? {
-    chartType: "bar",
-    title: "Weekly Signups Trend",
-    data: {
-      series: [
-        {
-          name: "Signups",
-          data: data.charts.weeklyTrend.labels.map((label, i) => ({
-            x: label,
-            y: data.charts.weeklyTrend.values[i],
-          })),
-          color: "#14B8A6",
-        },
-      ],
-    },
-    xAxis: {
-      label: "Week",
-      type: "category",
-    },
-    yAxis: [{ label: "Signups" }],
-    options: {
-      legend: false,
-      stacked: false,
-      horizontal: false,
-      showDataLabels: false,
-    },
-    colors: {
-      palette: ["#14B8A6"],
-    },
-    metadata: {
-      dataSourceRowCount: data.charts.weeklyTrend.labels.length,
-      displayedPointCount: data.charts.weeklyTrend.labels.length,
-      generatedAt: new Date().toISOString(),
-    },
-  } : null;
+  const weeklyTrendChartConfig: ChartConfig | null = useMemo(() => {
+    if (!data || data.charts.weeklyTrend.labels.length === 0) return null;
+    return {
+      chartType: "bar",
+      title: "Weekly Signups Trend",
+      data: {
+        series: [
+          {
+            name: "Signups",
+            data: data.charts.weeklyTrend.labels.map((label, i) => ({
+              x: label,
+              y: data.charts.weeklyTrend.values[i],
+            })),
+            color: "#14B8A6",
+          },
+        ],
+      },
+      xAxis: { label: "Week", type: "category" },
+      yAxis: [{ label: "Signups" }],
+      options: {
+        legend: false,
+        stacked: false,
+        horizontal: false,
+        showDataLabels: false,
+      },
+      colors: { palette: ["#14B8A6"] },
+      metadata: {
+        dataSourceRowCount: data.charts.weeklyTrend.labels.length,
+        displayedPointCount: data.charts.weeklyTrend.labels.length,
+        generatedAt: new Date().toISOString(),
+      },
+    };
+  }, [data?.charts.weeklyTrend.labels, data?.charts.weeklyTrend.values]);
 
       return (
         <div className="flex flex-col">
@@ -244,7 +249,7 @@ export default function GrowthPage() {
                   <div className="p-4 bg-primary/10 dark:bg-primary/20 rounded-lg">
                     <p className="text-sm text-primary">Repaying Rate</p>
                     <p className="text-xl font-bold text-primary">
-                      {data?.metrics.repayingRate.value.toFixed(1) || 0}%
+                      {data?.metrics.repayingRate.value.toFixed(2) || 0}%
                     </p>
                   </div>
                 </div>
@@ -274,7 +279,7 @@ export default function GrowthPage() {
                 <div className="p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg">
                   <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50 mb-2">Conversion Rate</p>
                   <p className="text-2xl font-bold text-primary mb-1">
-                    {data?.metrics.payingRate.value.toFixed(1) || 0}%
+                    {data?.metrics.payingRate.value.toFixed(2) || 0}%
                   </p>
                   <p className="text-xs text-zinc-500">signup to paying</p>
                 </div>
