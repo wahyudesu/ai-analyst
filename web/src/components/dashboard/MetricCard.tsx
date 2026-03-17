@@ -4,7 +4,7 @@ import { LucideIcon, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { ComparisonToggle, ComparisonMode } from "./ComparisonToggle";
 import { useMemo } from "react";
 
-interface MetricCardProps {
+export interface MetricCardProps {
   title: string;
   value: string | number;
   change?: number;

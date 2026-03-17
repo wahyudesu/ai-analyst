@@ -97,7 +97,7 @@ interface UseDashboardDataWithParamsOptions<T, P> extends UseDashboardDataOption
   getParams?: () => P;
 }
 
-interface UseDashboardDataWithParamsReturn<T> extends UseDashboardDataReturn<T> {
+interface UseDashboardDataWithParamsReturn<T, P> extends UseDashboardDataReturn<T> {
   fetchWithParams: (params: Partial<P>, bypassCache?: boolean) => Promise<void>;
 }
 
@@ -109,7 +109,7 @@ export function useDashboardDataWithParams<
   getParams,
   ttl = 5 * 60 * 1000,
   enabled = true,
-}: UseDashboardDataWithParamsOptions<T, P>): UseDashboardDataWithParamsReturn<T> {
+}: UseDashboardDataWithParamsOptions<T, P>): UseDashboardDataWithParamsReturn<T, P> {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
