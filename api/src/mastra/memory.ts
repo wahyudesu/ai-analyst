@@ -9,7 +9,7 @@ import { LibSQLStore } from "@mastra/libsql"
  */
 const memoryStorage = new LibSQLStore({
   id: "memory-storage",
-  url: process.env.DATABASE_URL || 'file:./mastra.db',
+  url: process.env.MEMORY_URL || 'file:./mastra.db',
 })
 
 /**

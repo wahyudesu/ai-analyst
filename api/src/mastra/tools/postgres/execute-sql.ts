@@ -29,11 +29,11 @@ Returns columns, rows, execution time, and any validation warnings.`,
   }),
   execute: async ({ query }) => {
     // Get connection string from secure request context (not from LLM)
-    const connectionString = getDatabaseUrl() || process.env.DATABASE_URL || '';
+    const connectionString = getDatabaseUrl() || process.env.POSTGRES_DATABASE_URL || process.env.DATABASE_URL || '';
 
     // Check if DATABASE_URL is set
     if (!connectionString) {
-      throw new Error('DATABASE_URL environment variable is not set. Please configure your PostgreSQL connection string.');
+      throw new Error('POSTGRES_DATABASE_URL environment variable is not set. Please configure your PostgreSQL connection string.');
     }
 
     // Validate and sanitize query with enhanced security

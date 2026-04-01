@@ -28,7 +28,7 @@ import { CloudflareDeployer } from "@mastra/deployer-cloudflare"
  */
 const storage = new LibSQLStore({
   id: 'mastra-storage',
-  url: process.env.DATABASE_URL || 'file:./mastra.db',
+  url: process.env.MEMORY_URL || 'file:./mastra.db',
 })
 
 // Export memories for use in API routes
