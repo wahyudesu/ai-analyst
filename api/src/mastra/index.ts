@@ -1,7 +1,7 @@
 import { chatRoute } from "@mastra/ai-sdk"
 import { Mastra } from "@mastra/core/mastra"
 import { registerApiRoute } from "@mastra/core/server"
-import { UpstashStore } from "@mastra/upstash"
+import { LibSQLStore } from "@mastra/libsql"
 import { PinoLogger } from "@mastra/loggers"
 import {
   CloudExporter,
@@ -21,15 +21,14 @@ import { modelsRoute, modelCheckRoute } from "./routes/models"
 import { CloudflareDeployer } from "@mastra/deployer-cloudflare"
 
 /**
- * Upstash storage for Mastra
- * Environment variables required:
- * - UPSTASH_REDIS_REST_URL: Upstash Redis REST API URL
- * - UPSTASH_REDIS_REST_TOKEN: Upstash Redis REST API token
+ * LibSQL storage for Mastra
+ * Environment variables (optional):
+ * - DATABASE_URL: LibSQL connection string (default: file:./mastra.db for local)
+ * - OBSERVABILITY_DB_URL: Separate DB for observability (optional, defaults to same as DATABASE_URL)
  */
-const storage = new UpstashStore({
-  id: "upstash-storage",
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+const storage = new LibSQLStore({
+  id: 'mastra-storage',
+  url: process.env.DATABASE_URL || 'file:./mastra.db',
 })
 
 // Export memories for use in API routes
@@ -53,10 +52,10 @@ export const mastra = new Mastra({
   observability: new Observability({
     configs: {
       default: {
-        serviceName: "mastra",
+        serviceName: "ai-analyst",
         exporters: [
-          new DefaultExporter(), // Persists traces to storage for Mastra Studio
-          new CloudExporter(), // Sends traces to Mastra Cloud (if MASTRA_CLOUD_ACCESS_TOKEN is set)
+          new DefaultExporter(), // Local: simpan traces ke LibSQLite
+          new CloudExporter(),   // Production: kirim ke Mastra Cloud (butuh MASTRA_CLOUD_ACCESS_TOKEN)
         ],
         spanOutputProcessors: [
           new SensitiveDataFilter(), // Redacts sensitive data like passwords, tokens, keys

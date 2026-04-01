@@ -1,18 +1,15 @@
 import { Memory } from "@mastra/memory"
-import { UpstashStore } from "@mastra/upstash"
+import { LibSQLStore } from "@mastra/libsql"
 
 /**
- * Shared storage for memory - Upstash Redis-compatible storage
- * Works with Cloudflare Workers and other serverless platforms
+ * Shared storage for memory - LibSQLite database
  *
- * Environment variables required:
- * - UPSTASH_REDIS_REST_URL: Upstash Redis REST API URL
- * - UPSTASH_REDIS_REST_TOKEN: Upstash Redis REST API token
+ * Environment variables (optional):
+ * - DATABASE_URL: LibSQLite connection string (default: file:./mastra.db for local)
  */
-const memoryStorage = new UpstashStore({
+const memoryStorage = new LibSQLStore({
   id: "memory-storage",
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+  url: process.env.DATABASE_URL || 'file:./mastra.db',
 })
 
 /**

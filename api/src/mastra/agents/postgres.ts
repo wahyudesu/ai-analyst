@@ -4,6 +4,12 @@ import { postgresTools } from "../tools/postgres";
 import { chartTools } from "../tools/charts";
 import { dataAnalystMemory } from "../memory";
 import { DEFAULT_MODEL_ID } from "../config/models.js";
+import {
+  createAnswerRelevancyScorer,
+  createToxicityScorer,
+  createFaithfulnessScorer,
+  createCompletenessScorer,
+} from "@mastra/evals/scorers/prebuilt";
 
 // Create a data analyst agent for PostgreSQL database with memory
 export const sqlagent = new Agent({
@@ -15,4 +21,28 @@ export const sqlagent = new Agent({
   model: DEFAULT_MODEL_ID,
   tools: { ...postgresTools, ...chartTools },
   memory: dataAnalystMemory,
+  scorers: {
+    relevancy: {
+      scorer: createAnswerRelevancyScorer({
+        model: { id: "zai/GLM-5", url: "https://api.z.ai/api/paas/v4/" },
+      }),
+      sampling: { type: "ratio", rate: 0.5 },
+    },
+    safety: {
+      scorer: createToxicityScorer({
+        model: { id: "zai/GLM-5", url: "https://api.z.ai/api/paas/v4/" },
+      }),
+      sampling: { type: "ratio", rate: 1 },
+    },
+    // completeness: {
+    //   scorer: createCompletenessScorer({ model: {id: "zai/GLM-5", url: "https://api.z.ai/api/paas/v4/"} }),
+    //   sampling: { type: 'ratio', rate: 1 },
+    // },
+    faithfulness: {
+      scorer: createFaithfulnessScorer({
+        model: { id: "zai/GLM-5", url: "https://api.z.ai/api/paas/v4/" },
+      }),
+      sampling: { type: "ratio", rate: 1 },
+    },
+  },
 });
