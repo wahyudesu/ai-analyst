@@ -1,58 +1,62 @@
-"use client";
+"use client"
 
-import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
-import { useState, useRef, useEffect, useCallback } from "react";
-import { Database, ChartBar, ChevronDown, Send, Sparkles } from "lucide-react";
+import { useChat } from "@ai-sdk/react"
+import { DefaultChatTransport } from "ai"
+import { ChartBar, ChevronDown, Database, Send, Sparkles } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
-import { MessageRenderer } from "@/components/MessageRenderer";
-import { threadsClient } from "@/lib/threads-client";
-import { useDatabaseConfig } from "@/lib/use-database-config";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { MessageRenderer } from "@/components/MessageRenderer"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useAgents, useMessages, type Agent } from "@/lib/api/queries";
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { type Agent, useAgents, useMessages } from "@/lib/api/queries"
+import { threadsClient } from "@/lib/threads-client"
+import { useDatabaseConfig } from "@/lib/use-database-config"
 
 interface ChatContentProps {
-  agentId?: string;
-  connectionString?: string;
-  className?: string;
+  agentId?: string
+  connectionString?: string
+  className?: string
 }
 
 interface ModelOption {
-  id: string;
-  name: string;
-  provider: "zai" | "openai";
+  id: string
+  name: string
+  provider: "zai" | "openai"
 }
 
 // Constants - hoisted outside component
-const DEFAULT_AGENT_ID = "data-analyst";
+const DEFAULT_AGENT_ID = "data-analyst"
 
 const MODEL_OPTIONS: ModelOption[] = [
   { id: "zai-coding-plan/glm-4.5", name: "GLM 4.5", provider: "zai" },
-  { id: "zai-coding-plan/glm-4.5-flash", name: "GLM 4.5 Flash", provider: "zai" },
+  {
+    id: "zai-coding-plan/glm-4.5-flash",
+    name: "GLM 4.5 Flash",
+    provider: "zai",
+  },
   { id: "openai/gpt-4o-mini", name: "GPT-4o Mini", provider: "openai" },
-] as const;
+] as const
 
-const DEFAULT_MODEL_ID = MODEL_OPTIONS[0].id;
+const DEFAULT_MODEL_ID = MODEL_OPTIONS[0].id
 
 // Agent icons mapping - hoisted outside component
 const AGENT_ICONS = {
   "data-analyst": Database,
   "chart-agent": ChartBar,
   "supabase-agent": Database,
-} as const;
+} as const
 
-type AgentId = keyof typeof AGENT_ICONS;
+type AgentId = keyof typeof AGENT_ICONS
 
 function getAgentIcon(agentId?: string): React.ElementType {
-  return AGENT_ICONS[agentId as AgentId] || Database;
+  return AGENT_ICONS[agentId as AgentId] || Database
 }
 
 export function ChatContent({
@@ -60,20 +64,20 @@ export function ChatContent({
   connectionString,
   className,
 }: ChatContentProps) {
-  const [input, setInput] = useState("");
-  const [currentAgentId, setCurrentAgentId] = useState<string>(DEFAULT_AGENT_ID);
-  const [currentModelId, setCurrentModelId] = useState<string>(DEFAULT_MODEL_ID);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { databaseUrl } = useDatabaseConfig();
+  const [input, setInput] = useState("")
+  const [currentAgentId, setCurrentAgentId] = useState<string>(DEFAULT_AGENT_ID)
+  const [currentModelId, setCurrentModelId] = useState<string>(DEFAULT_MODEL_ID)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const { databaseUrl } = useDatabaseConfig()
 
-  const threadIdRef = useRef<string>(threadsClient.getOrCreateThreadId());
-  const threadId = threadIdRef.current;
-  const resourceId = threadsClient.getResourceId();
+  const threadIdRef = useRef<string>(threadsClient.getOrCreateThreadId())
+  const threadId = threadIdRef.current
+  const resourceId = threadsClient.getResourceId()
 
-  const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
+  const [modelSelectorOpen, setModelSelectorOpen] = useState(false)
 
   // Fetch all agents using shared query hook
-  const { data: allAgents = [] } = useAgents();
+  const { data: allAgents = [] } = useAgents()
 
   // Transport params ref to avoid recreating transport unnecessarily
   const transportParamsRef = useRef({
@@ -82,7 +86,7 @@ export function ChatContent({
     threadId,
     resourceId,
     databaseUrl,
-  });
+  })
 
   // Update ref without triggering re-renders
   transportParamsRef.current = {
@@ -91,7 +95,7 @@ export function ChatContent({
     threadId,
     resourceId,
     databaseUrl,
-  };
+  }
 
   const { messages, status, sendMessage, error, setMessages } = useChat({
     transport: new DefaultChatTransport({
@@ -114,67 +118,76 @@ export function ChatContent({
         },
       }),
     }),
-  });
+  })
 
-  const isLoading = status === "streaming" || status === "submitted";
+  const isLoading = status === "streaming" || status === "submitted"
 
   // Direct lookup - no useMemo needed for simple find operation
-  const currentAgentInfo = allAgents.find((a) => a.id === currentAgentId) || null;
+  const currentAgentInfo = allAgents.find(a => a.id === currentAgentId) || null
 
   // Track seen message IDs to skip chart animation for already-rendered messages
-  const seenMessageIdsRef = useRef<Set<string>>(new Set());
+  const seenMessageIdsRef = useRef<Set<string>>(new Set())
 
   // Fetch message history using shared query hook
-  const { data: fetchedMessages } = useMessages(threadId, currentAgentId);
+  const { data: fetchedMessages } = useMessages(threadId, currentAgentId)
 
   // Update messages when fetched data changes
   useEffect(() => {
     if (fetchedMessages) {
-      setMessages(fetchedMessages);
+      setMessages(fetchedMessages)
       // Mark all fetched messages as seen (skip chart animation for these)
       fetchedMessages.forEach((m: { id?: string }) => {
-        if (m.id) seenMessageIdsRef.current.add(m.id);
-      });
+        if (m.id) seenMessageIdsRef.current.add(m.id)
+      })
     }
-  }, [fetchedMessages, setMessages]);
+  }, [fetchedMessages, setMessages])
 
   // Clear seen message IDs when switching sessions
   useEffect(() => {
-    seenMessageIdsRef.current.clear();
-  }, [threadId]);
+    seenMessageIdsRef.current.clear()
+  }, [threadId])
 
   // Auto-scroll to bottom
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages])
 
   // Stable callbacks - primitive dependencies only
-  const startNewChat = useCallback((agentId?: string) => {
-    const agentToUse = agentId || DEFAULT_AGENT_ID;
-    threadsClient.clearCurrentThreadId();
-    const newThreadId = threadsClient.getOrCreateThreadId();
-    threadIdRef.current = newThreadId;
-    setCurrentAgentId(agentToUse);
-    setMessages([]);
-    setInput("");
-    setCurrentModelId(DEFAULT_MODEL_ID);
-  }, [setMessages]); // setMessages is stable from useChat
+  const startNewChat = useCallback(
+    (agentId?: string) => {
+      const agentToUse = agentId || DEFAULT_AGENT_ID
+      threadsClient.clearCurrentThreadId()
+      const newThreadId = threadsClient.getOrCreateThreadId()
+      threadIdRef.current = newThreadId
+      setCurrentAgentId(agentToUse)
+      setMessages([])
+      setInput("")
+      setCurrentModelId(DEFAULT_MODEL_ID)
+    },
+    [setMessages]
+  ) // setMessages is stable from useChat
 
-  const handleAgentChange = useCallback((agentId: string) => {
-    setCurrentAgentId(agentId);
-    startNewChat(agentId);
-  }, [startNewChat]);
+  const handleAgentChange = useCallback(
+    (agentId: string) => {
+      setCurrentAgentId(agentId)
+      startNewChat(agentId)
+    },
+    [startNewChat]
+  )
 
-  const handleSubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (input.trim()) {
-      sendMessage({ text: input });
-      setInput("");
-    }
-  }, [input, sendMessage]);
+  const handleSubmit = useCallback(
+    (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault()
+      if (input.trim()) {
+        sendMessage({ text: input })
+        setInput("")
+      }
+    },
+    [input, sendMessage]
+  )
 
   // Direct icon lookup - no useMemo needed
-  const AgentIcon = getAgentIcon(currentAgentId);
+  const AgentIcon = getAgentIcon(currentAgentId)
 
   return (
     <div className={`flex flex-col h-full ${className || ""}`}>
@@ -189,9 +202,9 @@ export function ChatContent({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
-            {allAgents.map((agent) => {
-              const Icon = getAgentIcon(agent.id);
-              const isSelected = agent.id === currentAgentId;
+            {allAgents.map(agent => {
+              const Icon = getAgentIcon(agent.id)
+              const isSelected = agent.id === currentAgentId
               return (
                 <DropdownMenuItem
                   key={agent.id}
@@ -211,16 +224,12 @@ export function ChatContent({
                     </div>
                   )}
                 </DropdownMenuItem>
-              );
+              )
             })}
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => startNewChat()}
-        >
+        <Button variant="outline" size="sm" onClick={() => startNewChat()}>
           New Chat
         </Button>
       </div>
@@ -249,9 +258,10 @@ export function ChatContent({
           <>
             {messages.map((message, index) => {
               // Skip animation for messages that were already seen (loaded from history)
-              const isNewMessage = message.id && !seenMessageIdsRef.current.has(message.id);
+              const isNewMessage =
+                message.id && !seenMessageIdsRef.current.has(message.id)
               if (message.id && isNewMessage) {
-                seenMessageIdsRef.current.add(message.id);
+                seenMessageIdsRef.current.add(message.id)
               }
               return (
                 <MessageRenderer
@@ -261,7 +271,7 @@ export function ChatContent({
                   sessionId={threadId}
                   skipAnimation={!isNewMessage}
                 />
-              );
+              )
             })}
             {error && (
               <div className="p-4 bg-destructive/10 text-destructive rounded-lg">
@@ -281,9 +291,15 @@ export function ChatContent({
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="p-4 border-t border-border bg-card">
+      <form
+        onSubmit={handleSubmit}
+        className="p-4 border-t border-border bg-card"
+      >
         <div className="flex gap-2 items-center max-w-4xl mx-auto">
-          <DropdownMenu open={modelSelectorOpen} onOpenChange={setModelSelectorOpen}>
+          <DropdownMenu
+            open={modelSelectorOpen}
+            onOpenChange={setModelSelectorOpen}
+          >
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
@@ -291,13 +307,16 @@ export function ChatContent({
                 disabled={isLoading}
               >
                 <span className="truncate">
-                  {MODEL_OPTIONS.find(m => m.id === currentModelId)?.name || "Model"}
+                  {MODEL_OPTIONS.find(m => m.id === currentModelId)?.name ||
+                    "Model"}
                 </span>
-                <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${modelSelectorOpen ? "rotate-180" : ""}`} />
+                <ChevronDown
+                  className={`w-4 h-4 text-muted-foreground transition-transform ${modelSelectorOpen ? "rotate-180" : ""}`}
+                />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-48">
-              {MODEL_OPTIONS.map((model) => (
+              {MODEL_OPTIONS.map(model => (
                 <DropdownMenuItem
                   key={model.id}
                   onClick={() => setCurrentModelId(model.id)}
@@ -315,7 +334,7 @@ export function ChatContent({
           <Input
             type="text"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={e => setInput(e.target.value)}
             placeholder="Ask about your data..."
             disabled={isLoading}
             className="flex-1"
@@ -330,5 +349,5 @@ export function ChatContent({
         </div>
       </form>
     </div>
-  );
+  )
 }

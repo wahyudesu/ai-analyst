@@ -1,18 +1,18 @@
-'use client';
+"use client"
 
-import { useEffect } from 'react';
+import { useEffect } from "react"
 
 export default function Error({
   error,
   reset,
 }: {
-  error: Error & { digest?: string };
-  reset: () => void;
+  error: Error & { digest?: string }
+  reset: () => void
 }) {
   useEffect(() => {
     // Log error to error reporting service
-    console.error('Application error:', error);
-  }, [error]);
+    console.error("Application error:", error)
+  }, [error])
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-zinc-50 dark:bg-black px-4">
@@ -36,7 +36,8 @@ export default function Error({
           Something went wrong!
         </h2>
         <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-          {error.message || 'An unexpected error occurred while processing your request.'}
+          {error.message ||
+            "An unexpected error occurred while processing your request."}
         </p>
         <div className="flex gap-3 justify-center">
           <button
@@ -46,7 +47,7 @@ export default function Error({
             Try again
           </button>
           <button
-            onClick={() => window.location.href = '/'}
+            onClick={() => (window.location.href = "/")}
             className="px-4 py-2 bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors"
           >
             Go home
@@ -54,5 +55,5 @@ export default function Error({
         </div>
       </div>
     </div>
-  );
+  )
 }

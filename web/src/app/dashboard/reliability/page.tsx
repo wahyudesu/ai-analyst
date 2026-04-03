@@ -1,172 +1,207 @@
-"use client";
+"use client"
 
-import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { MetricCard } from "@/components/dashboard/MetricCard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart } from "@/components/charts/BarChart";
-import { LineChart } from "@/components/charts/LineChart";
-import type { ChartConfig } from "@/components/charts/types";
-import { Shield, AlertTriangle, Clock, Rocket } from "lucide-react";
-import { useEffect, useState } from "react";
+import { BarChart } from "@/components/charts/BarChart"
+import { LineChart } from "@/components/charts/LineChart"
+import type { ChartConfig } from "@/components/charts/types"
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader"
+import { MetricCard } from "@/components/dashboard/MetricCard"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { AlertTriangle, Clock, Rocket, Shield } from "lucide-react"
+import { useEffect, useState } from "react"
 
 interface ReliabilityData {
   metrics: {
-    uptime: { value: number; format: string };
-    incidents: { value: number; format: string };
-    avgResponseTime: { value: number; format: string };
-    weeklyDeployments: { value: number; format: string };
-  };
+    uptime: { value: number; format: string }
+    incidents: { value: number; format: string }
+    avgResponseTime: { value: number; format: string }
+    weeklyDeployments: { value: number; format: string }
+  }
   charts: {
-    uptimeHistory: { labels: string[]; values: number[] };
-    deploymentsHistory: { labels: string[]; values: number[] };
-    responseTimeHistory: { labels: string[]; values: number[] };
-  };
+    uptimeHistory: { labels: string[]; values: number[] }
+    deploymentsHistory: { labels: string[]; values: number[] }
+    responseTimeHistory: { labels: string[]; values: number[] }
+  }
 }
 
 export default function ReliabilityPage() {
-  const [data, setData] = useState<ReliabilityData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<ReliabilityData | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const response = await fetch("/api/dashboard/reliability");
+        const response = await fetch("/api/dashboard/reliability")
         if (response.ok) {
-          const result = await response.json();
-          setData(result);
+          const result = await response.json()
+          setData(result)
         }
       } catch (error) {
-        console.error("Failed to fetch reliability data:", error);
+        console.error("Failed to fetch reliability data:", error)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
     }
-    fetchData();
-  }, []);
+    fetchData()
+  }, [])
 
-    const uptimeConfig: ChartConfig | null = data && data.charts.uptimeHistory.labels.length > 0 ? {
-    chartType: "line",
-    title: "Uptime Trend (6 Months)",
-    data: {
-      series: [
-        {
-          name: "Uptime %",
-          data: data.charts.uptimeHistory.labels.map((label, i) => ({
-            x: label,
-            y: data.charts.uptimeHistory.values[i],
-          })),
-          color: "#10B981",
-        },
-      ],
-    },
-    xAxis: { label: "Month", type: "category" },
-    yAxis: [{ label: "Uptime %" }],
-    options: { legend: false, stacked: false, horizontal: false, showDataLabels: false },
-    colors: { palette: ["#10B981"] },
-    metadata: {
-      dataSourceRowCount: data.charts.uptimeHistory.labels.length,
-      displayedPointCount: data.charts.uptimeHistory.labels.length,
-      generatedAt: new Date().toISOString(),
-    },
-  } : null;
+  const uptimeConfig: ChartConfig | null =
+    data && data.charts.uptimeHistory.labels.length > 0
+      ? {
+          chartType: "line",
+          title: "Uptime Trend (6 Months)",
+          data: {
+            series: [
+              {
+                name: "Uptime %",
+                data: data.charts.uptimeHistory.labels.map((label, i) => ({
+                  x: label,
+                  y: data.charts.uptimeHistory.values[i],
+                })),
+                color: "#10B981",
+              },
+            ],
+          },
+          xAxis: { label: "Month", type: "category" },
+          yAxis: [{ label: "Uptime %" }],
+          options: {
+            legend: false,
+            stacked: false,
+            horizontal: false,
+            showDataLabels: false,
+          },
+          colors: { palette: ["#10B981"] },
+          metadata: {
+            dataSourceRowCount: data.charts.uptimeHistory.labels.length,
+            displayedPointCount: data.charts.uptimeHistory.labels.length,
+            generatedAt: new Date().toISOString(),
+          },
+        }
+      : null
 
-    const deploymentsConfig: ChartConfig | null = data && data.charts.deploymentsHistory.labels.length > 0 ? {
-    chartType: "bar",
-    title: "Deployment Frequency",
-    data: {
-      series: [
-        {
-          name: "Deployments",
-          data: data.charts.deploymentsHistory.labels.map((label, i) => ({
-            x: label,
-            y: data.charts.deploymentsHistory.values[i],
-          })),
-          color: "#14B8A6",
-        },
-      ],
-    },
-    xAxis: { label: "Week", type: "category" },
-    yAxis: [{ label: "Deployments" }],
-    options: { legend: false, stacked: false, horizontal: false, showDataLabels: false },
-    colors: { palette: ["#14B8A6"] },
-    metadata: {
-      dataSourceRowCount: data.charts.deploymentsHistory.labels.length,
-      displayedPointCount: data.charts.deploymentsHistory.labels.length,
-      generatedAt: new Date().toISOString(),
-    },
-  } : null;
+  const deploymentsConfig: ChartConfig | null =
+    data && data.charts.deploymentsHistory.labels.length > 0
+      ? {
+          chartType: "bar",
+          title: "Deployment Frequency",
+          data: {
+            series: [
+              {
+                name: "Deployments",
+                data: data.charts.deploymentsHistory.labels.map((label, i) => ({
+                  x: label,
+                  y: data.charts.deploymentsHistory.values[i],
+                })),
+                color: "#14B8A6",
+              },
+            ],
+          },
+          xAxis: { label: "Week", type: "category" },
+          yAxis: [{ label: "Deployments" }],
+          options: {
+            legend: false,
+            stacked: false,
+            horizontal: false,
+            showDataLabels: false,
+          },
+          colors: { palette: ["#14B8A6"] },
+          metadata: {
+            dataSourceRowCount: data.charts.deploymentsHistory.labels.length,
+            displayedPointCount: data.charts.deploymentsHistory.labels.length,
+            generatedAt: new Date().toISOString(),
+          },
+        }
+      : null
 
-    const responseTimeConfig: ChartConfig | null = data && data.charts.responseTimeHistory.labels.length > 0 ? {
-    chartType: "line",
-    title: "Average Response Time",
-    data: {
-      series: [
-        {
-          name: "Response Time (ms)",
-          data: data.charts.responseTimeHistory.labels.map((label, i) => ({
-            x: label,
-            y: data.charts.responseTimeHistory.values[i],
-          })),
-          color: "#F97316",
-        },
-      ],
-    },
-    xAxis: { label: "Day", type: "category" },
-    yAxis: [{ label: "Time (ms)" }],
-    options: { legend: false, stacked: false, horizontal: false, showDataLabels: false },
-    colors: { palette: ["#F97316"] },
-    metadata: {
-      dataSourceRowCount: data.charts.responseTimeHistory.labels.length,
-      displayedPointCount: data.charts.responseTimeHistory.labels.length,
-      generatedAt: new Date().toISOString(),
-    },
-  } : null;
+  const responseTimeConfig: ChartConfig | null =
+    data && data.charts.responseTimeHistory.labels.length > 0
+      ? {
+          chartType: "line",
+          title: "Average Response Time",
+          data: {
+            series: [
+              {
+                name: "Response Time (ms)",
+                data: data.charts.responseTimeHistory.labels.map(
+                  (label, i) => ({
+                    x: label,
+                    y: data.charts.responseTimeHistory.values[i],
+                  })
+                ),
+                color: "#F97316",
+              },
+            ],
+          },
+          xAxis: { label: "Day", type: "category" },
+          yAxis: [{ label: "Time (ms)" }],
+          options: {
+            legend: false,
+            stacked: false,
+            horizontal: false,
+            showDataLabels: false,
+          },
+          colors: { palette: ["#F97316"] },
+          metadata: {
+            dataSourceRowCount: data.charts.responseTimeHistory.labels.length,
+            displayedPointCount: data.charts.responseTimeHistory.labels.length,
+            generatedAt: new Date().toISOString(),
+          },
+        }
+      : null
 
-  const uptime = data?.metrics.uptime.value || 99.95;
-  const uptimeStatus = uptime >= 99.9 ? "excellent" : uptime >= 99.5 ? "good" : "fair";
+  const uptime = data?.metrics.uptime.value || 99.95
+  const uptimeStatus =
+    uptime >= 99.9 ? "excellent" : uptime >= 99.5 ? "good" : "fair"
 
-      return (
-        <div className="flex flex-col">
-          <DashboardHeader
-            title="Reliability & Tech Health"
-            subtitle="System performance and deployment metrics"
-          />
+  return (
+    <div className="flex flex-col">
+      <DashboardHeader
+        title="Reliability & Tech Health"
+        subtitle="System performance and deployment metrics"
+      />
 
-        <main className="p-6">
+      <main className="p-6">
         <div className="max-w-7xl mx-auto space-y-4">
           {/* Status Banner */}
-          <div className={`p-4 rounded-lg ${
-            uptimeStatus === "excellent"
-              ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
-              : uptimeStatus === "good"
-              ? "bg-primary/10 dark:bg-primary/20 border border-primary/30"
-              : "bg-destructive/10 dark:bg-destructive/20 border border-destructive/30"
-          }`}>
+          <div
+            className={`p-4 rounded-lg ${
+              uptimeStatus === "excellent"
+                ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
+                : uptimeStatus === "good"
+                  ? "bg-primary/10 dark:bg-primary/20 border border-primary/30"
+                  : "bg-destructive/10 dark:bg-destructive/20 border border-destructive/30"
+            }`}
+          >
             <div className="flex items-center gap-3">
-              <Shield className={`w-6 h-6 ${
-                uptimeStatus === "excellent"
-                  ? "text-green-600 dark:text-green-400"
-                  : uptimeStatus === "good"
-                  ? "text-primary"
-                  : "text-destructive"
-              }`} />
-              <div>
-                <p className={`font-semibold ${
+              <Shield
+                className={`w-6 h-6 ${
                   uptimeStatus === "excellent"
-                    ? "text-green-900 dark:text-green-100"
+                    ? "text-green-600 dark:text-green-400"
                     : uptimeStatus === "good"
-                    ? "text-primary"
-                    : "text-destructive"
-                }`}>
+                      ? "text-primary"
+                      : "text-destructive"
+                }`}
+              />
+              <div>
+                <p
+                  className={`font-semibold ${
+                    uptimeStatus === "excellent"
+                      ? "text-green-900 dark:text-green-100"
+                      : uptimeStatus === "good"
+                        ? "text-primary"
+                        : "text-destructive"
+                  }`}
+                >
                   All Systems Operational
                 </p>
-                <p className={`text-sm ${
-                  uptimeStatus === "excellent"
-                    ? "text-green-700 dark:text-green-300"
-                    : uptimeStatus === "good"
-                    ? "text-primary/80"
-                    : "text-destructive/80"
-                }`}>
+                <p
+                  className={`text-sm ${
+                    uptimeStatus === "excellent"
+                      ? "text-green-700 dark:text-green-300"
+                      : uptimeStatus === "good"
+                        ? "text-primary/80"
+                        : "text-destructive/80"
+                  }`}
+                >
                   {uptime.toFixed(2)}% uptime over the past 90 days
                 </p>
               </div>
@@ -270,9 +305,15 @@ export default function ReliabilityPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-center">
-                  <p className="text-3xl font-bold text-green-600 dark:text-green-400">99.9%</p>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">Target: 99.9%</p>
-                  <p className="text-xs text-green-600 dark:text-green-400 mt-2">Compliant</p>
+                  <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+                    99.9%
+                  </p>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+                    Target: 99.9%
+                  </p>
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-2">
+                    Compliant
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -283,9 +324,15 @@ export default function ReliabilityPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-center">
-                  <p className="text-3xl font-bold text-green-600 dark:text-green-400">99.95%</p>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">Target: 99.9%</p>
-                  <p className="text-xs text-green-600 dark:text-green-400 mt-2">Compliant</p>
+                  <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+                    99.95%
+                  </p>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+                    Target: 99.9%
+                  </p>
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-2">
+                    Compliant
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -297,7 +344,9 @@ export default function ReliabilityPage() {
               <CardContent>
                 <div className="text-center">
                   <p className="text-3xl font-bold text-primary">145ms</p>
-                  <p className="text-sm text-muted-foreground mt-1">Target: &lt;200ms</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Target: &lt;200ms
+                  </p>
                   <p className="text-xs text-primary mt-2">Within Target</p>
                 </div>
               </CardContent>
@@ -306,5 +355,5 @@ export default function ReliabilityPage() {
         </div>
       </main>
     </div>
-  );
+  )
 }

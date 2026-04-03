@@ -1,14 +1,14 @@
-"use client";
+"use client"
 
-import type { ComponentProps } from "react";
+import type { ComponentProps } from "react"
 
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { ArrowDownIcon, DownloadIcon } from "lucide-react";
-import { useCallback } from "react";
-import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import { ArrowDownIcon, DownloadIcon } from "lucide-react"
+import { useCallback } from "react"
+import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom"
 
-export type ConversationProps = ComponentProps<typeof StickToBottom>;
+export type ConversationProps = ComponentProps<typeof StickToBottom>
 
 export const Conversation = ({ className, ...props }: ConversationProps) => (
   <StickToBottom
@@ -18,11 +18,11 @@ export const Conversation = ({ className, ...props }: ConversationProps) => (
     role="log"
     {...props}
   />
-);
+)
 
 export type ConversationContentProps = ComponentProps<
   typeof StickToBottom.Content
->;
+>
 
 export const ConversationContent = ({
   className,
@@ -32,13 +32,13 @@ export const ConversationContent = ({
     className={cn("flex flex-col gap-8 p-4", className)}
     {...props}
   />
-);
+)
 
 export type ConversationEmptyStateProps = ComponentProps<"div"> & {
-  title?: string;
-  description?: string;
-  icon?: React.ReactNode;
-};
+  title?: string
+  description?: string
+  icon?: React.ReactNode
+}
 
 export const ConversationEmptyState = ({
   className,
@@ -67,19 +67,19 @@ export const ConversationEmptyState = ({
       </>
     )}
   </div>
-);
+)
 
-export type ConversationScrollButtonProps = ComponentProps<typeof Button>;
+export type ConversationScrollButtonProps = ComponentProps<typeof Button>
 
 export const ConversationScrollButton = ({
   className,
   ...props
 }: ConversationScrollButtonProps) => {
-  const { isAtBottom, scrollToBottom } = useStickToBottomContext();
+  const { isAtBottom, scrollToBottom } = useStickToBottomContext()
 
   const handleScrollToBottom = useCallback(() => {
-    scrollToBottom();
-  }, [scrollToBottom]);
+    scrollToBottom()
+  }, [scrollToBottom])
 
   return (
     !isAtBottom && (
@@ -97,28 +97,27 @@ export const ConversationScrollButton = ({
         <ArrowDownIcon className="size-4" />
       </Button>
     )
-  );
-};
+  )
+}
 
 export interface ConversationMessage {
-  role: "user" | "assistant" | "system" | "data" | "tool";
-  content: string;
+  role: "user" | "assistant" | "system" | "data" | "tool"
+  content: string
 }
 
 export type ConversationDownloadProps = Omit<
   ComponentProps<typeof Button>,
   "onClick"
 > & {
-  messages: ConversationMessage[];
-  filename?: string;
-  formatMessage?: (message: ConversationMessage, index: number) => string;
-};
+  messages: ConversationMessage[]
+  filename?: string
+  formatMessage?: (message: ConversationMessage, index: number) => string
+}
 
 const defaultFormatMessage = (message: ConversationMessage): string => {
-  const roleLabel =
-    message.role.charAt(0).toUpperCase() + message.role.slice(1);
-  return `**${roleLabel}:** ${message.content}`;
-};
+  const roleLabel = message.role.charAt(0).toUpperCase() + message.role.slice(1)
+  return `**${roleLabel}:** ${message.content}`
+}
 
 export const messagesToMarkdown = (
   messages: ConversationMessage[],
@@ -126,7 +125,7 @@ export const messagesToMarkdown = (
     message: ConversationMessage,
     index: number
   ) => string = defaultFormatMessage
-): string => messages.map((msg, i) => formatMessage(msg, i)).join("\n\n");
+): string => messages.map((msg, i) => formatMessage(msg, i)).join("\n\n")
 
 export const ConversationDownload = ({
   messages,
@@ -137,17 +136,17 @@ export const ConversationDownload = ({
   ...props
 }: ConversationDownloadProps) => {
   const handleDownload = useCallback(() => {
-    const markdown = messagesToMarkdown(messages, formatMessage);
-    const blob = new Blob([markdown], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  }, [messages, filename, formatMessage]);
+    const markdown = messagesToMarkdown(messages, formatMessage)
+    const blob = new Blob([markdown], { type: "text/markdown" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = filename
+    document.body.append(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }, [messages, filename, formatMessage])
 
   return (
     <Button
@@ -163,5 +162,5 @@ export const ConversationDownload = ({
     >
       {children ?? <DownloadIcon className="size-4" />}
     </Button>
-  );
-};
+  )
+}

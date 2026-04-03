@@ -35,9 +35,9 @@ export enum ProcessingStep {
 }
 
 export interface ProgressState {
-  step: ProcessingStep;
-  progress: number; // 0-1
-  message?: string;
+  step: ProcessingStep
+  progress: number // 0-1
+  message?: string
 }
 
 /**
@@ -45,15 +45,15 @@ export interface ProgressState {
  */
 export function getStepForTool(toolName: string): ProcessingStep {
   const stepMap: Record<string, ProcessingStep> = {
-    'get-schema': ProcessingStep.EXPLORING_SCHEMA,
-    'get-table': ProcessingStep.LOADING_TABLE_INFO,
-    'execute-sql': ProcessingStep.EXECUTING_QUERY,
-    'generate-chart': ProcessingStep.GENERATING_CHART,
-    'suggest-charts': ProcessingStep.ANALYZING_RESULTS,
-    'generate-multiple-charts': ProcessingStep.PREPARING_CHART,
-  };
+    "get-schema": ProcessingStep.EXPLORING_SCHEMA,
+    "get-table": ProcessingStep.LOADING_TABLE_INFO,
+    "execute-sql": ProcessingStep.EXECUTING_QUERY,
+    "generate-chart": ProcessingStep.GENERATING_CHART,
+    "suggest-charts": ProcessingStep.ANALYZING_RESULTS,
+    "generate-multiple-charts": ProcessingStep.PREPARING_CHART,
+  }
 
-  return stepMap[toolName] || ProcessingStep.PROCESSING;
+  return stepMap[toolName] || ProcessingStep.PROCESSING
 }
 
 /**
@@ -61,7 +61,7 @@ export function getStepForTool(toolName: string): ProcessingStep {
  */
 export function formatProgress(step: ProcessingStep, details?: string): string {
   if (details) {
-    return `${step} - ${details}`;
+    return `${step} - ${details}`
   }
-  return step;
+  return step
 }

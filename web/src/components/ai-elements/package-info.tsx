@@ -1,31 +1,31 @@
-"use client";
+"use client"
 
-import type { HTMLAttributes } from "react";
+import type { HTMLAttributes } from "react"
 
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { ArrowRightIcon, MinusIcon, PackageIcon, PlusIcon } from "lucide-react";
-import { createContext, useContext } from "react";
+import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
+import { ArrowRightIcon, MinusIcon, PackageIcon, PlusIcon } from "lucide-react"
+import { createContext, useContext } from "react"
 
-type ChangeType = "major" | "minor" | "patch" | "added" | "removed";
+type ChangeType = "major" | "minor" | "patch" | "added" | "removed"
 
 interface PackageInfoContextType {
-  name: string;
-  currentVersion?: string;
-  newVersion?: string;
-  changeType?: ChangeType;
+  name: string
+  currentVersion?: string
+  newVersion?: string
+  changeType?: ChangeType
 }
 
 const PackageInfoContext = createContext<PackageInfoContextType>({
   name: "",
-});
+})
 
 export type PackageInfoProps = HTMLAttributes<HTMLDivElement> & {
-  name: string;
-  currentVersion?: string;
-  newVersion?: string;
-  changeType?: ChangeType;
-};
+  name: string
+  currentVersion?: string
+  newVersion?: string
+  changeType?: ChangeType
+}
 
 export const PackageInfo = ({
   name,
@@ -54,9 +54,9 @@ export const PackageInfo = ({
       )}
     </div>
   </PackageInfoContext.Provider>
-);
+)
 
-export type PackageInfoHeaderProps = HTMLAttributes<HTMLDivElement>;
+export type PackageInfoHeaderProps = HTMLAttributes<HTMLDivElement>
 
 export const PackageInfoHeader = ({
   className,
@@ -69,33 +69,34 @@ export const PackageInfoHeader = ({
   >
     {children}
   </div>
-);
+)
 
-export type PackageInfoNameProps = HTMLAttributes<HTMLDivElement>;
+export type PackageInfoNameProps = HTMLAttributes<HTMLDivElement>
 
 export const PackageInfoName = ({
   className,
   children,
   ...props
 }: PackageInfoNameProps) => {
-  const { name } = useContext(PackageInfoContext);
+  const { name } = useContext(PackageInfoContext)
 
   return (
     <div className={cn("flex items-center gap-2", className)} {...props}>
       <PackageIcon className="size-4 text-muted-foreground" />
       <span className="font-medium font-mono text-sm">{children ?? name}</span>
     </div>
-  );
-};
+  )
+}
 
 const changeTypeStyles: Record<ChangeType, string> = {
-  added: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+  added:
+    "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
   major: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
   minor:
     "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
   patch: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
   removed: "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400",
-};
+}
 
 const changeTypeIcons: Record<ChangeType, React.ReactNode> = {
   added: <PlusIcon className="size-3" />,
@@ -103,19 +104,19 @@ const changeTypeIcons: Record<ChangeType, React.ReactNode> = {
   minor: <ArrowRightIcon className="size-3" />,
   patch: <ArrowRightIcon className="size-3" />,
   removed: <MinusIcon className="size-3" />,
-};
+}
 
-export type PackageInfoChangeTypeProps = HTMLAttributes<HTMLDivElement>;
+export type PackageInfoChangeTypeProps = HTMLAttributes<HTMLDivElement>
 
 export const PackageInfoChangeType = ({
   className,
   children,
   ...props
 }: PackageInfoChangeTypeProps) => {
-  const { changeType } = useContext(PackageInfoContext);
+  const { changeType } = useContext(PackageInfoContext)
 
   if (!changeType) {
-    return null;
+    return null
   }
 
   return (
@@ -131,20 +132,20 @@ export const PackageInfoChangeType = ({
       {changeTypeIcons[changeType]}
       {children ?? changeType}
     </Badge>
-  );
-};
+  )
+}
 
-export type PackageInfoVersionProps = HTMLAttributes<HTMLDivElement>;
+export type PackageInfoVersionProps = HTMLAttributes<HTMLDivElement>
 
 export const PackageInfoVersion = ({
   className,
   children,
   ...props
 }: PackageInfoVersionProps) => {
-  const { currentVersion, newVersion } = useContext(PackageInfoContext);
+  const { currentVersion, newVersion } = useContext(PackageInfoContext)
 
   if (!(currentVersion || newVersion)) {
-    return null;
+    return null
   }
 
   return (
@@ -167,10 +168,10 @@ export const PackageInfoVersion = ({
         </>
       )}
     </div>
-  );
-};
+  )
+}
 
-export type PackageInfoDescriptionProps = HTMLAttributes<HTMLParagraphElement>;
+export type PackageInfoDescriptionProps = HTMLAttributes<HTMLParagraphElement>
 
 export const PackageInfoDescription = ({
   className,
@@ -180,9 +181,9 @@ export const PackageInfoDescription = ({
   <p className={cn("mt-2 text-muted-foreground text-sm", className)} {...props}>
     {children}
   </p>
-);
+)
 
-export type PackageInfoContentProps = HTMLAttributes<HTMLDivElement>;
+export type PackageInfoContentProps = HTMLAttributes<HTMLDivElement>
 
 export const PackageInfoContent = ({
   className,
@@ -192,9 +193,9 @@ export const PackageInfoContent = ({
   <div className={cn("mt-3 border-t pt-3", className)} {...props}>
     {children}
   </div>
-);
+)
 
-export type PackageInfoDependenciesProps = HTMLAttributes<HTMLDivElement>;
+export type PackageInfoDependenciesProps = HTMLAttributes<HTMLDivElement>
 
 export const PackageInfoDependencies = ({
   className,
@@ -207,12 +208,12 @@ export const PackageInfoDependencies = ({
     </span>
     <div className="space-y-1">{children}</div>
   </div>
-);
+)
 
 export type PackageInfoDependencyProps = HTMLAttributes<HTMLDivElement> & {
-  name: string;
-  version?: string;
-};
+  name: string
+  version?: string
+}
 
 export const PackageInfoDependency = ({
   name,
@@ -232,4 +233,4 @@ export const PackageInfoDependency = ({
       </>
     )}
   </div>
-);
+)

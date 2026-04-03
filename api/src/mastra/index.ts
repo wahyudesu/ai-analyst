@@ -1,6 +1,7 @@
 import { chatRoute } from "@mastra/ai-sdk"
 import { Mastra } from "@mastra/core/mastra"
 import { registerApiRoute } from "@mastra/core/server"
+import { CloudflareDeployer } from "@mastra/deployer-cloudflare"
 import { LibSQLStore } from "@mastra/libsql"
 import { PinoLogger } from "@mastra/loggers"
 import {
@@ -12,13 +13,12 @@ import {
 import { sqlagent } from "./agents/postgres"
 import { supabaseAgent } from "./agents/supabase"
 import { chartAgent } from "./agents/testingagent"
-import { chatMemory, dataAnalystMemory, casualChatMemory } from "./memory"
-import * as threads from "./routes/threads"
+import { casualChatMemory, chatMemory, dataAnalystMemory } from "./memory"
+import { checkAuthRoute, loginRoute } from "./routes/auth"
 import { customChatRoute } from "./routes/chat"
+import { modelCheckRoute, modelsRoute } from "./routes/models"
 import { sqlRoute } from "./routes/sql"
-import { loginRoute, checkAuthRoute } from "./routes/auth"
-import { modelsRoute, modelCheckRoute } from "./routes/models"
-import { CloudflareDeployer } from "@mastra/deployer-cloudflare"
+import * as threads from "./routes/threads"
 
 /**
  * LibSQL storage for Mastra
@@ -27,8 +27,8 @@ import { CloudflareDeployer } from "@mastra/deployer-cloudflare"
  * - OBSERVABILITY_DB_URL: Separate DB for observability (optional, defaults to same as DATABASE_URL)
  */
 const storage = new LibSQLStore({
-  id: 'mastra-storage',
-  url: process.env.MEMORY_URL || 'file:./mastra.db',
+  id: "mastra-storage",
+  url: process.env.MEMORY_URL || "file:./mastra.db",
 })
 
 // Export memories for use in API routes
@@ -55,7 +55,7 @@ export const mastra = new Mastra({
         serviceName: "ai-analyst",
         exporters: [
           new DefaultExporter(), // Local: simpan traces ke LibSQLite
-          new CloudExporter(),   // Production: kirim ke Mastra Cloud (butuh MASTRA_CLOUD_ACCESS_TOKEN)
+          new CloudExporter(), // Production: kirim ke Mastra Cloud (butuh MASTRA_CLOUD_ACCESS_TOKEN)
         ],
         spanOutputProcessors: [
           new SensitiveDataFilter(), // Redacts sensitive data like passwords, tokens, keys
@@ -84,11 +84,11 @@ export const mastra = new Mastra({
       // Custom API route to fetch message history for a thread
       registerApiRoute("/messages", {
         method: "GET",
-        handler: async (c) => {
+        handler: async c => {
           const threadId = c.req.query("threadId")
           const agentId = c.req.query("agentId")
-          const page = parseInt(c.req.query("page") || "0")
-          const perPage = parseInt(c.req.query("perPage") || "100")
+          const page = Number.parseInt(c.req.query("page") || "0")
+          const perPage = Number.parseInt(c.req.query("perPage") || "100")
 
           if (!threadId) {
             return c.json({ error: "threadId is required" }, 400)
@@ -116,11 +116,11 @@ export const mastra = new Mastra({
       // Custom API route to list threads with message counts
       registerApiRoute("/threads", {
         method: "GET",
-        handler: async (c) => {
+        handler: async c => {
           const agentId = c.req.query("agentId")
           const resourceId = c.req.query("resourceId")
-          const page = parseInt(c.req.query("page") || "0")
-          const perPage = parseInt(c.req.query("perPage") || "50")
+          const page = Number.parseInt(c.req.query("page") || "0")
+          const perPage = Number.parseInt(c.req.query("perPage") || "50")
 
           if (!agentId) {
             return c.json({ error: "agentId is required" }, 400)
@@ -144,11 +144,11 @@ export const mastra = new Mastra({
     ],
   },
   deployer: new CloudflareDeployer({
-      name: "ai-analyst-api",
-      vars: {
-        NODE_ENV: "production",
-      },
-    }),
+    name: "ai-analyst-api",
+    vars: {
+      NODE_ENV: "production",
+    },
+  }),
 })
 
 // Export thread helpers for custom API routes if needed

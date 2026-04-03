@@ -3,7 +3,7 @@
  */
 
 export interface MetricRow {
-  [key: string]: any;
+  [key: string]: any
 }
 
 /**
@@ -12,7 +12,11 @@ export interface MetricRow {
  * @param params - Query parameters
  * @param databaseUrl - Optional custom database URL (from UI settings)
  */
-export async function queryNeon(sql: string, params: any[] = [], databaseUrl?: string): Promise<any[]> {
+export async function queryNeon(
+  sql: string,
+  params: any[] = [],
+  databaseUrl?: string
+): Promise<any[]> {
   try {
     // Use the internal API route to query the database
     const response = await fetch("/api/dashboard/query", {
@@ -21,17 +25,17 @@ export async function queryNeon(sql: string, params: any[] = [], databaseUrl?: s
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ sql, params, databaseUrl }),
-    });
+    })
 
     if (!response.ok) {
-      throw new Error(`Query failed: ${response.statusText}`);
+      throw new Error(`Query failed: ${response.statusText}`)
     }
 
-    const result = await response.json();
-    return result.rows || [];
+    const result = await response.json()
+    return result.rows || []
   } catch (error) {
-    console.error("Database query error:", error);
-    throw error;
+    console.error("Database query error:", error)
+    throw error
   }
 }
 
@@ -44,31 +48,31 @@ export function formatCurrency(value: number): string {
     currency: "USD",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(value);
+  }).format(value)
 }
 
 /**
  * Helper to format percentage
  */
-export function formatPercentage(value: number, decimals: number = 2): string {
-  return `${value.toFixed(decimals)}%`;
+export function formatPercentage(value: number, decimals = 2): string {
+  return `${value.toFixed(decimals)}%`
 }
 
 /**
  * Helper to format large numbers
  */
 export function formatNumber(value: number): string {
-  return new Intl.NumberFormat("en-US").format(value);
+  return new Intl.NumberFormat("en-US").format(value)
 }
 
 /**
  * Get date range for queries
  */
-export function getDateRange(days: number = 30): { start: Date; end: Date } {
-  const end = new Date();
-  const start = new Date();
-  start.setDate(start.getDate() - days);
-  return { start, end };
+export function getDateRange(days = 30): { start: Date; end: Date } {
+  const end = new Date()
+  const start = new Date()
+  start.setDate(start.getDate() - days)
+  return { start, end }
 }
 
 /**
@@ -84,5 +88,5 @@ export function rowToDataPoint(
     x: row[xKey],
     y: row[yKey],
     label: labelKey ? row[labelKey] : undefined,
-  };
+  }
 }

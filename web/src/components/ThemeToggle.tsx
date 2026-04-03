@@ -1,16 +1,16 @@
-"use client";
+"use client"
 
-import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useTheme } from "next-themes"
+import { useEffect, useState } from "react"
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
 
   // Wait for client-side hydration to complete
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    setMounted(true)
+  }, [])
 
   // Prevent hydration mismatch by not rendering until mounted
   if (!mounted) {
@@ -34,10 +34,10 @@ export function ThemeToggle() {
           />
         </svg>
       </button>
-    );
+    )
   }
 
-  const isDark = theme === "dark";
+  const isDark = theme === "dark"
 
   return (
     <button
@@ -78,5 +78,5 @@ export function ThemeToggle() {
         </svg>
       )}
     </button>
-  );
+  )
 }

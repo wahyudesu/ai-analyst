@@ -3,7 +3,10 @@
  * Direct SQL execution via Mastra's /sql endpoint (bypasses agent reasoning)
  */
 
-const MASTRA_URL = process.env.MASTRA_URL || process.env.NEXT_PUBLIC_MASTRA_URL || "http://localhost:4111";
+const MASTRA_URL =
+  process.env.MASTRA_URL ||
+  process.env.NEXT_PUBLIC_MASTRA_URL ||
+  "http://localhost:4111"
 
 /**
  * Execute a SQL query via Mastra API's direct SQL endpoint
@@ -17,18 +20,20 @@ export async function executeSQL(query: string): Promise<any[]> {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ query }),
-    });
+    })
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || `Mastra API error: ${response.statusText}`);
+      const error = await response.json()
+      throw new Error(
+        error.message || `Mastra API error: ${response.statusText}`
+      )
     }
 
-    const result = await response.json();
-    return result.rows || [];
+    const result = await response.json()
+    return result.rows || []
   } catch (error) {
-    console.error("Mastra SQL execution error:", error);
-    throw error;
+    console.error("Mastra SQL execution error:", error)
+    throw error
   }
 }
 
@@ -43,15 +48,15 @@ export async function getSchema(): Promise<any[]> {
     FROM information_schema.tables
     WHERE table_schema = 'public'
     ORDER BY table_name
-  `);
-  return response;
+  `)
+  return response
 }
 
 /**
  * Get table schema via Mastra API
  */
 export async function getTable(tableNames: string[]): Promise<any> {
-  const tables = tableNames.map((t) => `'${t}'`).join(",");
+  const tables = tableNames.map(t => `'${t}'`).join(",")
   const response = await executeSQL(`
     SELECT
       table_name,
@@ -63,6 +68,6 @@ export async function getTable(tableNames: string[]): Promise<any> {
     WHERE table_schema = 'public'
       AND table_name IN (${tables})
     ORDER BY table_name, ordinal_position
-  `);
-  return response;
+  `)
+  return response
 }

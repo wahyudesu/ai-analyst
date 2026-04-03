@@ -6,7 +6,11 @@
 import { createTool } from "@mastra/core/tools"
 import { z } from "zod"
 import { type ChartSuggestion, suggestChartTypes } from "./auto-detect.js"
-import { buildChartResult, processPieChart, processXYChart } from "./data-processors.js"
+import {
+  buildChartResult,
+  processPieChart,
+  processXYChart,
+} from "./data-processors.js"
 import type { GenerateChartOutput, PieSlice, Series } from "./types.js"
 
 const SQLQueryResultSchema = z.object({
@@ -59,7 +63,7 @@ Use this when you want to explore data from different perspectives or need help 
 
     const filteredSuggestions =
       requestedChartTypes && requestedChartTypes.length > 0
-        ? suggestions.filter((s) => requestedChartTypes.includes(s.chartType))
+        ? suggestions.filter(s => requestedChartTypes.includes(s.chartType))
         : suggestions
 
     const charts: GenerateChartOutput[] = []
@@ -107,7 +111,7 @@ Use this when you want to explore data from different perspectives or need help 
         processedData,
         options,
         xAxis: { label: suggestion.xColumn, type: suggestion.xAxisType },
-        yAxisLabels: yAxisConfigs.map((y) => y.label),
+        yAxisLabels: yAxisConfigs.map(y => y.label),
         dataSourceRowCount: data.rowCount,
         colorScheme: "default",
       })

@@ -1,106 +1,38 @@
-'use client';
+"use client"
 
-import { useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
-import type { MultipleChartsConfig, ChartsLayout } from './types';
-import { ChartRenderer } from './ChartRenderer';
+import { ChevronDown, ChevronRight } from "lucide-react"
+import { useState } from "react"
+import { ChartRenderer } from "./ChartRenderer"
+import type { ChartsLayout, MultipleChartsConfig } from "./types"
 
 interface MultipleChartsProps {
-  config: MultipleChartsConfig;
-  skipAnimation?: boolean;
+  config: MultipleChartsConfig
+  skipAnimation?: boolean
 }
 
 export function MultipleCharts({ config, skipAnimation }: MultipleChartsProps) {
-  const { charts, layout = 'grid', title, description } = config;
-  const [activeTab, setActiveTab] = useState(0);
+  const { charts, layout = "grid", title, description } = config
+  const [activeTab, setActiveTab] = useState(0)
 
-    if (charts.length === 0) {
-      return (
-        <div className="text-muted-foreground text-center py-4">
-          No charts to display
-        </div>
-      );
-    }
-
-  if (charts.length === 1) {
-    return <ChartRenderer config={charts[0]} skipAnimation={skipAnimation} />;
+  if (charts.length === 0) {
+    return (
+      <div className="text-muted-foreground text-center py-4">
+        No charts to display
+      </div>
+    )
   }
 
-    // Tabs layout
-    if (layout === 'tabs') {
-      return (
-        <div className="space-y-4">
-          {title && (
-            <div className="border-b border-border pb-2">
-              <h3 className="text-lg font-semibold text-foreground">
-                {title}
-              </h3>
-              {description && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  {description}
-                </p>
-              )}
-            </div>
-          )}
-          <div className="border-b border-border">
-            <nav className="flex space-x-4" aria-label="Tabs">
-              {charts.map((chart, index) => (
-                <button
-                  key={index}
-                  onClick={() => setActiveTab(index)}
-                  className={`
-                    py-2 px-1 border-b-2 font-medium text-sm transition-colors
-                    ${activeTab === index
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                    }
-                  `}
-                >
-                  {chart.chartType.charAt(0).toUpperCase() + chart.chartType.slice(1)} Chart
-                </button>
-              ))}
-            </nav>
-          </div>
-          <div className="mt-4">
-            <ChartRenderer key={activeTab} config={charts[activeTab]} skipAnimation={skipAnimation} />
-          </div>
-        </div>
-      );
-    }
+  if (charts.length === 1) {
+    return <ChartRenderer config={charts[0]} skipAnimation={skipAnimation} />
+  }
 
-    // Vertical layout
-    if (layout === 'vertical') {
-      return (
-        <div className="space-y-6">
-          {title && (
-            <div className="text-center">
-              <h3 className="text-lg font-semibold text-foreground">
-                {title}
-              </h3>
-              {description && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  {description}
-                </p>
-              )}
-            </div>
-          )}
-          {charts.map((chart, index) => (
-            <div key={index} className="bg-card rounded-lg p-4">
-              <ChartRenderer config={chart} skipAnimation={skipAnimation} />
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    // Grid layout (default)
+  // Tabs layout
+  if (layout === "tabs") {
     return (
       <div className="space-y-4">
         {title && (
-          <div className="text-center">
-            <h3 className="text-lg font-semibold text-foreground">
-              {title}
-            </h3>
+          <div className="border-b border-border pb-2">
+            <h3 className="text-lg font-semibold text-foreground">{title}</h3>
             {description && (
               <p className="text-sm text-muted-foreground mt-1">
                 {description}
@@ -108,28 +40,95 @@ export function MultipleCharts({ config, skipAnimation }: MultipleChartsProps) {
             )}
           </div>
         )}
-        <div
-          className={`grid gap-4 ${
-            charts.length === 2
-              ? 'grid-cols-1 md:grid-cols-2'
-              : charts.length === 3
-              ? 'grid-cols-1 md:grid-cols-3'
-              : 'grid-cols-1 md:grid-cols-2'
-          }`}
-        >
-          {charts.map((chart, index) => (
-            <div key={index} className="bg-card rounded-lg p-4">
-              <ChartRenderer config={chart} skipAnimation={skipAnimation} />
-            </div>
-          ))}
+        <div className="border-b border-border">
+          <nav className="flex space-x-4" aria-label="Tabs">
+            {charts.map((chart, index) => (
+              <button
+                key={index}
+                onClick={() => setActiveTab(index)}
+                className={`
+                    py-2 px-1 border-b-2 font-medium text-sm transition-colors
+                    ${
+                      activeTab === index
+                        ? "border-primary text-primary"
+                        : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                    }
+                  `}
+              >
+                {chart.chartType.charAt(0).toUpperCase() +
+                  chart.chartType.slice(1)}{" "}
+                Chart
+              </button>
+            ))}
+          </nav>
+        </div>
+        <div className="mt-4">
+          <ChartRenderer
+            key={activeTab}
+            config={charts[activeTab]}
+            skipAnimation={skipAnimation}
+          />
         </div>
       </div>
-    );
+    )
   }
+
+  // Vertical layout
+  if (layout === "vertical") {
+    return (
+      <div className="space-y-6">
+        {title && (
+          <div className="text-center">
+            <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+            {description && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {description}
+              </p>
+            )}
+          </div>
+        )}
+        {charts.map((chart, index) => (
+          <div key={index} className="bg-card rounded-lg p-4">
+            <ChartRenderer config={chart} skipAnimation={skipAnimation} />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  // Grid layout (default)
+  return (
+    <div className="space-y-4">
+      {title && (
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+          {description && (
+            <p className="text-sm text-muted-foreground mt-1">{description}</p>
+          )}
+        </div>
+      )}
+      <div
+        className={`grid gap-4 ${
+          charts.length === 2
+            ? "grid-cols-1 md:grid-cols-2"
+            : charts.length === 3
+              ? "grid-cols-1 md:grid-cols-3"
+              : "grid-cols-1 md:grid-cols-2"
+        }`}
+      >
+        {charts.map((chart, index) => (
+          <div key={index} className="bg-card rounded-lg p-4">
+            <ChartRenderer config={chart} skipAnimation={skipAnimation} />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 // Helper component to render collapsible multiple charts
 interface CollapsibleMultipleChartsProps extends MultipleChartsProps {
-  defaultOpen?: boolean;
+  defaultOpen?: boolean
 }
 
 export function CollapsibleMultipleCharts({
@@ -137,7 +136,7 @@ export function CollapsibleMultipleCharts({
   defaultOpen = false,
   skipAnimation,
 }: CollapsibleMultipleChartsProps) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [isOpen, setIsOpen] = useState(defaultOpen)
 
   return (
     <div className="border border-border rounded-lg overflow-hidden">
@@ -148,7 +147,8 @@ export function CollapsibleMultipleCharts({
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-primary rounded-full" />
           <span className="text-sm font-medium text-foreground">
-            {config.title || `Multiple Charts (${config.charts.length} visualizations)`}
+            {config.title ||
+              `Multiple Charts (${config.charts.length} visualizations)`}
           </span>
         </div>
         {isOpen ? (
@@ -163,5 +163,5 @@ export function CollapsibleMultipleCharts({
         </div>
       )}
     </div>
-  );
+  )
 }

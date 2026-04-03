@@ -1,27 +1,28 @@
-import { NextRequest, NextResponse } from "next/server";
-import { queryNeon } from "@/lib/db";
+import { queryNeon } from "@/lib/db"
+import { type NextRequest, NextResponse } from "next/server"
 
 // Cache for 2 minutes (120 seconds)
-export const revalidate = 120;
-export const dynamic = "force-dynamic";
+export const revalidate = 120
+export const dynamic = "force-dynamic"
 
 export async function GET(request: NextRequest) {
-  return await POST(request);
+  return await POST(request)
 }
 
 export async function POST(request: NextRequest) {
   try {
     // Get custom database URL from request body (for POST) or query param (for GET)
-    let databaseUrl: string | undefined;
+    let databaseUrl: string | undefined
     if (request.method === "POST") {
-      const body = await request.json().catch(() => ({}));
-      databaseUrl = body.databaseUrl;
+      const body = await request.json().catch(() => ({}))
+      databaseUrl = body.databaseUrl
     } else {
-      databaseUrl = request.nextUrl.searchParams.get("databaseUrl") || undefined;
+      databaseUrl = request.nextUrl.searchParams.get("databaseUrl") || undefined
     }
 
     // DAU - last 7 days (using messages table for more accurate activity)
-    const dauResult = await queryNeon(`
+    const dauResult = await queryNeon(
+      `
       SELECT
         DATE_TRUNC('day', created_at)::date as date,
         COUNT(DISTINCT profile_id) as daily_users
@@ -29,25 +30,38 @@ export async function POST(request: NextRequest) {
       WHERE created_at >= NOW() - INTERVAL '7 days'
       GROUP BY DATE_TRUNC('day', created_at)::date
       ORDER BY date
-    `, [], databaseUrl);
+    `,
+      [],
+      databaseUrl
+    )
 
-    const avgDAU = dauResult.length > 0
-      ? dauResult.reduce((sum: number, r: any) => sum + (parseInt(r.daily_users) || 0), 0) / dauResult.length
-      : 0;
+    const avgDAU =
+      dauResult.length > 0
+        ? dauResult.reduce(
+            (sum: number, r: any) =>
+              sum + (Number.parseInt(r.daily_users) || 0),
+            0
+          ) / dauResult.length
+        : 0
 
     // MAU
-    const mauResult = await queryNeon(`
+    const mauResult = await queryNeon(
+      `
       SELECT COUNT(DISTINCT profile_id) as monthly_users
       FROM messages
       WHERE created_at >= NOW() - INTERVAL '30 days'
-    `, [], databaseUrl);
-    const mau = parseInt((mauResult as any[])[0]?.monthly_users) || 1;
+    `,
+      [],
+      databaseUrl
+    )
+    const mau = Number.parseInt((mauResult as any[])[0]?.monthly_users) || 1
 
     // DAU/MAU Ratio
-    const dauMauRatio = mau > 0 ? (avgDAU / mau) * 100 : 0;
+    const dauMauRatio = mau > 0 ? (avgDAU / mau) * 100 : 0
 
     // Feature usage by source type
-    const sourceUsageResult = await queryNeon(`
+    const sourceUsageResult = await queryNeon(
+      `
       SELECT
         source_type,
         COUNT(*) as conversations,
@@ -57,17 +71,21 @@ export async function POST(request: NextRequest) {
       WHERE created_at >= NOW() - INTERVAL '30 days'
       GROUP BY source_type
       ORDER BY conversations DESC
-    `, [], databaseUrl);
+    `,
+      [],
+      databaseUrl
+    )
 
     const sourceUsage = sourceUsageResult.map((r: any) => ({
       source: r.source_type || "Unknown",
-      conversations: parseInt(r.conversations),
-      users: parseInt(r.unique_users),
-      messages: parseInt(r.total_messages) || 0,
-    }));
+      conversations: Number.parseInt(r.conversations),
+      users: Number.parseInt(r.unique_users),
+      messages: Number.parseInt(r.total_messages) || 0,
+    }))
 
     // Daily usage trend
-    const dailyTrendResult = await queryNeon(`
+    const dailyTrendResult = await queryNeon(
+      `
       SELECT
         DATE_TRUNC('day', m.created_at)::date as date,
         COUNT(DISTINCT m.profile_id) as dau,
@@ -78,25 +96,39 @@ export async function POST(request: NextRequest) {
       WHERE m.created_at >= NOW() - INTERVAL '30 days'
       GROUP BY DATE_TRUNC('day', m.created_at)::date
       ORDER BY date
-    `, [], databaseUrl);
+    `,
+      [],
+      databaseUrl
+    )
 
     // Agent adoption (total agents and unique creators)
-    const agentResult = await queryNeon(`
+    const agentResult = await queryNeon(
+      `
       SELECT
         COUNT(*) as total_agents,
         COUNT(DISTINCT profile_id) as unique_creators
       FROM agents
-    `, [], databaseUrl);
-    const totalAgents = parseInt((agentResult as any[])[0]?.total_agents) || 0;
-    const uniqueCreators = parseInt((agentResult as any[])[0]?.unique_creators) || 0;
+    `,
+      [],
+      databaseUrl
+    )
+    const totalAgents =
+      Number.parseInt((agentResult as any[])[0]?.total_agents) || 0
+    const uniqueCreators =
+      Number.parseInt((agentResult as any[])[0]?.unique_creators) || 0
 
     // Agents created in last 30 days
-    const recentAgentsResult = await queryNeon(`
+    const recentAgentsResult = await queryNeon(
+      `
       SELECT COUNT(*) as recent_agents
       FROM agents
       WHERE created_at >= NOW() - INTERVAL '30 days'
-    `, [], databaseUrl);
-    const recentAgents = parseInt((recentAgentsResult as any[])[0]?.recent_agents) || 0;
+    `,
+      [],
+      databaseUrl
+    )
+    const recentAgents =
+      Number.parseInt((recentAgentsResult as any[])[0]?.recent_agents) || 0
 
     return NextResponse.json(
       {
@@ -111,19 +143,30 @@ export async function POST(request: NextRequest) {
         charts: {
           dailyTrend: {
             labels: (dailyTrendResult as any[]).map((r: any) => r.date),
-            dau: (dailyTrendResult as any[]).map((r: any) => parseInt(r.dau)),
-            conversations: (dailyTrendResult as any[]).map((r: any) => parseInt(r.conversations)),
-            messages: (dailyTrendResult as any[]).map((r: any) => parseInt(r.messages) || 0),
+            dau: (dailyTrendResult as any[]).map((r: any) =>
+              Number.parseInt(r.dau)
+            ),
+            conversations: (dailyTrendResult as any[]).map((r: any) =>
+              Number.parseInt(r.conversations)
+            ),
+            messages: (dailyTrendResult as any[]).map(
+              (r: any) => Number.parseInt(r.messages) || 0
+            ),
           },
           sourceUsage,
         },
       },
       {
-        headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300" },
+        headers: {
+          "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300",
+        },
       }
-    );
+    )
   } catch (error) {
-    console.error("Usage API error:", error);
-    return NextResponse.json({ error: "Failed to fetch usage data" }, { status: 500 });
+    console.error("Usage API error:", error)
+    return NextResponse.json(
+      { error: "Failed to fetch usage data" },
+      { status: 500 }
+    )
   }
 }

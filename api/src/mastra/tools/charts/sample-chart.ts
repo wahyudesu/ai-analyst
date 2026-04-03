@@ -63,16 +63,29 @@ Available chart types:
 
 Use this when user wants to see a demo chart or test the visualization without real data.`,
   inputSchema: z.object({
-    chartType: z.enum(["bar", "line", "area", "pie"]).describe("Type of chart to generate"),
+    chartType: z
+      .enum(["bar", "line", "area", "pie"])
+      .describe("Type of chart to generate"),
     dataType: z
       .enum(["monthlySales", "categorySales", "revenueCost"])
       .optional()
-      .describe("Which sample dataset to use (auto-selected based on chartType if not specified)"),
-    title: z.string().optional().describe("Chart title (auto-generated if not specified)"),
+      .describe(
+        "Which sample dataset to use (auto-selected based on chartType if not specified)"
+      ),
+    title: z
+      .string()
+      .optional()
+      .describe("Chart title (auto-generated if not specified)"),
   }),
-  execute: async ({ chartType, dataType, title }): Promise<GenerateChartOutput> => {
+  execute: async ({
+    chartType,
+    dataType,
+    title,
+  }): Promise<GenerateChartOutput> => {
     // Auto-select data based on chart type
-    let selectedData = dataType ? sampleData[dataType as keyof typeof sampleData] : null
+    let selectedData = dataType
+      ? sampleData[dataType as keyof typeof sampleData]
+      : null
     let finalTitle = title
 
     if (!selectedData) {
@@ -108,12 +121,19 @@ Use this when user wants to see a demo chart or test the visualization without r
         chartType: "pie",
         title: finalTitle,
         data: {
-          slices: selectedData.rows.map((row: any) => ({
-            name: row.category || row.month,
-            value: row.amount || row.sales,
-            color: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"][selectedData.rows.indexOf(row)],
-            percentage: Math.round(((row.amount || row.sales) / selectedData.rows.reduce((sum: number, r: any) => sum + (r.amount || r.sales), 0)) * 1000) / 10,
-          })),
+          slices: selectedData.rows.map((row, index) => {
+            const value = "amount" in row ? row.amount : "sales" in row ? row.sales : 0
+            const total = selectedData.rows.reduce((sum, r) => {
+              const v = "amount" in r ? r.amount : "sales" in r ? r.sales : 0
+              return sum + v
+            }, 0)
+            return {
+              name: "category" in row ? row.category : "month" in row ? row.month : "Unknown",
+              value,
+              color: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"][index],
+              percentage: Math.round((value / total) * 1000) / 10,
+            }
+          }),
         },
         options: {
           legend: true,
@@ -140,21 +160,30 @@ Use this when user wants to see a demo chart or test the visualization without r
       chartType,
       title: finalTitle,
       data: {
-        series: valueColumns.map((col) => ({
+        series: valueColumns.map(col => ({
           name: col,
-          data: selectedData.rows.map((row: any) => ({
-            x: row.month || row.category,
-            y: row[col],
-            label: `${row.month || row.category}: ${row[col]}`,
-          })),
-          color: col === "revenue" ? "#3b82f6" : col === "cost" ? "#ef4444" : "#10b981",
+          data: selectedData.rows.map(row => {
+            const x = "month" in row ? row.month : "category" in row ? row.category : String(row[selectedData.columns[0]])
+            const y = row[col as keyof typeof row]
+            return {
+              x: String(x),
+              y: Number(y),
+              label: `${x}: ${y}`,
+            }
+          }),
+          color:
+            col === "revenue"
+              ? "#3b82f6"
+              : col === "cost"
+                ? "#ef4444"
+                : "#10b981",
         })),
       },
       xAxis: {
         label: selectedData.columns[0],
         type: "category",
       },
-      yAxis: valueColumns.map((col) => ({ label: col })),
+      yAxis: valueColumns.map(col => ({ label: col })),
       options: {
         legend: isMultiSeries,
         stacked: false,

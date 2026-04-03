@@ -1,5 +1,5 @@
-import { Memory } from "@mastra/memory"
 import { LibSQLStore } from "@mastra/libsql"
+import { Memory } from "@mastra/memory"
 
 /**
  * Shared storage for memory - LibSQLite database
@@ -9,7 +9,7 @@ import { LibSQLStore } from "@mastra/libsql"
  */
 const memoryStorage = new LibSQLStore({
   id: "memory-storage",
-  url: process.env.MEMORY_URL || 'file:./mastra.db',
+  url: process.env.MEMORY_URL || "file:./mastra.db",
 })
 
 /**

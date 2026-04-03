@@ -1,42 +1,42 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Database, Mail, Lock, Eye, EyeOff } from "lucide-react";
-import { signIn, type User } from "@/lib/simple-auth";
+import { type User, signIn } from "@/lib/simple-auth"
+import { Database, Eye, EyeOff, Lock, Mail } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
 
 interface SimpleAuthDialogProps {
-  onSuccess?: (user: User) => void;
+  onSuccess?: (user: User) => void
 }
 
 export function SimpleAuthDialog({ onSuccess }: SimpleAuthDialogProps) {
-  const router = useRouter();
-  const [email, setEmail] = useState("admin@example.com");
-  const [password, setPassword] = useState("admin123");
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter()
+  const [email, setEmail] = useState("admin@example.com")
+  const [password, setPassword] = useState("admin123")
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setIsLoading(true);
+    e.preventDefault()
+    setError(null)
+    setIsLoading(true)
 
     try {
-      const result = await signIn(email, password);
+      const result = await signIn(email, password)
       if (result.success && result.user) {
-        onSuccess?.(result.user);
+        onSuccess?.(result.user)
         // Redirect to dashboard after successful login
-        router.push("/dashboard");
+        router.push("/dashboard")
       } else {
-        setError(result.error || "Sign in failed");
+        setError(result.error || "Sign in failed")
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-black p-4">
@@ -65,7 +65,10 @@ export function SimpleAuthDialog({ onSuccess }: SimpleAuthDialogProps) {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5"
+              >
                 Email
               </label>
               <div className="relative">
@@ -74,7 +77,7 @@ export function SimpleAuthDialog({ onSuccess }: SimpleAuthDialogProps) {
                   id="email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={e => setEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-zinc-900 dark:text-zinc-50"
                   placeholder="you@example.com"
                   required
@@ -83,7 +86,10 @@ export function SimpleAuthDialog({ onSuccess }: SimpleAuthDialogProps) {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5"
+              >
                 Password
               </label>
               <div className="relative">
@@ -92,7 +98,7 @@ export function SimpleAuthDialog({ onSuccess }: SimpleAuthDialogProps) {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={e => setPassword(e.target.value)}
                   className="w-full pl-10 pr-10 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-zinc-900 dark:text-zinc-50"
                   placeholder="••••••••"
                   required
@@ -103,7 +109,11 @@ export function SimpleAuthDialog({ onSuccess }: SimpleAuthDialogProps) {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -124,5 +134,5 @@ export function SimpleAuthDialog({ onSuccess }: SimpleAuthDialogProps) {
         </p>
       </div>
     </div>
-  );
+  )
 }

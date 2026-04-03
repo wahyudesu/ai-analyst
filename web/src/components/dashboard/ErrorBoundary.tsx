@@ -1,33 +1,33 @@
-"use client";
+"use client"
 
-import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { AlertCircle, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { AlertCircle, RefreshCw } from "lucide-react"
+import React from "react"
 
 interface Props {
-  children: React.ReactNode;
-  fallback?: React.ReactNode;
+  children: React.ReactNode
+  fallback?: React.ReactNode
 }
 
 interface State {
-  hasError: boolean;
-  error?: Error;
+  hasError: boolean
+  error?: Error
 }
 
 export class DashboardErrorBoundary extends React.Component<Props, State> {
   public state: State = {
     hasError: false,
-  };
+  }
 
   public static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    return { hasError: true, error }
   }
 
   public render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
-        return this.props.fallback;
+        return this.props.fallback
       }
 
       return (
@@ -42,7 +42,8 @@ export class DashboardErrorBoundary extends React.Component<Props, State> {
                   Something went wrong
                 </h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  {this.state.error?.message || "Failed to load dashboard data. Please try again."}
+                  {this.state.error?.message ||
+                    "Failed to load dashboard data. Please try again."}
                 </p>
                 <div className="flex gap-3 justify-center">
                   <Button
@@ -52,9 +53,7 @@ export class DashboardErrorBoundary extends React.Component<Props, State> {
                     <RefreshCw className="w-4 h-4 mr-2" />
                     Reload Page
                   </Button>
-                  <Button
-                    onClick={() => this.setState({ hasError: false })}
-                  >
+                  <Button onClick={() => this.setState({ hasError: false })}>
                     Try Again
                   </Button>
                 </div>
@@ -62,10 +61,10 @@ export class DashboardErrorBoundary extends React.Component<Props, State> {
             </CardContent>
           </Card>
         </div>
-      );
+      )
     }
 
-    return this.props.children;
+    return this.props.children
   }
 }
 
@@ -76,8 +75,8 @@ export function DashboardErrorFallback({
   error,
   reset,
 }: {
-  error?: Error;
-  reset?: () => void;
+  error?: Error
+  reset?: () => void
 }) {
   return (
     <div className="flex items-center justify-center min-h-[400px]">
@@ -91,7 +90,8 @@ export function DashboardErrorFallback({
               Something went wrong
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              {error?.message || "Failed to load dashboard data. Please try again."}
+              {error?.message ||
+                "Failed to load dashboard data. Please try again."}
             </p>
             <div className="flex gap-3 justify-center">
               <Button
@@ -101,13 +101,11 @@ export function DashboardErrorFallback({
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Reload Page
               </Button>
-              {reset && (
-                <Button onClick={reset}>Try Again</Button>
-              )}
+              {reset && <Button onClick={reset}>Try Again</Button>}
             </div>
           </div>
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

@@ -1,39 +1,44 @@
-'use client';
+"use client"
 
 import {
-  BarChart as RechartsBarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-} from 'recharts';
-import {
+  type ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  type ChartConfig,
-} from '@/components/ui/chart';
-import type { ChartConfig as LegacyChartConfig } from './types';
-import { useMemo } from 'react';
+} from "@/components/ui/chart"
+import { useMemo } from "react"
+import {
+  Bar,
+  CartesianGrid,
+  BarChart as RechartsBarChart,
+  XAxis,
+  YAxis,
+} from "recharts"
+import type { ChartConfig as LegacyChartConfig } from "./types"
 
 interface HorizontalBarChartProps {
-  config: LegacyChartConfig;
-  className?: string;
+  config: LegacyChartConfig
+  className?: string
 }
 
 /**
  * Horizontal bar chart component using Recharts with shadcn/ui pattern
  */
-export function HorizontalBarChart({ config, className }: HorizontalBarChartProps) {
-  const { data, colors } = config;
-  const series = data.series || [];
+export function HorizontalBarChart({
+  config,
+  className,
+}: HorizontalBarChartProps) {
+  const { data, colors } = config
+  const series = data.series || []
 
   if (series.length === 0 || !series[0]?.data?.length) {
     return (
-      <div className={`flex items-center justify-center h-64 text-muted-foreground ${className || ''}`}>
+      <div
+        className={`flex items-center justify-center h-64 text-muted-foreground ${className || ""}`}
+      >
         No data available
       </div>
-    );
+    )
   }
 
   // Prepare data for Recharts
@@ -42,27 +47,27 @@ export function HorizontalBarChart({ config, className }: HorizontalBarChartProp
       name: point.label || String(point.x),
       value: point.y,
       originalX: point.x,
-    }));
-  }, [series]);
+    }))
+  }, [series])
 
   // Build shadcn chart config
-  const seriesName = series[0]?.name || 'value';
+  const seriesName = series[0]?.name || "value"
   const shadcnConfig: ChartConfig = {
     [seriesName]: {
       label: seriesName,
       color: colors?.palette?.[0] || series[0]?.color || `var(--chart-1)`,
     },
-  };
+  }
 
   // Build shadcn chart config with sanitized key
-  const originalName = series[0]?.name || 'value';
-  const sanitizedName = originalName.replace(/\s+/g, '-').toLowerCase();
+  const originalName = series[0]?.name || "value"
+  const sanitizedName = originalName.replace(/\s+/g, "-").toLowerCase()
   const shadcnConfig: ChartConfig = {
     [sanitizedName]: {
       label: originalName,
       color: colors?.palette?.[0] || series[0]?.color || `var(--chart-1)`,
     },
-  };
+  }
 
   return (
     <ChartContainer config={shadcnConfig} className={className}>
@@ -77,8 +82,8 @@ export function HorizontalBarChart({ config, className }: HorizontalBarChartProp
           tickLine={false}
           tickMargin={10}
           axisLine={false}
-          tickFormatter={(value) =>
-            typeof value === 'number' ? value.toLocaleString() : String(value)
+          tickFormatter={value =>
+            typeof value === "number" ? value.toLocaleString() : String(value)
           }
         />
         <YAxis
@@ -97,5 +102,5 @@ export function HorizontalBarChart({ config, className }: HorizontalBarChartProp
         />
       </RechartsBarChart>
     </ChartContainer>
-  );
+  )
 }

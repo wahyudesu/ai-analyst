@@ -1,45 +1,49 @@
-"use client";
+"use client"
 
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { PanelLeft } from "lucide-react";
-import { DashboardErrorBoundary } from "@/components/dashboard/ErrorBoundary";
-import { useAuth } from "@/lib/simple-auth";
-import { AuthDialog } from "@/components/auth";
-import { SettingsDialog } from "@/components/SettingsDialog";
-import { AppSidebar } from "@/components/dashboard/AppSidebar";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { Separator } from "@/components/ui/separator";
+import { SettingsDialog } from "@/components/SettingsDialog"
+import { AuthDialog } from "@/components/auth"
+import { AppSidebar } from "@/components/dashboard/AppSidebar"
+import { DashboardErrorBoundary } from "@/components/dashboard/ErrorBoundary"
+import { Separator } from "@/components/ui/separator"
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar"
+import { useAuth } from "@/lib/simple-auth"
+import { PanelLeft } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useCallback, useEffect, useState } from "react"
 
 interface AppLayoutProps {
-  children: React.ReactNode;
-  rightSidebar?: React.ReactNode;
+  children: React.ReactNode
+  rightSidebar?: React.ReactNode
 }
 
 export function AppLayout({ children, rightSidebar }: AppLayoutProps) {
-  const { data: session, isPending, signOut } = useAuth();
-  const router = useRouter();
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { data: session, isPending, signOut } = useAuth()
+  const router = useRouter()
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   // Redirect to home if not authenticated
   useEffect(() => {
     if (!isPending && !session?.user) {
-      router.push("/");
+      router.push("/")
     }
-  }, [session, isPending, router]);
+  }, [session, isPending, router])
 
   // Handle sign out
   const handleSignOut = useCallback(() => {
-    signOut();
-  }, [signOut]);
+    signOut()
+  }, [signOut])
 
   // Listen for custom settings event from sidebar
   useEffect(() => {
-    const handleOpenSettings = () => setIsSettingsOpen(true);
-    window.addEventListener('open-settings', handleOpenSettings);
-    return () => window.removeEventListener('open-settings', handleOpenSettings);
-  }, []);
+    const handleOpenSettings = () => setIsSettingsOpen(true)
+    window.addEventListener("open-settings", handleOpenSettings)
+    return () => window.removeEventListener("open-settings", handleOpenSettings)
+  }, [])
 
   // Loading state
   if (isPending) {
@@ -54,16 +58,20 @@ export function AppLayout({ children, rightSidebar }: AppLayoutProps) {
           <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
       </div>
-    );
+    )
   }
 
   // Show auth dialog if not authenticated
   if (!session?.user) {
-    return <AuthDialog />;
+    return <AuthDialog />
   }
 
   return (
-    <SidebarProvider defaultOpen={true} open={sidebarOpen} onOpenChange={setSidebarOpen}>
+    <SidebarProvider
+      defaultOpen={true}
+      open={sidebarOpen}
+      onOpenChange={setSidebarOpen}
+    >
       <AppSidebar />
       <SidebarInset>
         {/* Header with toggle button */}
@@ -80,9 +88,7 @@ export function AppLayout({ children, rightSidebar }: AppLayoutProps) {
 
         {/* Main content */}
         <div className="flex flex-1 flex-col overflow-hidden">
-          <DashboardErrorBoundary>
-            {children}
-          </DashboardErrorBoundary>
+          <DashboardErrorBoundary>{children}</DashboardErrorBoundary>
         </div>
 
         {/* Right sidebar (optional) */}
@@ -99,16 +105,16 @@ export function AppLayout({ children, rightSidebar }: AppLayoutProps) {
       {/* Sign out handler - listen for custom event */}
       <SignOutHandler onSignOut={handleSignOut} />
     </SidebarProvider>
-  );
+  )
 }
 
 // Separate component to handle sign out from sidebar dropdown
 function SignOutHandler({ onSignOut }: { onSignOut: () => void }) {
   useEffect(() => {
-    const handleSignOutEvent = () => onSignOut();
-    window.addEventListener('sign-out', handleSignOutEvent);
-    return () => window.removeEventListener('sign-out', handleSignOutEvent);
-  }, [onSignOut]);
+    const handleSignOutEvent = () => onSignOut()
+    window.addEventListener("sign-out", handleSignOutEvent)
+    return () => window.removeEventListener("sign-out", handleSignOutEvent)
+  }, [onSignOut])
 
-  return null;
+  return null
 }

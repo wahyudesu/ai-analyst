@@ -1,6 +1,6 @@
-"use client";
+"use client"
 
-import type { ComponentProps } from "react";
+import type { ComponentProps } from "react"
 
 import {
   InputGroup,
@@ -8,9 +8,9 @@ import {
   InputGroupButton,
   InputGroupInput,
   InputGroupText,
-} from "@/components/ui/input-group";
-import { cn } from "@/lib/utils";
-import { CheckIcon, CopyIcon } from "lucide-react";
+} from "@/components/ui/input-group"
+import { cn } from "@/lib/utils"
+import { CheckIcon, CopyIcon } from "lucide-react"
 import {
   createContext,
   useCallback,
@@ -18,19 +18,19 @@ import {
   useEffect,
   useRef,
   useState,
-} from "react";
+} from "react"
 
 interface SnippetContextType {
-  code: string;
+  code: string
 }
 
 const SnippetContext = createContext<SnippetContextType>({
   code: "",
-});
+})
 
 export type SnippetProps = ComponentProps<typeof InputGroup> & {
-  code: string;
-};
+  code: string
+}
 
 export const Snippet = ({
   code,
@@ -43,30 +43,30 @@ export const Snippet = ({
       {children}
     </InputGroup>
   </SnippetContext.Provider>
-);
+)
 
-export type SnippetAddonProps = ComponentProps<typeof InputGroupAddon>;
+export type SnippetAddonProps = ComponentProps<typeof InputGroupAddon>
 
 export const SnippetAddon = (props: SnippetAddonProps) => (
   <InputGroupAddon {...props} />
-);
+)
 
-export type SnippetTextProps = ComponentProps<typeof InputGroupText>;
+export type SnippetTextProps = ComponentProps<typeof InputGroupText>
 
 export const SnippetText = ({ className, ...props }: SnippetTextProps) => (
   <InputGroupText
     className={cn("pl-2 font-normal text-muted-foreground", className)}
     {...props}
   />
-);
+)
 
 export type SnippetInputProps = Omit<
   ComponentProps<typeof InputGroupInput>,
   "readOnly" | "value"
->;
+>
 
 export const SnippetInput = ({ className, ...props }: SnippetInputProps) => {
-  const { code } = useContext(SnippetContext);
+  const { code } = useContext(SnippetContext)
 
   return (
     <InputGroupInput
@@ -75,14 +75,14 @@ export const SnippetInput = ({ className, ...props }: SnippetInputProps) => {
       value={code}
       {...props}
     />
-  );
-};
+  )
+}
 
 export type SnippetCopyButtonProps = ComponentProps<typeof InputGroupButton> & {
-  onCopy?: () => void;
-  onError?: (error: Error) => void;
-  timeout?: number;
-};
+  onCopy?: () => void
+  onError?: (error: Error) => void
+  timeout?: number
+}
 
 export const SnippetCopyButton = ({
   onCopy,
@@ -92,39 +92,39 @@ export const SnippetCopyButton = ({
   className,
   ...props
 }: SnippetCopyButtonProps) => {
-  const [isCopied, setIsCopied] = useState(false);
-  const timeoutRef = useRef<number>(0);
-  const { code } = useContext(SnippetContext);
+  const [isCopied, setIsCopied] = useState(false)
+  const timeoutRef = useRef<number>(0)
+  const { code } = useContext(SnippetContext)
 
   const copyToClipboard = useCallback(async () => {
     if (typeof window === "undefined" || !navigator?.clipboard?.writeText) {
-      onError?.(new Error("Clipboard API not available"));
-      return;
+      onError?.(new Error("Clipboard API not available"))
+      return
     }
 
     try {
       if (!isCopied) {
-        await navigator.clipboard.writeText(code);
-        setIsCopied(true);
-        onCopy?.();
+        await navigator.clipboard.writeText(code)
+        setIsCopied(true)
+        onCopy?.()
         timeoutRef.current = window.setTimeout(
           () => setIsCopied(false),
           timeout
-        );
+        )
       }
     } catch (error) {
-      onError?.(error as Error);
+      onError?.(error as Error)
     }
-  }, [code, onCopy, onError, timeout, isCopied]);
+  }, [code, onCopy, onError, timeout, isCopied])
 
   useEffect(
     () => () => {
-      window.clearTimeout(timeoutRef.current);
+      window.clearTimeout(timeoutRef.current)
     },
     []
-  );
+  )
 
-  const Icon = isCopied ? CheckIcon : CopyIcon;
+  const Icon = isCopied ? CheckIcon : CopyIcon
 
   return (
     <InputGroupButton
@@ -137,5 +137,5 @@ export const SnippetCopyButton = ({
     >
       {children ?? <Icon className="size-3.5" size={14} />}
     </InputGroupButton>
-  );
-};
+  )
+}

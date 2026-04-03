@@ -1,6 +1,6 @@
-"use client";
+"use client"
 
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 
 export function MetricCardSkeleton() {
   return (
@@ -16,7 +16,7 @@ export function MetricCardSkeleton() {
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }
 
 export function MetricCardGridSkeleton({ count = 6 }: { count?: number }) {
@@ -26,7 +26,7 @@ export function MetricCardGridSkeleton({ count = 6 }: { count?: number }) {
         <MetricCardSkeleton key={i} />
       ))}
     </div>
-  );
+  )
 }
 
 export function ChartSkeleton() {
@@ -39,7 +39,7 @@ export function ChartSkeleton() {
         <div className="h-64 bg-muted animate-pulse rounded" />
       </CardContent>
     </Card>
-  );
+  )
 }
 
 export function ChartGridSkeleton({ count = 2 }: { count?: number }) {
@@ -49,7 +49,7 @@ export function ChartGridSkeleton({ count = 2 }: { count?: number }) {
         <ChartSkeleton key={i} />
       ))}
     </div>
-  );
+  )
 }
 
 export function TableSkeleton({ rows = 5 }: { rows?: number }) {
@@ -72,7 +72,7 @@ export function TableSkeleton({ rows = 5 }: { rows?: number }) {
         </div>
       ))}
     </div>
-  );
+  )
 }
 
 export function StatsGridSkeleton({ count = 3 }: { count?: number }) {
@@ -85,5 +85,5 @@ export function StatsGridSkeleton({ count = 3 }: { count?: number }) {
         </div>
       ))}
     </div>
-  );
+  )
 }

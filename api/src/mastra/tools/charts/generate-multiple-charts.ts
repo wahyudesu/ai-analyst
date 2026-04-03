@@ -7,8 +7,17 @@
 import { createTool } from "@mastra/core/tools"
 import { z } from "zod"
 import { type ChartSuggestion, suggestChartTypes } from "./auto-detect.js"
-import { buildChartResult, processPieChart, processXYChart } from "./data-processors.js"
-import type { GenerateChartOutput, PieSlice, Series, YAxisConfig } from "./types.js"
+import {
+  buildChartResult,
+  processPieChart,
+  processXYChart,
+} from "./data-processors.js"
+import type {
+  GenerateChartOutput,
+  PieSlice,
+  Series,
+  YAxisConfig,
+} from "./types.js"
 
 const SQLQueryResultSchema = z.object({
   columns: z.array(z.string()),
@@ -54,7 +63,10 @@ Use this when you want to:
       "SQL query result from execute-sql tool"
     ),
     baseTitle: z.string().describe("Base title for the chart collection"),
-    description: z.string().optional().describe("Description of what the charts show"),
+    description: z
+      .string()
+      .optional()
+      .describe("Description of what the charts show"),
     chartTypes: z
       .array(z.enum(chartTypes))
       .optional()
@@ -85,7 +97,7 @@ Use this when you want to:
     // Filter by requested chart types or use all suggestions
     let filteredSuggestions =
       requestedChartTypes && requestedChartTypes.length > 0
-        ? suggestions.filter((s) => requestedChartTypes.includes(s.chartType))
+        ? suggestions.filter(s => requestedChartTypes.includes(s.chartType))
         : suggestions
 
     // Limit to maxCharts
@@ -142,7 +154,7 @@ Use this when you want to:
         processedData,
         options,
         xAxis: { label: suggestion.xColumn, type: suggestion.xAxisType },
-        yAxisLabels: yAxisConfigs.map((y) => y.label || y.column),
+        yAxisLabels: yAxisConfigs.map(y => y.label || y.column),
         dataSourceRowCount: data.rowCount,
         colorScheme: "default",
       })

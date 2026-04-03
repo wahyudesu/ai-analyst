@@ -2,6 +2,7 @@
  * Data transformation utilities for chart generation
  */
 
+import { getColor, getPalette } from "./color-palettes.js"
 import type {
   AggregationType,
   ChartOptions,
@@ -9,13 +10,12 @@ import type {
   DataPoint,
   GenerateChartOutput,
   PieSlice,
-  Series,
   SQLQueryResult,
+  Series,
   SortType,
   XAxisConfig,
   YAxisConfig,
 } from "./types.js"
-import { getColor, getPalette } from "./color-palettes.js"
 
 /**
  * Get column value from row
@@ -63,7 +63,10 @@ function toString(value: unknown): string {
 /**
  * Apply aggregation to values
  */
-function applyAggregation(values: number[], aggregation: AggregationType): number {
+function applyAggregation(
+  values: number[],
+  aggregation: AggregationType
+): number {
   if (values.length === 0) return 0
 
   switch (aggregation) {
@@ -140,7 +143,9 @@ function sortDataPoints(
     if (xType === "time" || xType === "category") {
       const aStr = String(aVal)
       const bStr = String(bVal)
-      return sortType === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr)
+      return sortType === "asc"
+        ? aStr.localeCompare(bStr)
+        : bStr.localeCompare(aStr)
     }
 
     // For numeric, sort by values
@@ -209,7 +214,10 @@ export function processXYChart(
     }
 
     // Sort and limit
-    const processed = limitDataPoints(sortDataPoints(dataPoints, sort, xType), limit)
+    const processed = limitDataPoints(
+      sortDataPoints(dataPoints, sort, xType),
+      limit
+    )
 
     series.push({
       name: label,
@@ -244,15 +252,15 @@ export function processPieChart(
 
   // Find label column (use first non-y column or 'label' if exists)
   let labelColumn = columns.find(
-    (c) => c !== yColumn && c.toLowerCase().includes("label")
+    c => c !== yColumn && c.toLowerCase().includes("label")
   )
   if (!labelColumn) {
     labelColumn = columns.find(
-      (c) => c !== yColumn && c.toLowerCase().includes("name")
+      c => c !== yColumn && c.toLowerCase().includes("name")
     )
   }
   if (!labelColumn) {
-    labelColumn = columns.find((c) => c !== yColumn)
+    labelColumn = columns.find(c => c !== yColumn)
   }
   if (!labelColumn) {
     labelColumn = yColumn
@@ -309,7 +317,10 @@ export function processPieChart(
 /**
  * Count total data points across all series
  */
-export function countDataPoints(series?: Series[], slices?: PieSlice[]): number {
+export function countDataPoints(
+  series?: Series[],
+  slices?: PieSlice[]
+): number {
   if (series) {
     return series.reduce((sum, s) => sum + s.data.length, 0)
   }
@@ -328,14 +339,21 @@ export interface BuildChartResultInput {
   title: string
   subtitle?: string
   processedData: { series?: Series[]; slices?: PieSlice[] }
-  options: { legend: boolean; stacked: boolean; horizontal: boolean; showDataLabels: boolean }
+  options: {
+    legend: boolean
+    stacked: boolean
+    horizontal: boolean
+    showDataLabels: boolean
+  }
   xAxis?: { label: string; type: "category" | "time" | "number" }
   yAxisLabels?: string[]
   dataSourceRowCount: number
   colorScheme?: "default" | "categorical" | "sequential"
 }
 
-export function buildChartResult(input: BuildChartResultInput): GenerateChartOutput {
+export function buildChartResult(
+  input: BuildChartResultInput
+): GenerateChartOutput {
   const {
     chartType,
     title,
@@ -364,7 +382,10 @@ export function buildChartResult(input: BuildChartResultInput): GenerateChartOut
     },
     metadata: {
       dataSourceRowCount,
-      displayedPointCount: countDataPoints(processedData.series, processedData.slices),
+      displayedPointCount: countDataPoints(
+        processedData.series,
+        processedData.slices
+      ),
       generatedAt: new Date().toISOString(),
     },
   }
@@ -375,7 +396,7 @@ export function buildChartResult(input: BuildChartResultInput): GenerateChartOut
       label: xAxis.label,
       type: xAxis.type,
     }
-    result.yAxis = yAxisLabels.map((label) => ({ label }))
+    result.yAxis = yAxisLabels.map(label => ({ label }))
   }
 
   return result

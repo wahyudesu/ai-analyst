@@ -2,17 +2,17 @@
  * Chart components exports
  */
 
-export { ChartRenderer } from './ChartRenderer';
-export { BarChart } from './BarChart';
-export { LineChart } from './LineChart';
-export { AreaChart } from './AreaChart';
-export { PieChart } from './PieChart';
-export { MultipleCharts, CollapsibleMultipleCharts } from './MultipleCharts';
-export { FunnelChart } from './FunnelChart';
-export { StackedAreaChart } from './StackedAreaChart';
-export { HorizontalBarChart } from './HorizontalBarChart';
-export { DualAxisChart } from './DualAxisChart';
-export type { ChartConfig, MultipleChartsConfig, ChartsLayout } from './types';
+export { ChartRenderer } from "./ChartRenderer"
+export { BarChart } from "./BarChart"
+export { LineChart } from "./LineChart"
+export { AreaChart } from "./AreaChart"
+export { PieChart } from "./PieChart"
+export { MultipleCharts, CollapsibleMultipleCharts } from "./MultipleCharts"
+export { FunnelChart } from "./FunnelChart"
+export { StackedAreaChart } from "./StackedAreaChart"
+export { HorizontalBarChart } from "./HorizontalBarChart"
+export { DualAxisChart } from "./DualAxisChart"
+export type { ChartConfig, MultipleChartsConfig, ChartsLayout } from "./types"
 
 // Dynamic imports for code-splitting
 export {
@@ -25,5 +25,5 @@ export {
   HorizontalBarChart as DynamicHorizontalBarChart,
   DualAxisChart as DynamicDualAxisChart,
   ChartSkeleton,
-} from './dynamic';
-export { ChartLoader } from './ChartLoader';
+} from "./dynamic"
+export { ChartLoader } from "./ChartLoader"

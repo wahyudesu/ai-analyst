@@ -1,15 +1,15 @@
-import { Agent } from "@mastra/core/agent";
-import { POSTGRES_DATA_ANALYST_INSTRUCTIONS } from "./prompt/prompt-postgres";
-import { postgresTools } from "../tools/postgres";
-import { chartTools } from "../tools/charts";
-import { dataAnalystMemory } from "../memory";
-import { DEFAULT_MODEL_ID } from "../config/models.js";
+import { Agent } from "@mastra/core/agent"
 import {
   createAnswerRelevancyScorer,
-  createToxicityScorer,
-  createFaithfulnessScorer,
   createCompletenessScorer,
-} from "@mastra/evals/scorers/prebuilt";
+  createFaithfulnessScorer,
+  createToxicityScorer,
+} from "@mastra/evals/scorers/prebuilt"
+import { DEFAULT_MODEL_ID } from "../config/models.js"
+import { dataAnalystMemory } from "../memory"
+import { chartTools } from "../tools/charts"
+import { postgresTools } from "../tools/postgres"
+import { POSTGRES_DATA_ANALYST_INSTRUCTIONS } from "./prompt/prompt-postgres"
 
 // Create a data analyst agent for PostgreSQL database with memory
 export const sqlagent = new Agent({
@@ -45,4 +45,4 @@ export const sqlagent = new Agent({
       sampling: { type: "ratio", rate: 1 },
     },
   },
-});
+})

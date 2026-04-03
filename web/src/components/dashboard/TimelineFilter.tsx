@@ -1,7 +1,6 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,16 +8,17 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Calendar, ChevronDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+} from "@/components/ui/dropdown-menu"
+import { cn } from "@/lib/utils"
+import { Calendar, ChevronDown } from "lucide-react"
+import { useEffect, useState } from "react"
 
-export type TimeRange = "7d" | "30d" | "90d" | "12w" | "all" | "custom";
+export type TimeRange = "7d" | "30d" | "90d" | "12w" | "all" | "custom"
 
 export interface TimeRangeOption {
-  value: TimeRange;
-  label: string;
-  description: string;
+  value: TimeRange
+  label: string
+  description: string
 }
 
 const timeRangeOptions: TimeRangeOption[] = [
@@ -27,15 +27,15 @@ const timeRangeOptions: TimeRangeOption[] = [
   { value: "90d", label: "90 Days", description: "Last 90 days" },
   { value: "12w", label: "12 Weeks", description: "Last 12 weeks" },
   { value: "all", label: "All Time", description: "All historical data" },
-];
+]
 
 interface TimelineFilterProps {
-  value: TimeRange;
-  onChange: (value: TimeRange) => void;
-  customStartDate?: Date | null;
-  customEndDate?: Date | null;
-  onCustomRangeChange?: (start: Date | null, end: Date | null) => void;
-  className?: string;
+  value: TimeRange
+  onChange: (value: TimeRange) => void
+  customStartDate?: Date | null
+  customEndDate?: Date | null
+  onCustomRangeChange?: (start: Date | null, end: Date | null) => void
+  className?: string
 }
 
 export function TimelineFilter({
@@ -46,32 +46,33 @@ export function TimelineFilter({
   onCustomRangeChange,
   className,
 }: TimelineFilterProps) {
-  const [isCustomOpen, setIsCustomOpen] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isCustomOpen, setIsCustomOpen] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
 
   // Cleanup modal state on unmount to prevent memory leaks
   useEffect(() => {
     return () => {
       if (isCustomOpen) {
-        setIsCustomOpen(false);
+        setIsCustomOpen(false)
       }
-    };
-  }, [isCustomOpen]);
+    }
+  }, [isCustomOpen])
 
-  const selectedOption = timeRangeOptions.find((opt) => opt.value === value);
-  const displayLabel = value === "custom" && customStartDate && customEndDate
-    ? `${customStartDate.toLocaleDateString()} - ${customEndDate.toLocaleDateString()}`
-    : selectedOption?.label || "Select range";
+  const selectedOption = timeRangeOptions.find(opt => opt.value === value)
+  const displayLabel =
+    value === "custom" && customStartDate && customEndDate
+      ? `${customStartDate.toLocaleDateString()} - ${customEndDate.toLocaleDateString()}`
+      : selectedOption?.label || "Select range"
 
   const handleSelect = (rangeValue: TimeRange) => {
     if (rangeValue === "custom") {
-      setDropdownOpen(false);
-      setIsCustomOpen(true);
+      setDropdownOpen(false)
+      setIsCustomOpen(true)
     } else {
-      onChange(rangeValue);
-      setDropdownOpen(false);
+      onChange(rangeValue)
+      setDropdownOpen(false)
     }
-  };
+  }
 
   return (
     <>
@@ -94,9 +95,11 @@ export function TimelineFilter({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-[200px]">
-          <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Time Range</DropdownMenuLabel>
+          <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
+            Time Range
+          </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {timeRangeOptions.map((option) => (
+          {timeRangeOptions.map(option => (
             <DropdownMenuItem
               key={option.value}
               onClick={() => handleSelect(option.value)}
@@ -131,11 +134,13 @@ export function TimelineFilter({
             <h3 className="text-lg font-semibold mb-4">Custom Date Range</h3>
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium mb-2 block">Start Date</label>
+                <label className="text-sm font-medium mb-2 block">
+                  Start Date
+                </label>
                 <input
                   type="date"
-                  value={customStartDate?.toISOString().split('T')[0] || ''}
-                  onChange={(e) =>
+                  value={customStartDate?.toISOString().split("T")[0] || ""}
+                  onChange={e =>
                     onCustomRangeChange?.(
                       e.target.value ? new Date(e.target.value) : null,
                       customEndDate || null
@@ -145,11 +150,13 @@ export function TimelineFilter({
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">End Date</label>
+                <label className="text-sm font-medium mb-2 block">
+                  End Date
+                </label>
                 <input
                   type="date"
-                  value={customEndDate?.toISOString().split('T')[0] || ''}
-                  onChange={(e) =>
+                  value={customEndDate?.toISOString().split("T")[0] || ""}
+                  onChange={e =>
                     onCustomRangeChange?.(
                       customStartDate || null,
                       e.target.value ? new Date(e.target.value) : null
@@ -170,8 +177,8 @@ export function TimelineFilter({
               <Button
                 onClick={() => {
                   if (customStartDate && customEndDate) {
-                    onChange("custom");
-                    setIsCustomOpen(false);
+                    onChange("custom")
+                    setIsCustomOpen(false)
                   }
                 }}
                 disabled={!customStartDate || !customEndDate}
@@ -184,25 +191,25 @@ export function TimelineFilter({
         </div>
       )}
     </>
-  );
+  )
 }
 
 // Helper to convert TimeRange to SQL interval
 export function timeRangeToInterval(timeRange: TimeRange): string {
   switch (timeRange) {
     case "7d":
-      return "7 days";
+      return "7 days"
     case "30d":
-      return "30 days";
+      return "30 days"
     case "90d":
-      return "90 days";
+      return "90 days"
     case "12w":
-      return "84 days"; // 12 weeks
+      return "84 days" // 12 weeks
     case "all":
-      return "100 years"; // Effectively all time
+      return "100 years" // Effectively all time
     case "custom":
-      return "30 days"; // Fallback, actual dates used in query
+      return "30 days" // Fallback, actual dates used in query
     default:
-      return "30 days";
+      return "30 days"
   }
 }

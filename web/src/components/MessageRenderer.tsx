@@ -1,20 +1,37 @@
 "use client"
 
-import { memo, useMemo, useState } from "react"
-import { ChevronDown, ChevronRight, Database, Copy, Check, ThumbsUp, ThumbsDown, MoreVertical } from "lucide-react"
-import { Streamdown } from "streamdown"
 import { code } from "@streamdown/code"
 import { math } from "@streamdown/math"
 import { mermaid } from "@streamdown/mermaid"
+import {
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Database,
+  MoreVertical,
+  ThumbsDown,
+  ThumbsUp,
+} from "lucide-react"
+import { memo, useMemo, useState } from "react"
+import { Streamdown } from "streamdown"
 
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ChartRenderer, MultipleCharts, CollapsibleMultipleCharts } from "./charts"
+import {
+  ChartRenderer,
+  CollapsibleMultipleCharts,
+  MultipleCharts,
+} from "./charts"
 import type { ChartConfig, MultipleChartsConfig } from "./charts/types"
 
 // Constants
@@ -127,11 +144,16 @@ function extractChartConfig(parts?: MessagePart[]): ChartConfig | null {
   return null
 }
 
-function extractMultipleChartsConfig(parts?: MessagePart[]): MultipleChartsConfig | null {
+function extractMultipleChartsConfig(
+  parts?: MessagePart[]
+): MultipleChartsConfig | null {
   if (!parts) return null
 
   for (const part of parts) {
-    if (part.state === "output-available" && hasMultipleChartsOutput(part.output)) {
+    if (
+      part.state === "output-available" &&
+      hasMultipleChartsOutput(part.output)
+    ) {
       return part.output as MultipleChartsConfig
     }
     if (part.result && hasMultipleChartsOutput(part.result)) {
@@ -166,15 +188,30 @@ function getToolName(part: MessagePart): string {
  * Supports text, tool calls, and chart visualizations
  * Pattern based on Vercel AI SDK Generative UI
  */
-function MessageRenderer({ message, agentInfo, onRename, onPin, onDelete, sessionId, compact = false, skipAnimation }: MessageRendererProps) {
+function MessageRenderer({
+  message,
+  agentInfo,
+  onRename,
+  onPin,
+  onDelete,
+  sessionId,
+  compact = false,
+  skipAnimation,
+}: MessageRendererProps) {
   const isUser = message.role === "user"
   const [copied, setCopied] = useState(false)
   const [liked, setLiked] = useState(false)
   const [disliked, setDisliked] = useState(false)
 
   // Memoized derived values
-  const chartConfig = useMemo(() => extractChartConfig(message.parts), [message.parts])
-  const multipleChartsConfig = useMemo(() => extractMultipleChartsConfig(message.parts), [message.parts])
+  const chartConfig = useMemo(
+    () => extractChartConfig(message.parts),
+    [message.parts]
+  )
+  const multipleChartsConfig = useMemo(
+    () => extractMultipleChartsConfig(message.parts),
+    [message.parts]
+  )
   const textContent = useMemo(() => extractTextContent(message), [message])
   const toolParts = useMemo(() => {
     return message.parts?.filter(isToolPart) ?? []
@@ -274,7 +311,9 @@ function MessageRenderer({ message, agentInfo, onRename, onPin, onDelete, sessio
             <button
               onClick={handleLike}
               className={`p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors ${
-                liked ? "text-blue-600 dark:text-blue-400" : "text-zinc-500 dark:text-zinc-400"
+                liked
+                  ? "text-blue-600 dark:text-blue-400"
+                  : "text-zinc-500 dark:text-zinc-400"
               }`}
               title="Like"
             >
@@ -285,7 +324,9 @@ function MessageRenderer({ message, agentInfo, onRename, onPin, onDelete, sessio
             <button
               onClick={handleDislike}
               className={`p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors ${
-                disliked ? "text-red-600 dark:text-red-400" : "text-zinc-500 dark:text-zinc-400"
+                disliked
+                  ? "text-red-600 dark:text-red-400"
+                  : "text-zinc-500 dark:text-zinc-400"
               }`}
               title="Dislike"
             >
@@ -371,7 +412,11 @@ function MessageRenderer({ message, agentInfo, onRename, onPin, onDelete, sessio
         {/* Chart rendering */}
         {multipleChartsConfig && !isUser && (
           <div className="min-h-[5rem]">
-            <CollapsibleMultipleCharts config={multipleChartsConfig} defaultOpen={false} skipAnimation={skipAnimation} />
+            <CollapsibleMultipleCharts
+              config={multipleChartsConfig}
+              defaultOpen={false}
+              skipAnimation={skipAnimation}
+            />
           </div>
         )}
         {chartConfig && !isUser && (
@@ -395,7 +440,12 @@ interface ToolPartProps {
   onToggleCollapse: () => void
 }
 
-function ToolPart({ part, isCollapsed, canCollapse, onToggleCollapse }: ToolPartProps) {
+function ToolPart({
+  part,
+  isCollapsed,
+  canCollapse,
+  onToggleCollapse,
+}: ToolPartProps) {
   const toolName = getToolName(part)
 
   // Skip rendering if chart output or multiple charts output (rendered separately)
@@ -406,7 +456,14 @@ function ToolPart({ part, isCollapsed, canCollapse, onToggleCollapse }: ToolPart
   // Render based on state
   switch (part.state) {
     case "input-available":
-      return <ToolInputState part={part} toolName={toolName} isCollapsed={isCollapsed} onToggleCollapse={canCollapse ? onToggleCollapse : undefined} />
+      return (
+        <ToolInputState
+          part={part}
+          toolName={toolName}
+          isCollapsed={isCollapsed}
+          onToggleCollapse={canCollapse ? onToggleCollapse : undefined}
+        />
+      )
 
     case "output-available":
       return (
@@ -443,7 +500,7 @@ function ToolInputState({
   part,
   toolName,
   isCollapsed = true,
-  onToggleCollapse
+  onToggleCollapse,
 }: {
   part: MessagePart
   toolName: string
@@ -460,7 +517,9 @@ function ToolInputState({
               Calling {toolName}...
             </span>
           </div>
-          <ChevronRight className={`w-4 h-4 text-zinc-500 transition-transform ${!isCollapsed ? 'rotate-90' : ''}`} />
+          <ChevronRight
+            className={`w-4 h-4 text-zinc-500 transition-transform ${!isCollapsed ? "rotate-90" : ""}`}
+          />
         </CollapsibleTrigger>
         <CollapsibleContent>
           {part.args != null && (
@@ -488,7 +547,10 @@ function ToolOutputState({
   onToggleCollapse: () => void
 }) {
   return (
-    <Collapsible open={!isCollapsed} onOpenChange={canCollapse ? onToggleCollapse : undefined}>
+    <Collapsible
+      open={!isCollapsed}
+      onOpenChange={canCollapse ? onToggleCollapse : undefined}
+    >
       <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 overflow-hidden">
         <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 min-h-[2.5rem] hover:bg-zinc-100 dark:hover:bg-zinc-700/50 transition-colors">
           <div className="flex items-center gap-2">
@@ -499,7 +561,11 @@ function ToolOutputState({
           </div>
           {canCollapse && (
             <span className="text-zinc-500 dark:text-zinc-400 pointer-events-none">
-              {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              {isCollapsed ? (
+                <ChevronRight className="w-4 h-4" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
             </span>
           )}
         </CollapsibleTrigger>
@@ -517,7 +583,10 @@ function ToolOutputState({
   )
 }
 
-function ToolErrorState({ part, toolName }: { part: MessagePart; toolName: string }) {
+function ToolErrorState({
+  part,
+  toolName,
+}: { part: MessagePart; toolName: string }) {
   return (
     <div className="rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-3 py-2 min-h-[2.5rem]">
       <div className="flex items-center gap-2">
@@ -547,10 +616,15 @@ function ToolLegacyState({
   onToggleCollapse: () => void
 }) {
   const isError = part.isError ?? false
-  const hasContent = Boolean((part.output || part.result) && !hasChartOutput(part.output))
+  const hasContent = Boolean(
+    (part.output || part.result) && !hasChartOutput(part.output)
+  )
 
   return (
-    <Collapsible open={!isCollapsed} onOpenChange={canCollapse ? onToggleCollapse : undefined}>
+    <Collapsible
+      open={!isCollapsed}
+      onOpenChange={canCollapse ? onToggleCollapse : undefined}
+    >
       <div
         className={`rounded-lg border overflow-hidden ${
           isError
@@ -560,12 +634,20 @@ function ToolLegacyState({
       >
         <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 min-h-[2.5rem] hover:bg-zinc-100 dark:hover:bg-zinc-700/50 transition-colors">
           <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${isError ? "bg-red-500" : "bg-green-500"}`} />
-            <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">{toolName}</span>
+            <div
+              className={`w-2 h-2 rounded-full ${isError ? "bg-red-500" : "bg-green-500"}`}
+            />
+            <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+              {toolName}
+            </span>
           </div>
           {hasContent && canCollapse ? (
             <span className="text-zinc-500 dark:text-zinc-400 pointer-events-none">
-              {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              {isCollapsed ? (
+                <ChevronRight className="w-4 h-4" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
             </span>
           ) : null}
         </CollapsibleTrigger>

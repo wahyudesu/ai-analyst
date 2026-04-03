@@ -1,88 +1,90 @@
-"use client";
+"use client"
 
-import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { MetricCard } from "@/components/dashboard/MetricCard";
-import { RefreshButton } from "@/components/dashboard/RefreshButton";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart } from "@/components/charts/LineChart";
-import { BarChart } from "@/components/charts/BarChart";
-import { AreaChart } from "@/components/charts/AreaChart";
-import type { ChartConfig } from "@/components/charts/types";
-import { useDatabaseConfig } from "@/lib/use-database-config";
-import { Activity, Users, Zap, Target } from "lucide-react";
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { AreaChart } from "@/components/charts/AreaChart"
+import { BarChart } from "@/components/charts/BarChart"
+import { LineChart } from "@/components/charts/LineChart"
+import type { ChartConfig } from "@/components/charts/types"
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader"
+import { MetricCard } from "@/components/dashboard/MetricCard"
+import { RefreshButton } from "@/components/dashboard/RefreshButton"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useDatabaseConfig } from "@/lib/use-database-config"
+import { Activity, Target, Users, Zap } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 interface UsageData {
   metrics: {
-    dau: { value: number; format: string };
-    mau: { value: number; format: string };
-    dauMauRatio: { value: number; format: string };
-    totalAgents: { value: number; format: string };
-    uniqueCreators: { value: number; format: string };
-  };
+    dau: { value: number; format: string }
+    mau: { value: number; format: string }
+    dauMauRatio: { value: number; format: string }
+    totalAgents: { value: number; format: string }
+    uniqueCreators: { value: number; format: string }
+  }
   charts: {
     dailyTrend: {
-      labels: string[];
-      dau: number[];
-      conversations: number[];
-      messages: number[];
-    };
+      labels: string[]
+      dau: number[]
+      conversations: number[]
+      messages: number[]
+    }
     sourceUsage: {
-      source: string;
-      conversations: number;
-      users: number;
-      messages: number;
-    }[];
-  };
+      source: string
+      conversations: number
+      users: number
+      messages: number
+    }[]
+  }
 }
 
 export default function UsagePage() {
-  const [data, setData] = useState<UsageData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
-  const { databaseUrl } = useDatabaseConfig();
+  const [data, setData] = useState<UsageData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
+  const { databaseUrl } = useDatabaseConfig()
 
   // Use ref to avoid recreating fetchData when databaseUrl changes
-  const databaseUrlRef = useRef(databaseUrl);
-  databaseUrlRef.current = databaseUrl;
+  const databaseUrlRef = useRef(databaseUrl)
+  databaseUrlRef.current = databaseUrl
 
   const fetchData = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
-      setIsRefreshing(true);
+      setIsRefreshing(true)
     } else {
-      setLoading(true);
+      setLoading(true)
     }
 
     try {
       const response = await fetch("/api/dashboard/usage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ databaseUrl: databaseUrlRef.current || undefined }),
-      });
+        body: JSON.stringify({
+          databaseUrl: databaseUrlRef.current || undefined,
+        }),
+      })
       if (response.ok) {
-        const result = await response.json();
-        setData(result);
-        setLastRefresh(new Date());
+        const result = await response.json()
+        setData(result)
+        setLastRefresh(new Date())
       }
     } catch (error) {
-      console.error("Failed to fetch usage data:", error);
+      console.error("Failed to fetch usage data:", error)
     } finally {
-      setLoading(false);
-      setIsRefreshing(false);
+      setLoading(false)
+      setIsRefreshing(false)
     }
-  }, []);
+  }, [])
 
   const handleRefresh = useCallback(() => {
-    return fetchData(true);
-  }, [fetchData]);
+    return fetchData(true)
+  }, [fetchData])
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchData()
+  }, [fetchData])
 
   const dailyTrendConfig: ChartConfig | null = useMemo(() => {
-    if (!data || data.charts.dailyTrend.labels.length === 0) return null;
+    if (!data || data.charts.dailyTrend.labels.length === 0) return null
     return {
       chartType: "line",
       title: "Daily Active Users (30 Days)",
@@ -100,18 +102,23 @@ export default function UsagePage() {
       },
       xAxis: { label: "Date", type: "category" },
       yAxis: [{ label: "Users" }],
-      options: { legend: false, stacked: false, horizontal: false, showDataLabels: false },
+      options: {
+        legend: false,
+        stacked: false,
+        horizontal: false,
+        showDataLabels: false,
+      },
       colors: { palette: ["#14B8A6"] },
       metadata: {
         dataSourceRowCount: data.charts.dailyTrend.labels.length,
         displayedPointCount: data.charts.dailyTrend.labels.length,
         generatedAt: new Date().toISOString(),
       },
-    };
-  }, [data?.charts.dailyTrend.labels, data?.charts.dailyTrend.dau]);
+    }
+  }, [data?.charts.dailyTrend.labels, data?.charts.dailyTrend.dau])
 
   const sourceUsageConfig: ChartConfig | null = useMemo(() => {
-    if (!data || data.charts.sourceUsage.length === 0) return null;
+    if (!data || data.charts.sourceUsage.length === 0) return null
     return {
       chartType: "bar",
       title: "Usage by Source",
@@ -119,7 +126,7 @@ export default function UsagePage() {
         series: [
           {
             name: "Conversations",
-            data: data.charts.sourceUsage.map((s) => ({
+            data: data.charts.sourceUsage.map(s => ({
               x: s.source,
               y: s.conversations,
             })),
@@ -129,31 +136,38 @@ export default function UsagePage() {
       },
       xAxis: { label: "Source", type: "category" },
       yAxis: [{ label: "Conversations" }],
-      options: { legend: false, stacked: false, horizontal: true, showDataLabels: false },
-      colors: { palette: ["#14B8A6", "#10B981", "#F97316", "#EF4444", "#8B5CF6"] },
+      options: {
+        legend: false,
+        stacked: false,
+        horizontal: true,
+        showDataLabels: false,
+      },
+      colors: {
+        palette: ["#14B8A6", "#10B981", "#F97316", "#EF4444", "#8B5CF6"],
+      },
       metadata: {
         dataSourceRowCount: data.charts.sourceUsage.length,
         displayedPointCount: data.charts.sourceUsage.length,
         generatedAt: new Date().toISOString(),
       },
-    };
-  }, [data?.charts.sourceUsage]);
+    }
+  }, [data?.charts.sourceUsage])
 
-      return (
-        <div className="flex flex-col">
-          <DashboardHeader
-            title="Product Usage"
-            subtitle="User engagement and feature adoption metrics"
-            actions={
-              <RefreshButton
-                onRefresh={handleRefresh}
-                isRefreshing={isRefreshing}
-                lastRefresh={lastRefresh}
-              />
-            }
+  return (
+    <div className="flex flex-col">
+      <DashboardHeader
+        title="Product Usage"
+        subtitle="User engagement and feature adoption metrics"
+        actions={
+          <RefreshButton
+            onRefresh={handleRefresh}
+            isRefreshing={isRefreshing}
+            lastRefresh={lastRefresh}
           />
+        }
+      />
 
-          <main className="p-6">
+      <main className="p-6">
         <div className="max-w-7xl mx-auto space-y-4">
           {/* Key Metrics */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -188,7 +202,9 @@ export default function UsagePage() {
             {/* DAU/MAU Gauge */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">User Stickiness (DAU/MAU)</CardTitle>
+                <CardTitle className="text-base">
+                  User Stickiness (DAU/MAU)
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-4">
@@ -220,7 +236,11 @@ export default function UsagePage() {
                         {data?.metrics.dauMauRatio.value.toFixed(2) || 0}%
                       </p>
                       <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                        {(data?.metrics.dauMauRatio.value || 0) > 25 ? "Excellent" : (data?.metrics.dauMauRatio.value || 0) > 15 ? "Good" : "Fair"}
+                        {(data?.metrics.dauMauRatio.value || 0) > 25
+                          ? "Excellent"
+                          : (data?.metrics.dauMauRatio.value || 0) > 15
+                            ? "Good"
+                            : "Fair"}
                       </p>
                     </div>
                   </div>
@@ -228,15 +248,28 @@ export default function UsagePage() {
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                      <p className="text-sm"><span className="font-medium text-green-600 dark:text-green-400">25%+</span> <span className="text-zinc-500">Excellent</span></p>
+                      <p className="text-sm">
+                        <span className="font-medium text-green-600 dark:text-green-400">
+                          25%+
+                        </span>{" "}
+                        <span className="text-zinc-500">Excellent</span>
+                      </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-primary"></div>
-                      <p className="text-sm"><span className="font-medium text-primary">15-25%</span> <span className="text-zinc-500">Good</span></p>
+                      <p className="text-sm">
+                        <span className="font-medium text-primary">15-25%</span>{" "}
+                        <span className="text-zinc-500">Good</span>
+                      </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-primary/40"></div>
-                      <p className="text-sm"><span className="font-medium text-primary/60">&lt;15%</span> <span className="text-zinc-500">Fair</span></p>
+                      <p className="text-sm">
+                        <span className="font-medium text-primary/60">
+                          &lt;15%
+                        </span>{" "}
+                        <span className="text-zinc-500">Fair</span>
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -251,13 +284,17 @@ export default function UsagePage() {
               <CardContent>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg">
-                    <p className="text-xs text-zinc-600 dark:text-zinc-400">Total Agents Created</p>
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                      Total Agents Created
+                    </p>
                     <p className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
                       {data?.metrics.totalAgents.value || 0}
                     </p>
                   </div>
                   <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg">
-                    <p className="text-xs text-zinc-600 dark:text-zinc-400">Unique Creators</p>
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                      Unique Creators
+                    </p>
                     <p className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
                       {data?.metrics.uniqueCreators.value || 0}
                     </p>
@@ -311,22 +348,35 @@ export default function UsagePage() {
           {/* Source Usage Breakdown */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Source Usage Breakdown</CardTitle>
+              <CardTitle className="text-base">
+                Source Usage Breakdown
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-zinc-200 dark:border-zinc-800">
-                      <th className="text-left py-2 px-3 text-xs font-medium text-zinc-600 dark:text-zinc-400">Source</th>
-                      <th className="text-right py-2 px-3 text-xs font-medium text-zinc-600 dark:text-zinc-400">Conversations</th>
-                      <th className="text-right py-2 px-3 text-xs font-medium text-zinc-600 dark:text-zinc-400">Users</th>
-                      <th className="text-right py-2 px-3 text-xs font-medium text-zinc-600 dark:text-zinc-400">Messages</th>
+                      <th className="text-left py-2 px-3 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                        Source
+                      </th>
+                      <th className="text-right py-2 px-3 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                        Conversations
+                      </th>
+                      <th className="text-right py-2 px-3 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                        Users
+                      </th>
+                      <th className="text-right py-2 px-3 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                        Messages
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {data?.charts.sourceUsage.map((source, i) => (
-                      <tr key={i} className="border-b border-zinc-100 dark:border-zinc-800/50">
+                      <tr
+                        key={i}
+                        className="border-b border-zinc-100 dark:border-zinc-800/50"
+                      >
                         <td className="py-2 px-3">
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/10 dark:bg-primary/20 text-primary capitalize">
                             {source.source}
@@ -348,9 +398,8 @@ export default function UsagePage() {
               </div>
             </CardContent>
           </Card>
-
         </div>
       </main>
     </div>
-  );
+  )
 }

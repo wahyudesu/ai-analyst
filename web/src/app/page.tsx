@@ -1,23 +1,23 @@
-"use client";
+"use client"
 
-import { useAuth } from "@/lib/simple-auth";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { AuthDialog } from "@/components/auth";
+import { AuthDialog } from "@/components/auth"
+import { useAuth } from "@/lib/simple-auth"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
 
 export default function Home() {
-  const { data: session, isPending } = useAuth();
-  const router = useRouter();
+  const { data: session, isPending } = useAuth()
+  const router = useRouter()
 
   useEffect(() => {
     if (!isPending) {
       if (session?.user) {
-        router.push("/dashboard");
+        router.push("/dashboard")
       } else {
         // Show auth dialog - user will be redirected after login
       }
     }
-  }, [session, isPending, router]);
+  }, [session, isPending, router])
 
   if (isPending) {
     return (
@@ -28,17 +28,15 @@ export default function Home() {
             <div className="w-2 h-2 bg-orange-600 rounded-full animate-bounce delay-100" />
             <div className="w-2 h-2 bg-orange-600 rounded-full animate-bounce delay-200" />
           </div>
-          <p className="text-zinc-600 dark:text-zinc-400">
-            Loading...
-          </p>
+          <p className="text-zinc-600 dark:text-zinc-400">Loading...</p>
         </div>
       </div>
-    );
+    )
   }
 
   if (!session?.user) {
-    return <AuthDialog />;
+    return <AuthDialog />
   }
 
-  return null;
+  return null
 }

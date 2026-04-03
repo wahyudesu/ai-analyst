@@ -3,9 +3,9 @@
  */
 
 import { generateChartTool } from "./generate-chart.js"
-import { suggestChartsTool } from "./suggest-charts.js"
-import { sampleChartTool } from "./sample-chart.js"
 import { generateMultipleChartsTool } from "./generate-multiple-charts.js"
+import { sampleChartTool } from "./sample-chart.js"
+import { suggestChartsTool } from "./suggest-charts.js"
 
 export const chartTools = {
   generateChart: generateChartTool,
@@ -14,7 +14,12 @@ export const chartTools = {
   generateMultipleCharts: generateMultipleChartsTool,
 } as const
 
-export { generateChartTool, suggestChartsTool, sampleChartTool, generateMultipleChartsTool }
+export {
+  generateChartTool,
+  suggestChartsTool,
+  sampleChartTool,
+  generateMultipleChartsTool,
+}
 export type {
   ChartType,
   AxisType,

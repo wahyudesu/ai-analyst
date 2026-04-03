@@ -2,8 +2,8 @@ import {
   createAnswerRelevancyScorer,
   createFaithfulnessScorer,
 } from "@mastra/evals/scorers/prebuilt"
-import { mastra } from "../index"
 import { z } from "zod"
+import { mastra } from "../index"
 
 const inputSchema = z.object({
   question: z.string(),
@@ -32,7 +32,8 @@ await dataset.addItems({
       },
       output: {
         sql: "SELECT * FROM users WHERE created_at >= NOW() - INTERVAL '7 days'",
-        explanation: "Query filters users by registration date within last 7 days",
+        explanation:
+          "Query filters users by registration date within last 7 days",
       },
     },
     {

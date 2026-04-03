@@ -56,7 +56,6 @@ export function getPalette(scheme: ColorScheme = "default"): string[] {
       return categoricalPalette
     case "sequential":
       return sequentialPalette
-    case "default":
     default:
       return defaultPalette
   }

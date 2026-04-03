@@ -1,8 +1,8 @@
 import { Composio } from "@composio/core"
 import { Agent } from "@mastra/core/agent"
 import { MCPClient } from "@mastra/mcp"
-import { DATA_ANALYST_INSTRUCTIONS } from "./prompt/prompt-supabase"
 import { dataAnalystMemory } from "../memory"
+import { DATA_ANALYST_INSTRUCTIONS } from "./prompt/prompt-supabase"
 
 // Get Composio configuration from environment variables
 const configId = process.env.COMPOSIO_MCP_CONFIG_ID

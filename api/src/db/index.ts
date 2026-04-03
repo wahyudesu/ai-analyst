@@ -4,4 +4,7 @@
  * Exports connection manager for PostgreSQL
  */
 
-export { connectionManager, type SecureConnectionManager } from './connection-manager.js';
+export {
+  connectionManager,
+  type SecureConnectionManager,
+} from "./connection-manager.js"

@@ -1,16 +1,15 @@
-"use client";
+"use client"
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 import {
-  LayoutDashboard,
-  TrendingUp,
-  DollarSign,
-  Activity,
-  Shield,
-  MessageSquare,
-  type LucideIcon,
-} from "lucide-react";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Sidebar,
   SidebarContent,
@@ -22,19 +21,20 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
+} from "@/components/ui/sidebar"
+import { useAuth } from "@/lib/simple-auth"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { User, Settings } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useAuth } from "@/lib/simple-auth";
+  Activity,
+  DollarSign,
+  LayoutDashboard,
+  type LucideIcon,
+  MessageSquare,
+  Shield,
+  TrendingUp,
+} from "lucide-react"
+import { Settings, User } from "lucide-react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 // Navigation items - hoisted outside component for stability
 const navItems = [
@@ -69,15 +69,13 @@ const navItems = [
     icon: MessageSquare,
     highlight: true,
   },
-] as const;
+] as const
 
-interface AppSidebarProps {
-  // Props can be added here if needed in the future
-}
+type AppSidebarProps = {}
 
 export function AppSidebar({}: AppSidebarProps) {
-  const pathname = usePathname();
-  const { data: session } = useAuth();
+  const pathname = usePathname()
+  const { data: session } = useAuth()
 
   return (
     <Sidebar collapsible="icon">
@@ -101,7 +99,9 @@ export function AppSidebar({}: AppSidebarProps) {
           </div>
           <div className="grid flex-1 text-sm leading-tight">
             <span className="truncate font-semibold">AI Analyst</span>
-            <span className="truncate text-xs text-muted-foreground">Dashboard</span>
+            <span className="truncate text-xs text-muted-foreground">
+              Dashboard
+            </span>
           </div>
         </div>
       </SidebarHeader>
@@ -111,9 +111,9 @@ export function AppSidebar({}: AppSidebarProps) {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => {
-                const isActive = pathname === item.href;
-                const Icon = item.icon;
+              {navItems.map(item => {
+                const isActive = pathname === item.href
+                const Icon = item.icon
 
                 return (
                   <SidebarMenuItem key={item.href}>
@@ -128,7 +128,7 @@ export function AppSidebar({}: AppSidebarProps) {
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                );
+                )
               })}
             </SidebarMenu>
           </SidebarGroupContent>
@@ -149,7 +149,7 @@ export function AppSidebar({}: AppSidebarProps) {
                     <AvatarFallback className="rounded-lg">
                       {(session?.user?.name || session?.user?.email || "U")
                         .split(" ")
-                        .map((n) => n[0])
+                        .map(n => n[0])
                         .join("")
                         .toUpperCase()
                         .slice(0, 2)}
@@ -177,7 +177,7 @@ export function AppSidebar({}: AppSidebarProps) {
                       <AvatarFallback className="rounded-lg">
                         {(session?.user?.name || session?.user?.email || "U")
                           .split(" ")
-                          .map((n) => n[0])
+                          .map(n => n[0])
                           .join("")
                           .toUpperCase()
                           .slice(0, 2)}
@@ -200,15 +200,19 @@ export function AppSidebar({}: AppSidebarProps) {
                     <span>Profile</span>
                   </Link>
                 </DropdownMenuItem>
-                <SidebarMenuItem onClick={() => {/* TODO: Open settings */}}>
+                <SidebarMenuItem
+                  onClick={() => {
+                    /* TODO: Open settings */
+                  }}
+                >
                   <DropdownMenuItem asChild>
                     <button
                       type="button"
                       className="w-full cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
+                      onClick={e => {
+                        e.stopPropagation()
                         // Dispatch custom event to open settings
-                        window.dispatchEvent(new CustomEvent('open-settings'));
+                        window.dispatchEvent(new CustomEvent("open-settings"))
                       }}
                     >
                       <Settings className="mr-2 h-4 w-4" />
@@ -218,11 +222,13 @@ export function AppSidebar({}: AppSidebarProps) {
                 </SidebarMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => window.dispatchEvent(new CustomEvent('sign-out'))}
+                  onClick={() =>
+                    window.dispatchEvent(new CustomEvent("sign-out"))
+                  }
                   className="text-destructive focus:text-destructive cursor-pointer"
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    window.dispatchEvent(new CustomEvent('sign-out'));
+                  onSelect={e => {
+                    e.preventDefault()
+                    window.dispatchEvent(new CustomEvent("sign-out"))
                   }}
                 >
                   <span className="flex items-center gap-2">
@@ -248,5 +254,5 @@ export function AppSidebar({}: AppSidebarProps) {
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
-  );
+  )
 }

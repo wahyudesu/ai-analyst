@@ -1,28 +1,21 @@
-'use client';
+"use client"
 
 import {
-  ComposedChart,
-  Bar,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-} from 'recharts';
-import {
+  type ChartConfig,
   ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
   ChartLegend,
   ChartLegendContent,
-  type ChartConfig,
-} from '@/components/ui/chart';
-import type { ChartConfig as LegacyChartConfig } from './types';
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart"
+import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts"
+import type { ChartConfig as LegacyChartConfig } from "./types"
 
 interface DualAxisChartProps {
-  config: LegacyChartConfig;
-  className?: string;
-  leftAxisLabel?: string;
-  rightAxisLabel?: string;
+  config: LegacyChartConfig
+  className?: string
+  leftAxisLabel?: string
+  rightAxisLabel?: string
 }
 
 /**
@@ -32,54 +25,56 @@ interface DualAxisChartProps {
 export function DualAxisChart({
   config,
   className,
-  leftAxisLabel = '',
-  rightAxisLabel = '',
+  leftAxisLabel = "",
+  rightAxisLabel = "",
 }: DualAxisChartProps) {
-  const { data, options, colors } = config;
-  const series = data.series || [];
+  const { data, options, colors } = config
+  const series = data.series || []
 
   if (series.length === 0 || !series[0]?.data?.length) {
     return (
-      <div className={`flex items-center justify-center h-64 text-muted-foreground ${className || ''}`}>
+      <div
+        className={`flex items-center justify-center h-64 text-muted-foreground ${className || ""}`}
+      >
         No data available
       </div>
-    );
+    )
   }
 
   // Build shadcn chart config from legacy config with sanitized keys
   const sanitizedKeys = series.map((s, idx) => ({
     original: s.name,
-    sanitized: s.name.replace(/\s+/g, '-').toLowerCase(),
+    sanitized: s.name.replace(/\s+/g, "-").toLowerCase(),
     color: colors?.palette?.[idx] || s.color || `var(--chart-${(idx % 5) + 1})`,
-  }));
+  }))
 
   const shadcnConfig: ChartConfig = sanitizedKeys.reduce((acc, item) => {
     acc[item.sanitized] = {
       label: item.original,
       color: item.color,
-    };
-    return acc;
-  }, {} as ChartConfig);
+    }
+    return acc
+  }, {} as ChartConfig)
 
   // Prepare data for Recharts with sanitized keys
   const chartData = series[0].data.map((point, index) => {
     const row: Record<string, unknown> = {
       _x: point.x,
       _label: point.label,
-    };
+    }
 
     series.forEach((s, idx) => {
       if (s.data[index]) {
-        row[sanitizedKeys[idx].sanitized] = s.data[index].y;
+        row[sanitizedKeys[idx].sanitized] = s.data[index].y
       }
-    });
+    })
 
-    return row;
-  });
+    return row
+  })
 
   // First series is bars, second is line
-  const barSeries = sanitizedKeys[0];
-  const lineSeries = sanitizedKeys[1];
+  const barSeries = sanitizedKeys[0]
+  const lineSeries = sanitizedKeys[1]
 
   return (
     <ChartContainer config={shadcnConfig} className={className}>
@@ -100,14 +95,14 @@ export function DualAxisChart({
           yAxisId="left"
           tickLine={false}
           axisLine={false}
-          tickFormatter={(value) =>
-            typeof value === 'number' ? value.toLocaleString() : String(value)
+          tickFormatter={value =>
+            typeof value === "number" ? value.toLocaleString() : String(value)
           }
           label={{
             value: leftAxisLabel,
             angle: -90,
-            position: 'insideLeft',
-            className: 'fill-muted-foreground text-[10px]',
+            position: "insideLeft",
+            className: "fill-muted-foreground text-[10px]",
           }}
         />
         <YAxis
@@ -115,14 +110,14 @@ export function DualAxisChart({
           orientation="right"
           tickLine={false}
           axisLine={false}
-          tickFormatter={(value) =>
-            typeof value === 'number' ? value.toLocaleString() : String(value)
+          tickFormatter={value =>
+            typeof value === "number" ? value.toLocaleString() : String(value)
           }
           label={{
             value: rightAxisLabel,
             angle: 90,
-            position: 'insideRight',
-            className: 'fill-muted-foreground text-[10px]',
+            position: "insideRight",
+            className: "fill-muted-foreground text-[10px]",
           }}
         />
         <ChartTooltip content={<ChartTooltipContent />} />
@@ -149,5 +144,5 @@ export function DualAxisChart({
         )}
       </ComposedChart>
     </ChartContainer>
-  );
+  )
 }

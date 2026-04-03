@@ -1,6 +1,6 @@
-import { dataAnalystMemory, casualChatMemory } from "../memory"
-import type { Memory } from "@mastra/memory"
 import { toAISdkV5Messages } from "@mastra/ai-sdk/ui"
+import type { Memory } from "@mastra/memory"
+import { casualChatMemory, dataAnalystMemory } from "../memory"
 
 // MastraDBMessage interface from Mastra
 export interface MastraDBMessage {
@@ -9,7 +9,7 @@ export interface MastraDBMessage {
   role: "system" | "user" | "assistant" | "tool"
   content?: string
   createdAt?: Date
-  [key: string]: any
+  [key: string]: unknown
 }
 
 /**
@@ -39,7 +39,7 @@ export interface Thread {
   id: string
   resourceId: string
   title?: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
   createdAt: Date
   updatedAt: Date
 }
@@ -121,14 +121,16 @@ export async function listThreads(args: {
       : undefined,
   })
 
-  return (result.threads || []).map((thread: any) => ({
-    id: thread.id!,
-    resourceId: thread.resourceId,
-    title: thread.title ?? undefined,
-    metadata: thread.metadata ?? undefined,
-    createdAt: new Date(thread.createdAt!),
-    updatedAt: new Date(thread.updatedAt!),
-  }))
+  return (result.threads || [])
+    .filter(thread => Boolean(thread.id && thread.resourceId))
+    .map(thread => ({
+      id: thread.id!,
+      resourceId: thread.resourceId!,
+      title: thread.title ?? undefined,
+      metadata: thread.metadata ?? undefined,
+      createdAt: new Date(thread.createdAt!),
+      updatedAt: new Date(thread.updatedAt!),
+    }))
 }
 
 /**
@@ -138,7 +140,7 @@ export async function updateThread(args: {
   threadId: string
   agentId: string
   title?: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }): Promise<Thread> {
   const memory = AGENT_MEMORY[args.agentId] || casualChatMemory
 
@@ -221,7 +223,7 @@ export async function getThreadMessages(args: {
   page?: number
   perPage?: number
 }): Promise<{
-  messages: any[]
+  messages: unknown[]
   total?: number
   hasMore?: boolean
 }> {
@@ -238,9 +240,8 @@ export async function getThreadMessages(args: {
     })
 
     // Convert to AI SDK v5+ UIMessage format for UI rendering
-    const uiMessages = messages && messages.length > 0
-      ? toAISdkV5Messages(messages)
-      : []
+    const uiMessages =
+      messages && messages.length > 0 ? toAISdkV5Messages(messages) : []
 
     return {
       messages: uiMessages,
@@ -268,7 +269,7 @@ export async function listThreadsWithMessageCount(args: {
   const memory = AGENT_MEMORY[args.agentId] || casualChatMemory
 
   const threadsWithCounts = await Promise.all(
-    threads.map(async (thread) => {
+    threads.map(async thread => {
       try {
         // Use memory.recall() to get messages and count them
         const { messages } = await memory.recall({

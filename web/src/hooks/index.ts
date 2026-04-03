@@ -1,1 +1,1 @@
-export { useDashboardCache } from "./useDashboardCache";
+export { useDashboardCache } from "./useDashboardCache"

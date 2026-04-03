@@ -1,11 +1,11 @@
-"use client";
+"use client"
 
-import type { ComponentProps } from "react";
+import type { ComponentProps } from "react"
 
-import { cn } from "@/lib/utils";
-import { Controls as ControlsPrimitive } from "@xyflow/react";
+import { cn } from "@/lib/utils"
+import { Controls as ControlsPrimitive } from "@xyflow/react"
 
-export type ControlsProps = ComponentProps<typeof ControlsPrimitive>;
+export type ControlsProps = ComponentProps<typeof ControlsPrimitive>
 
 export const Controls = ({ className, ...props }: ControlsProps) => (
   <ControlsPrimitive
@@ -16,4 +16,4 @@ export const Controls = ({ className, ...props }: ControlsProps) => (
     )}
     {...props}
   />
-);
+)

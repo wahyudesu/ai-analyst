@@ -1,11 +1,11 @@
-import type { Experimental_GeneratedImage } from "ai";
+import type { Experimental_GeneratedImage } from "ai"
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"
 
 export type ImageProps = Experimental_GeneratedImage & {
-  className?: string;
-  alt?: string;
-};
+  className?: string
+  alt?: string
+}
 
 export const Image = ({
   base64,
@@ -22,4 +22,4 @@ export const Image = ({
     )}
     src={`data:${mediaType};base64,${base64}`}
   />
-);
+)

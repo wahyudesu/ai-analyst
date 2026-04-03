@@ -19,10 +19,16 @@ export const getTableTool = createTool({
   }),
   execute: async ({ tableNames, schema = "public" }) => {
     // Get connection string from secure request context (not from LLM)
-    const connectionString = getDatabaseUrl() || process.env.POSTGRES_DATABASE_URL || process.env.DATABASE_URL || '';
+    const connectionString =
+      getDatabaseUrl() ||
+      process.env.POSTGRES_DATABASE_URL ||
+      process.env.DATABASE_URL ||
+      ""
 
     if (!connectionString) {
-      throw new Error('POSTGRES_DATABASE_URL environment variable is not set. Please configure your PostgreSQL connection string.');
+      throw new Error(
+        "POSTGRES_DATABASE_URL environment variable is not set. Please configure your PostgreSQL connection string."
+      )
     }
 
     try {
@@ -69,36 +75,56 @@ export const getTableTool = createTool({
       return { tables }
     } catch (error) {
       // Enhanced error handling
-      let message = 'Unknown error'
-      let code = ''
+      let message = "Unknown error"
+      let code = ""
 
       if (error instanceof Error) {
-        message = error.message || 'No error message'
-        code = (error as any).code || ''
-      } else if (typeof error === 'string') {
+        message = error.message || "No error message"
+        code = (error as any).code || ""
+      } else if (typeof error === "string") {
         message = error
-      } else if (error && typeof error === 'object') {
-        message = (error as any).message || (error as any).toString?.() || JSON.stringify(error)
-        code = (error as any).code || ''
+      } else if (error && typeof error === "object") {
+        message =
+          (error as any).message ||
+          (error as any).toString?.() ||
+          JSON.stringify(error)
+        code = (error as any).code || ""
       }
 
-      if (code === 'ETIMEDOUT' || message.includes('ETIMEDOUT') || message.includes('timeout') || message.includes('TIMEOUT')) {
-        throw new Error(`Database connection timeout. This usually means:\n` +
-          `1. The database server is not reachable (check network/firewall)\n` +
-          `2. The database is in sleep mode (try accessing it directly to wake it up)\n` +
-          `3. IPv6 connectivity issues (trying to force IPv4)\n` +
-          `Original error: ${message}`);
+      if (
+        code === "ETIMEDOUT" ||
+        message.includes("ETIMEDOUT") ||
+        message.includes("timeout") ||
+        message.includes("TIMEOUT")
+      ) {
+        throw new Error(
+          `Database connection timeout. This usually means:\n` +
+            `1. The database server is not reachable (check network/firewall)\n` +
+            `2. The database is in sleep mode (try accessing it directly to wake it up)\n` +
+            `3. IPv6 connectivity issues (trying to force IPv4)\n` +
+            `Original error: ${message}`
+        )
       }
 
-      if (code === 'ENOTFOUND' || message.includes('ENOTFOUND') || message.includes('getaddrinfo')) {
-        throw new Error(`Database host not found. Check the hostname in your DATABASE_URL.\nOriginal error: ${message}`);
+      if (
+        code === "ENOTFOUND" ||
+        message.includes("ENOTFOUND") ||
+        message.includes("getaddrinfo")
+      ) {
+        throw new Error(
+          `Database host not found. Check the hostname in your DATABASE_URL.\nOriginal error: ${message}`
+        )
       }
 
-      if (code === 'ECONNREFUSED' || message.includes('ECONNREFUSED')) {
-        throw new Error(`Connection refused. Check if the database is running and accessible.\nOriginal error: ${message}`);
+      if (code === "ECONNREFUSED" || message.includes("ECONNREFUSED")) {
+        throw new Error(
+          `Connection refused. Check if the database is running and accessible.\nOriginal error: ${message}`
+        )
       }
 
-      throw new Error(`Failed to get table schema: ${message}${code ? ` (code: ${code})` : ''}`)
+      throw new Error(
+        `Failed to get table schema: ${message}${code ? ` (code: ${code})` : ""}`
+      )
     }
     // Note: pool is NOT closed here - connection manager handles pooling
   },

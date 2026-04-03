@@ -1,9 +1,21 @@
 "use client"
 
-import * as React from "react"
-import { LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
+import {
+  type ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart"
 import { cn } from "@/lib/utils"
+import * as React from "react"
+import {
+  CartesianGrid,
+  Line,
+  LineChart as RechartsLineChart,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+} from "recharts"
 
 interface LineChartProps extends React.HTMLAttributes<HTMLDivElement> {
   data: Record<string, any>[]
@@ -23,7 +35,7 @@ export function LineChart({
   ...props
 }: LineChartProps) {
   const seriesKeys = React.useMemo(
-    () => Object.keys(data[0] || {}).filter((key) => key !== dataKey),
+    () => Object.keys(data[0] || {}).filter(key => key !== dataKey),
     [data, dataKey]
   )
 
@@ -47,10 +59,21 @@ export function LineChart({
   }, [seriesKeys, config])
 
   return (
-    <ChartContainer config={chartConfig} className={cn("w-full", className)} {...props}>
+    <ChartContainer
+      config={chartConfig}
+      className={cn("w-full", className)}
+      {...props}
+    >
       <ResponsiveContainer width="100%" height={containerHeight}>
-        <RechartsLineChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
-          <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-muted" />
+        <RechartsLineChart
+          data={data}
+          margin={{ top: 5, right: 10, left: 10, bottom: 0 }}
+        >
+          <CartesianGrid
+            vertical={false}
+            strokeDasharray="3 3"
+            className="stroke-muted"
+          />
           <XAxis
             dataKey={dataKey}
             tickLine={false}
@@ -62,11 +85,13 @@ export function LineChart({
           <YAxis
             tickLine={false}
             axisLine={false}
-            tickFormatter={(value) => (typeof value === "number" ? value.toLocaleString() : value)}
+            tickFormatter={value =>
+              typeof value === "number" ? value.toLocaleString() : value
+            }
             className="text-xs"
           />
           <ChartTooltip content={<ChartTooltipContent />} />
-          {seriesKeys.map((key) => (
+          {seriesKeys.map(key => (
             <Line
               key={key}
               type="monotone"

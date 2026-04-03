@@ -3,21 +3,21 @@
  * Prevents useEffect dependency cascades by using refs for values that shouldn't trigger re-renders
  */
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react"
 
 interface UseDashboardDataOptions<T> {
-  apiUrl: string;
-  ttl?: number; // Cache TTL in milliseconds
-  enabled?: boolean;
+  apiUrl: string
+  ttl?: number // Cache TTL in milliseconds
+  enabled?: boolean
 }
 
 interface UseDashboardDataReturn<T> {
-  data: T | null;
-  loading: boolean;
-  error: string | null;
-  isRefreshing: boolean;
-  fetch: (bypassCache?: boolean) => Promise<void>;
-  refresh: () => Promise<void>;
+  data: T | null
+  loading: boolean
+  error: string | null
+  isRefreshing: boolean
+  fetch: (bypassCache?: boolean) => Promise<void>
+  refresh: () => Promise<void>
 }
 
 export function useDashboardData<T = unknown>({
@@ -25,60 +25,64 @@ export function useDashboardData<T = unknown>({
   ttl = 5 * 60 * 1000, // 5 minutes default
   enabled = true,
 }: UseDashboardDataOptions<T>): UseDashboardDataReturn<T> {
-  const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [data, setData] = useState<T | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Refs to prevent callback recreation
-  const enabledRef = useRef(enabled);
-  enabledRef.current = enabled;
+  const enabledRef = useRef(enabled)
+  enabledRef.current = enabled
 
-  const fetchData = useCallback(async (bypassCache = false): Promise<void> => {
-    if (!enabledRef.current) return;
+  const fetchData = useCallback(
+    async (bypassCache = false): Promise<void> => {
+      if (!enabledRef.current) return
 
-    if (bypassCache) {
-      setIsRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-
-    try {
-      setError(null);
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-        cache: bypassCache ? "no-store" : "default",
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.statusText}`);
+      if (bypassCache) {
+        setIsRefreshing(true)
+      } else {
+        setLoading(true)
       }
 
-      const result = await response.json();
-      if (result.error) {
-        throw new Error(result.error);
-      }
+      try {
+        setError(null)
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+          cache: bypassCache ? "no-store" : "default",
+        })
 
-      setData(result);
-    } catch (err) {
-      console.error(`Failed to fetch data from ${apiUrl}:`, err);
-      const errorMessage = err instanceof Error ? err.message : "Unknown error";
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-      setIsRefreshing(false);
-    }
-  }, [apiUrl]);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch: ${response.statusText}`)
+        }
+
+        const result = await response.json()
+        if (result.error) {
+          throw new Error(result.error)
+        }
+
+        setData(result)
+      } catch (err) {
+        console.error(`Failed to fetch data from ${apiUrl}:`, err)
+        const errorMessage =
+          err instanceof Error ? err.message : "Unknown error"
+        setError(errorMessage)
+      } finally {
+        setLoading(false)
+        setIsRefreshing(false)
+      }
+    },
+    [apiUrl]
+  )
 
   const refresh = useCallback(async () => {
-    await fetchData(true);
-  }, [fetchData]);
+    await fetchData(true)
+  }, [fetchData])
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchData()
+  }, [fetchData])
 
   return {
     data,
@@ -87,18 +91,20 @@ export function useDashboardData<T = unknown>({
     isRefreshing,
     fetch: fetchData,
     refresh,
-  };
+  }
 }
 
 /**
  * Extended hook with additional parameters for API requests
  */
-interface UseDashboardDataWithParamsOptions<T, P> extends UseDashboardDataOptions<T> {
-  getParams?: () => P;
+interface UseDashboardDataWithParamsOptions<T, P>
+  extends UseDashboardDataOptions<T> {
+  getParams?: () => P
 }
 
-interface UseDashboardDataWithParamsReturn<T, P> extends UseDashboardDataReturn<T> {
-  fetchWithParams: (params: Partial<P>, bypassCache?: boolean) => Promise<void>;
+interface UseDashboardDataWithParamsReturn<T, P>
+  extends UseDashboardDataReturn<T> {
+  fetchWithParams: (params: Partial<P>, bypassCache?: boolean) => Promise<void>
 }
 
 export function useDashboardDataWithParams<
@@ -109,75 +115,82 @@ export function useDashboardDataWithParams<
   getParams,
   ttl = 5 * 60 * 1000,
   enabled = true,
-}: UseDashboardDataWithParamsOptions<T, P>): UseDashboardDataWithParamsReturn<T, P> {
-  const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+}: UseDashboardDataWithParamsOptions<T, P>): UseDashboardDataWithParamsReturn<
+  T,
+  P
+> {
+  const [data, setData] = useState<T | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Refs to prevent callback recreation
-  const paramsRef = useRef<P | undefined>(getParams?.());
-  const enabledRef = useRef(enabled);
-  enabledRef.current = enabled;
+  const paramsRef = useRef<P | undefined>(getParams?.())
+  const enabledRef = useRef(enabled)
+  enabledRef.current = enabled
 
   // Update params ref when getParams changes
   useEffect(() => {
-    paramsRef.current = getParams?.();
-  }, [getParams]);
+    paramsRef.current = getParams?.()
+  }, [getParams])
 
   const fetchData = useCallback(
-    async (overrideParams: Partial<P> = {}, bypassCache = false): Promise<void> => {
-      if (!enabledRef.current) return;
+    async (
+      overrideParams: Partial<P> = {},
+      bypassCache = false
+    ): Promise<void> => {
+      if (!enabledRef.current) return
 
       if (bypassCache) {
-        setIsRefreshing(true);
+        setIsRefreshing(true)
       } else {
-        setLoading(true);
+        setLoading(true)
       }
 
       try {
-        setError(null);
+        setError(null)
         const bodyParams = {
           ...paramsRef.current,
           ...overrideParams,
-        };
+        }
 
         const response = await fetch(apiUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(bodyParams),
           cache: bypassCache ? "no-store" : "default",
-        });
+        })
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch: ${response.statusText}`);
+          throw new Error(`Failed to fetch: ${response.statusText}`)
         }
 
-        const result = await response.json();
+        const result = await response.json()
         if (result.error) {
-          throw new Error(result.error);
+          throw new Error(result.error)
         }
 
-        setData(result);
+        setData(result)
       } catch (err) {
-        console.error(`Failed to fetch data from ${apiUrl}:`, err);
-        const errorMessage = err instanceof Error ? err.message : "Unknown error";
-        setError(errorMessage);
+        console.error(`Failed to fetch data from ${apiUrl}:`, err)
+        const errorMessage =
+          err instanceof Error ? err.message : "Unknown error"
+        setError(errorMessage)
       } finally {
-        setLoading(false);
-        setIsRefreshing(false);
+        setLoading(false)
+        setIsRefreshing(false)
       }
     },
     [apiUrl]
-  );
+  )
 
   const refresh = useCallback(async () => {
-    await fetchData({}, true);
-  }, [fetchData]);
+    await fetchData({}, true)
+  }, [fetchData])
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchData()
+  }, [fetchData])
 
   return {
     data,
@@ -187,5 +200,5 @@ export function useDashboardDataWithParams<
     fetch: (bypassCache?: boolean) => fetchData({}, bypassCache),
     fetchWithParams: fetchData,
     refresh,
-  };
+  }
 }

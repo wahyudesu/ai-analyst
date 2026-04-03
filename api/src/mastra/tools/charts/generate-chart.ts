@@ -14,7 +14,11 @@ import {
   selectXAxisColumn,
   selectYAxisColumn,
 } from "./auto-detect.js"
-import { buildChartResult, processPieChart, processXYChart } from "./data-processors.js"
+import {
+  buildChartResult,
+  processPieChart,
+  processXYChart,
+} from "./data-processors.js"
 import type {
   AggregationType,
   ChartType,
@@ -154,7 +158,7 @@ Usage: Pass the result from executeSQL directly as 'data', specify chartType and
       aggregation ?? detectAggregation(data, xAxisColumn, chartType)
     const autoSort = sort ?? detectSort(chartType, xAxisType)
 
-    const yAxisConfigs = yCols.map((col) => ({
+    const yAxisConfigs = yCols.map(col => ({
       column: col,
       label: col,
       aggregation: autoAggregation,
@@ -194,7 +198,7 @@ Usage: Pass the result from executeSQL directly as 'data', specify chartType and
       processedData,
       options,
       xAxis: { label: xAxisColumn, type: xAxisType },
-      yAxisLabels: yAxisConfigs.map((y) => y.label),
+      yAxisLabels: yAxisConfigs.map(y => y.label),
       dataSourceRowCount: data.rowCount,
       colorScheme: "default",
     })

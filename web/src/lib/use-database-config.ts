@@ -34,14 +34,18 @@ export function useDatabaseConfig() {
     }
   })
 
-  const [databaseProvider, setDatabaseProviderState] = useState<DatabaseProvider>(() => {
-    if (typeof window === "undefined") return "postgres"
-    try {
-      return (localStorage.getItem(PROVIDER_STORAGE_KEY) as DatabaseProvider) || "postgres"
-    } catch {
-      return "postgres"
-    }
-  })
+  const [databaseProvider, setDatabaseProviderState] =
+    useState<DatabaseProvider>(() => {
+      if (typeof window === "undefined") return "postgres"
+      try {
+        return (
+          (localStorage.getItem(PROVIDER_STORAGE_KEY) as DatabaseProvider) ||
+          "postgres"
+        )
+      } catch {
+        return "postgres"
+      }
+    })
 
   /**
    * Set/save a new database URL to localStorage

@@ -1,35 +1,35 @@
-"use client";
+"use client"
 
-import { ChatContent } from "@/components/chat/ChatContent";
-import { Suspense, useState, useMemo } from "react";
-import { AlertCircle, Database, Settings } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { SettingsDialog } from "@/components/SettingsDialog";
-import { useSearchParams } from "next/navigation";
-import { useServerHealth } from "@/lib/api/queries";
+import { SettingsDialog } from "@/components/SettingsDialog"
+import { ChatContent } from "@/components/chat/ChatContent"
+import { Button } from "@/components/ui/button"
+import { useServerHealth } from "@/lib/api/queries"
+import { AlertCircle, Database, Settings } from "lucide-react"
+import { useSearchParams } from "next/navigation"
+import { Suspense, useMemo, useState } from "react"
 
-type ServerStatus = "loading" | "ready" | "error";
+type ServerStatus = "loading" | "ready" | "error"
 
 function ChatPage() {
-  const searchParams = useSearchParams();
-  const connectionString = searchParams.get("connection") ?? undefined;
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const searchParams = useSearchParams()
+  const connectionString = searchParams.get("connection") ?? undefined
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
   // Server health check using shared query hook with built-in retry
-  const { isLoading, isError, error: queryError } = useServerHealth();
+  const { isLoading, isError, error: queryError } = useServerHealth()
 
   // Derive status and error from query state
   const status = useMemo(() => {
-    if (isLoading) return "loading";
-    if (isError) return "error";
-    return "ready";
-  }, [isLoading, isError]);
+    if (isLoading) return "loading"
+    if (isError) return "error"
+    return "ready"
+  }, [isLoading, isError])
 
   const error = useMemo(() => {
-    if (queryError instanceof Error) return queryError.message;
-    if (queryError) return "Failed to connect to Mastra server";
-    return null;
-  }, [queryError]);
+    if (queryError instanceof Error) return queryError.message
+    if (queryError) return "Failed to connect to Mastra server"
+    return null
+  }, [queryError])
 
   if (status === "loading") {
     return (
@@ -45,7 +45,7 @@ function ChatPage() {
           </p>
         </div>
       </div>
-    );
+    )
   }
 
   if (status === "error") {
@@ -60,12 +60,10 @@ function ChatPage() {
             {error ||
               "No agents available. Make sure the Mastra server is running."}
           </p>
-          <Button onClick={() => window.location.reload()}>
-            Retry
-          </Button>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -86,13 +84,13 @@ function ChatPage() {
               </p>
             </div>
           </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsSettingsOpen(true)}
-            >
-              <Settings className="w-4 h-4" />
-            </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsSettingsOpen(true)}
+          >
+            <Settings className="w-4 h-4" />
+          </Button>
         </div>
       </header>
 
@@ -101,12 +99,9 @@ function ChatPage() {
         <ChatContent connectionString={connectionString} />
       </div>
 
-        <SettingsDialog
-          open={isSettingsOpen}
-          onOpenChange={setIsSettingsOpen}
-        />
+      <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
     </div>
-  );
+  )
 }
 
 export default function Chat() {
@@ -120,5 +115,5 @@ export default function Chat() {
     >
       <ChatPage />
     </Suspense>
-  );
+  )
 }

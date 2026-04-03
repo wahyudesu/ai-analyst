@@ -32,4 +32,4 @@ Key SQL formatting tips:
   ### Results
   [Query results in table format]
 
-`;
+`

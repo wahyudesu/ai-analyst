@@ -1,4 +1,4 @@
-import { ThemeToggle } from '@/components/ThemeToggle';
+import { ThemeToggle } from "@/components/ThemeToggle"
 
 export default function Loading() {
   return (
@@ -38,5 +38,5 @@ export default function Loading() {
         </div>
       </div>
     </div>
-  );
+  )
 }

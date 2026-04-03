@@ -14,7 +14,7 @@ export interface Thread {
   id: string
   resourceId: string
   title?: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
   createdAt: Date
   updatedAt: Date
 }

@@ -1,46 +1,48 @@
-'use client';
+"use client"
 
-import type { ChartConfig as LegacyChartConfig } from './types';
+import type { ChartConfig as LegacyChartConfig } from "./types"
 
 interface FunnelChartProps {
-  config: LegacyChartConfig;
-  className?: string;
+  config: LegacyChartConfig
+  className?: string
 }
 
 interface FunnelStep {
-  name: string;
-  value: number;
-  percentage?: number;
-  color?: string;
+  name: string
+  value: number
+  percentage?: number
+  color?: string
 }
 
 /**
  * Funnel chart component for showing conversion/stage progression
  */
 export function FunnelChart({ config, className }: FunnelChartProps) {
-  const { data, colors } = config;
-  const series = data.series || [];
+  const { data, colors } = config
+  const series = data.series || []
 
   if (series.length === 0 || !series[0]?.data?.length) {
     return (
-      <div className={`flex items-center justify-center h-64 text-muted-foreground ${className || ''}`}>
+      <div
+        className={`flex items-center justify-center h-64 text-muted-foreground ${className || ""}`}
+      >
         No data available
       </div>
-    );
+    )
   }
 
-  const firstValue = series[0].data[0]?.y || 1;
+  const firstValue = series[0].data[0]?.y || 1
   const funnelData: FunnelStep[] = series[0].data.map((point, index) => {
-    const color = colors?.palette?.[index] || `var(--chart-${(index % 5) + 1})`;
+    const color = colors?.palette?.[index] || `var(--chart-${(index % 5) + 1})`
     return {
       name: point.label || String(point.x),
       value: point.y,
-      percentage: firstValue > 0 ? (point.y / firstValue * 100) : 0,
+      percentage: firstValue > 0 ? (point.y / firstValue) * 100 : 0,
       color,
-    };
-  });
+    }
+  })
 
-  const maxValue = Math.max(...funnelData.map((d) => d.value), 1);
+  const maxValue = Math.max(...funnelData.map(d => d.value), 1)
 
   return (
     <div className={className}>
@@ -79,5 +81,5 @@ export function FunnelChart({ config, className }: FunnelChartProps) {
         ))}
       </div>
     </div>
-  );
+  )
 }

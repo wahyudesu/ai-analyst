@@ -7,7 +7,7 @@ export const API_ENDPOINTS = {
   CHAT: "/api/chat",
   CHAT_MESSAGES: "/api/chat/messages",
   DATABASE_TEST_CONNECTION: "/api/database/test-connection",
-} as const;
+} as const
 
 /**
  * TanStack Query key factory
@@ -18,7 +18,7 @@ export const queryKeys = {
   serverHealth: ["server-health"] as const,
   messages: (threadId: string, agentId: string) =>
     ["messages", threadId, agentId] as const,
-} as const;
+} as const
 
 /**
  * Common error messages
@@ -31,4 +31,4 @@ export const ERROR_MESSAGES = {
   DATABASE_CONNECTION_FAILED: "Connection failed",
   DATABASE_TEST_FAILED: "Failed to test connection",
   DATABASE_URL_REQUIRED: "Please enter a connection URL first",
-} as const;
+} as const

@@ -1,22 +1,21 @@
-"use client";
+"use client"
 
-import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { Database, ChartBar, ChevronDown, Menu, X, Plus, Pin, Edit2, Check } from "lucide-react";
-
-import { MessageRenderer } from "./MessageRenderer";
-import { threadsClient } from "@/lib/threads-client";
-import { useDatabaseConfig } from "@/lib/use-database-config";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useChat } from "@ai-sdk/react"
+import { DefaultChatTransport } from "ai"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  ChartBar,
+  Check,
+  ChevronDown,
+  Database,
+  Edit2,
+  Menu,
+  Pin,
+  Plus,
+  X,
+} from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -24,55 +23,70 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { useAgents, useMessages, type Agent } from "@/lib/api/queries";
-import { fetchModels, type ModelConfig } from "@/lib/api/models";
+} from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { type ModelConfig, fetchModels } from "@/lib/api/models"
+import { type Agent, useAgents, useMessages } from "@/lib/api/queries"
+import { threadsClient } from "@/lib/threads-client"
+import { useDatabaseConfig } from "@/lib/use-database-config"
+import { MessageRenderer } from "./MessageRenderer"
 
 interface ChatProps {
-  agentId?: string;
-  connectionString?: string;
-  className?: string;
+  agentId?: string
+  connectionString?: string
+  className?: string
 }
 
 interface ChatSession {
-  id: string;
-  title: string;
-  createdAt: Date;
-  messageCount?: number;
-  agentId?: string;
-  isPinned?: boolean;
-  modelId?: string;
+  id: string
+  title: string
+  createdAt: Date
+  messageCount?: number
+  agentId?: string
+  isPinned?: boolean
+  modelId?: string
 }
 
 interface ModelOption {
-  id: string;
-  name: string;
-  provider: "zai" | "openai";
+  id: string
+  name: string
+  provider: "zai" | "openai"
 }
 
 // Constants
-const DEFAULT_AGENT_ID = "data-analyst";
+const DEFAULT_AGENT_ID = "data-analyst"
 
 // Model options - fetched from API, with fallback defaults
 const FALLBACK_MODEL_OPTIONS: ModelOption[] = [
   { id: "zai-coding-plan/glm-4.5", name: "ZAI GLM 4.5", provider: "zai" },
-  { id: "zai-coding-plan/glm-4.5-flash", name: "ZAI GLM 4.5 Flash", provider: "zai" },
+  {
+    id: "zai-coding-plan/glm-4.5-flash",
+    name: "ZAI GLM 4.5 Flash",
+    provider: "zai",
+  },
   { id: "openai/gpt-4o-mini", name: "GPT-4o Mini", provider: "openai" },
   { id: "openai/gpt-4o", name: "GPT-4o", provider: "openai" },
   { id: "openai/o1-mini", name: "O1 Mini", provider: "openai" },
-];
+]
 
-const DEFAULT_MODEL_ID = FALLBACK_MODEL_OPTIONS[0].id;
+const DEFAULT_MODEL_ID = FALLBACK_MODEL_OPTIONS[0].id
 
 // Agent icons mapping - stable outside component
 const AGENT_ICONS: Record<string, React.ElementType> = {
   "data-analyst": Database,
   "chart-agent": ChartBar,
   "supabase-agent": Database,
-} as const;
+} as const
 
 function getAgentIcon(agentId?: string): React.ElementType {
-  return AGENT_ICONS[agentId || DEFAULT_AGENT_ID] || Database;
+  return AGENT_ICONS[agentId || DEFAULT_AGENT_ID] || Database
 }
 
 export function Chat({
@@ -80,63 +94,64 @@ export function Chat({
   connectionString,
   className,
 }: ChatProps) {
-  const [input, setInput] = useState("");
-  const [currentAgentId, setCurrentAgentId] =
-    useState<string>(DEFAULT_AGENT_ID);
-  const [currentModelId, setCurrentModelId] =
-    useState<string>(DEFAULT_MODEL_ID);
-  const [modelOptions, setModelOptions] =
-    useState<ModelOption[]>(FALLBACK_MODEL_OPTIONS);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { databaseUrl } = useDatabaseConfig();
+  const [input, setInput] = useState("")
+  const [currentAgentId, setCurrentAgentId] = useState<string>(DEFAULT_AGENT_ID)
+  const [currentModelId, setCurrentModelId] = useState<string>(DEFAULT_MODEL_ID)
+  const [modelOptions, setModelOptions] = useState<ModelOption[]>(
+    FALLBACK_MODEL_OPTIONS
+  )
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const { databaseUrl } = useDatabaseConfig()
 
   // Session management
-  const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [sessions, setSessions] = useState<ChatSession[]>([])
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   // Delete confirmation dialog state
   const [deleteDialog, setDeleteDialog] = useState<{
-    isOpen: boolean;
-    sessionId: string | null;
-    sessionTitle: string;
+    isOpen: boolean
+    sessionId: string | null
+    sessionTitle: string
   }>({
     isOpen: false,
     sessionId: null,
     sessionTitle: "",
-  });
+  })
 
   // Rename dialog state
   const [renameDialog, setRenameDialog] = useState<{
-    isOpen: boolean;
-    sessionId: string | null;
-    currentTitle: string;
-    newTitle: string;
+    isOpen: boolean
+    sessionId: string | null
+    currentTitle: string
+    newTitle: string
   }>({
     isOpen: false,
     sessionId: null,
     currentTitle: "",
     newTitle: "",
-  });
+  })
 
   // Session actions menu state
-  const [sessionActionsOpen, setSessionActionsOpen] = useState<string | null>(null);
+  const [sessionActionsOpen, setSessionActionsOpen] = useState<string | null>(
+    null
+  )
 
   // Inline rename state
-  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
-  const [editingTitle, setEditingTitle] = useState("");
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
+  const [editingTitle, setEditingTitle] = useState("")
 
   // Model selector open state
-  const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
+  const [modelSelectorOpen, setModelSelectorOpen] = useState(false)
 
   // Get or create thread ID for session management
-  const threadIdRef = useRef<string>(threadsClient.getOrCreateThreadId());
-  const threadId = threadIdRef.current;
+  const threadIdRef = useRef<string>(threadsClient.getOrCreateThreadId())
+  const threadId = threadIdRef.current
 
-  const resourceId = threadsClient.getResourceId();
+  const resourceId = threadsClient.getResourceId()
 
   // Fetch all agents using shared query hook
-  const { data: allAgents = [] } = useAgents();
+  const { data: allAgents = [] } = useAgents()
 
   // Memoize transport to prevent useChat from re-initializing
   // Use a ref to track current values without triggering re-creation
@@ -146,7 +161,7 @@ export function Chat({
     threadId,
     resourceId,
     databaseUrl,
-  });
+  })
 
   // Update ref when values change (doesn't trigger re-render)
   transportParamsRef.current = {
@@ -155,7 +170,7 @@ export function Chat({
     threadId,
     resourceId,
     databaseUrl,
-  };
+  }
 
   const transport = useMemo(
     () =>
@@ -180,260 +195,261 @@ export function Chat({
           },
         }),
       }),
-    [currentAgentId, currentModelId, databaseUrl],
-  );
+    [currentAgentId, currentModelId, databaseUrl]
+  )
 
   const { messages, status, sendMessage, error, setMessages } = useChat({
     transport,
-  });
+  })
 
-  const isLoading = status === "streaming" || status === "submitted";
+  const isLoading = status === "streaming" || status === "submitted"
 
   // Get current agent info
   const currentAgentInfo = useMemo(
-    () => allAgents.find((a) => a.id === currentAgentId) || null,
-    [allAgents, currentAgentId],
-  );
+    () => allAgents.find(a => a.id === currentAgentId) || null,
+    [allAgents, currentAgentId]
+  )
 
   // Title update ref - must be before other hooks
-  const titleUpdateRef = useRef<string | undefined>(undefined);
+  const titleUpdateRef = useRef<string | undefined>(undefined)
   // Track seen message IDs to skip chart animation for already-rendered messages
-  const seenMessageIdsRef = useRef<Set<string>>(new Set());
+  const seenMessageIdsRef = useRef<Set<string>>(new Set())
 
   // Helper functions - declared early, stable dependencies
   const saveSessions = useCallback((updatedSessions: ChatSession[]) => {
-    localStorage.setItem("chat-sessions", JSON.stringify(updatedSessions));
-  }, []);
+    localStorage.setItem("chat-sessions", JSON.stringify(updatedSessions))
+  }, [])
 
   // Initialize session - run once on mount
   useEffect(() => {
     const loadSessions = () => {
-      const stored = localStorage.getItem("chat-sessions");
+      const stored = localStorage.getItem("chat-sessions")
       if (stored) {
-        const parsed = JSON.parse(stored);
+        const parsed = JSON.parse(stored)
         setSessions(
           parsed.map((s: any) => ({
             ...s,
             createdAt: new Date(s.createdAt),
-          })),
-        );
+          }))
+        )
       }
-    };
+    }
 
     const loadModels = async () => {
       try {
-        const data = await fetchModels();
-        setModelOptions(data.models as ModelOption[]);
+        const data = await fetchModels()
+        setModelOptions(data.models as ModelOption[])
         // Set default model if not already set
         if (data.default && !currentModelId) {
-          setCurrentModelId(data.default);
+          setCurrentModelId(data.default)
         }
       } catch (error) {
-        console.error("Failed to fetch models, using fallback:", error);
+        console.error("Failed to fetch models, using fallback:", error)
         // Keep using fallback options
       }
-    };
+    }
 
-    loadSessions();
-    loadModels();
+    loadSessions()
+    loadModels()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [])
 
   // Set current session ID from thread only on first mount
-  const isInitializedRef = useRef(false);
+  const isInitializedRef = useRef(false)
   useEffect(() => {
     if (!isInitializedRef.current) {
-      isInitializedRef.current = true;
-      setCurrentSessionId(threadId);
+      isInitializedRef.current = true
+      setCurrentSessionId(threadId)
     }
-  }, [threadId]);
+  }, [threadId])
 
   // Fetch message history using shared query hook
-  const { data: fetchedMessages, isLoading: isLoadingMessagesQuery } = useMessages(threadId, currentAgentId);
+  const { data: fetchedMessages, isLoading: isLoadingMessagesQuery } =
+    useMessages(threadId, currentAgentId)
 
   // Update messages when fetched data changes
   useEffect(() => {
     if (fetchedMessages) {
-      setMessages(fetchedMessages);
+      setMessages(fetchedMessages)
       // Mark all fetched messages as seen (skip chart animation for these)
       fetchedMessages.forEach((m: { id?: string }) => {
-        if (m.id) seenMessageIdsRef.current.add(m.id);
-      });
+        if (m.id) seenMessageIdsRef.current.add(m.id)
+      })
     }
-  }, [fetchedMessages]);
+  }, [fetchedMessages])
 
   // Clear seen message IDs when switching sessions
   useEffect(() => {
-    seenMessageIdsRef.current.clear();
-  }, [threadId]);
+    seenMessageIdsRef.current.clear()
+  }, [threadId])
 
-  const isLoadingMessages = isLoadingMessagesQuery;
+  const isLoadingMessages = isLoadingMessagesQuery
 
   // Auto-scroll
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages])
 
   // Update session title - with proper guard
   // Use ref for currentAgentId to avoid re-running this effect when agent changes
-  const agentIdRef = useRef(currentAgentId);
-  agentIdRef.current = currentAgentId;
+  const agentIdRef = useRef(currentAgentId)
+  agentIdRef.current = currentAgentId
 
   useEffect(() => {
     // Only update title if we haven't already for this session
     if (messages.length > 0 && currentSessionId) {
-      if (titleUpdateRef.current === currentSessionId) return;
+      if (titleUpdateRef.current === currentSessionId) return
 
-      const firstUserMessage = messages.find((m) => m.role === "user");
+      const firstUserMessage = messages.find(m => m.role === "user")
       if (firstUserMessage) {
         const content =
-          firstUserMessage.parts?.find((p) => p.type === "text")?.text ||
+          firstUserMessage.parts?.find(p => p.type === "text")?.text ||
           (firstUserMessage as any).content ||
-          "New Chat";
-        const title = String(content).slice(0, 50);
+          "New Chat"
+        const title = String(content).slice(0, 50)
 
         // Use functional update to avoid dependency on sessions
-        setSessions((prev) => {
+        setSessions(prev => {
           // Check if session already exists with this title to avoid update
-          const existing = prev.find((s) => s.id === currentSessionId);
+          const existing = prev.find(s => s.id === currentSessionId)
           if (existing && existing.title === title) {
             // Still mark as updated to prevent re-checking
-            return prev;
+            return prev
           }
 
-          let updated;
+          let updated
           if (existing) {
-            updated = prev.map((s) =>
-              s.id === currentSessionId ? { ...s, title } : s,
-            );
+            updated = prev.map(s =>
+              s.id === currentSessionId ? { ...s, title } : s
+            )
           } else {
             const newSession: ChatSession = {
               id: currentSessionId,
               title: title || "New Chat",
               createdAt: new Date(),
               agentId: agentIdRef.current || DEFAULT_AGENT_ID,
-            };
-            updated = [newSession, ...prev];
+            }
+            updated = [newSession, ...prev]
           }
 
           // Save to localStorage directly to avoid dependency on saveSessions callback
-          localStorage.setItem("chat-sessions", JSON.stringify(updated));
-          return updated;
-        });
+          localStorage.setItem("chat-sessions", JSON.stringify(updated))
+          return updated
+        })
 
-        titleUpdateRef.current = currentSessionId;
+        titleUpdateRef.current = currentSessionId
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages, currentSessionId]);
+  }, [messages, currentSessionId])
 
   // Other callbacks
   const startNewChat = useCallback((agentId?: string) => {
-    const agentToUse = agentId || DEFAULT_AGENT_ID;
+    const agentToUse = agentId || DEFAULT_AGENT_ID
 
-    threadsClient.clearCurrentThreadId();
-    const newThreadId = threadsClient.getOrCreateThreadId();
-    threadIdRef.current = newThreadId;
-    setCurrentSessionId(newThreadId);
-    setCurrentAgentId(agentToUse);
-    setMessages([]);
-    setInput("");
-    titleUpdateRef.current = undefined;
-    setIsSidebarOpen(false);
+    threadsClient.clearCurrentThreadId()
+    const newThreadId = threadsClient.getOrCreateThreadId()
+    threadIdRef.current = newThreadId
+    setCurrentSessionId(newThreadId)
+    setCurrentAgentId(agentToUse)
+    setMessages([])
+    setInput("")
+    titleUpdateRef.current = undefined
+    setIsSidebarOpen(false)
     // Reset to default model for new chat
-    setCurrentModelId(DEFAULT_MODEL_ID);
-  }, []);
+    setCurrentModelId(DEFAULT_MODEL_ID)
+  }, [])
 
   const switchSession = useCallback(
     async (sessionId: string, sessionAgentId?: string) => {
-      threadsClient.setCurrentThreadId(sessionId);
-      threadIdRef.current = sessionId;
-      setCurrentSessionId(sessionId);
+      threadsClient.setCurrentThreadId(sessionId)
+      threadIdRef.current = sessionId
+      setCurrentSessionId(sessionId)
 
-      const agentToUse = sessionAgentId || DEFAULT_AGENT_ID;
-      setCurrentAgentId(agentToUse);
+      const agentToUse = sessionAgentId || DEFAULT_AGENT_ID
+      setCurrentAgentId(agentToUse)
 
       // useMessages hook will handle fetching when threadId/agentId changes
-      titleUpdateRef.current = undefined;
+      titleUpdateRef.current = undefined
     },
-    [],
-  );
+    []
+  )
 
   const confirmDeleteSession = useCallback(
     (sessionId: string, e: React.MouseEvent) => {
-      e.stopPropagation();
+      e.stopPropagation()
       // Find session from current state (not from dependency)
-      setDeleteDialog((prev) => {
-        const session = sessions.find((s) => s.id === sessionId);
+      setDeleteDialog(prev => {
+        const session = sessions.find(s => s.id === sessionId)
         return {
           isOpen: true,
           sessionId,
           sessionTitle: session?.title || "This chat",
-        };
-      });
+        }
+      })
     },
-    [sessions],
-  );
+    [sessions]
+  )
 
   const deleteSession = useCallback(
     (sessionId: string) => {
-      setSessions((prev) => {
-        const updated = prev.filter((s) => s.id !== sessionId);
-        saveSessions(updated);
-        return updated;
-      });
+      setSessions(prev => {
+        const updated = prev.filter(s => s.id !== sessionId)
+        saveSessions(updated)
+        return updated
+      })
 
       if (sessionId === currentSessionId) {
         // Start new chat with default agent when current session is deleted
-        startNewChat(DEFAULT_AGENT_ID);
+        startNewChat(DEFAULT_AGENT_ID)
       }
 
       // Close dialog
-      setDeleteDialog({ isOpen: false, sessionId: null, sessionTitle: "" });
+      setDeleteDialog({ isOpen: false, sessionId: null, sessionTitle: "" })
     },
-    [currentSessionId, saveSessions, startNewChat],
-  );
+    [currentSessionId, saveSessions, startNewChat]
+  )
 
   const pinSession = useCallback(
     (sessionId: string) => {
-      setSessions((prev) => {
-        const session = prev.find((s) => s.id === sessionId);
-        if (!session) return prev;
+      setSessions(prev => {
+        const session = prev.find(s => s.id === sessionId)
+        if (!session) return prev
 
-        const updated = prev.map((s) =>
-          s.id === sessionId ? { ...s, isPinned: !s.isPinned } : s,
-        );
-        saveSessions(updated);
-        return updated;
-      });
+        const updated = prev.map(s =>
+          s.id === sessionId ? { ...s, isPinned: !s.isPinned } : s
+        )
+        saveSessions(updated)
+        return updated
+      })
     },
-    [saveSessions],
-  );
+    [saveSessions]
+  )
 
   const openRenameDialog = useCallback(
     (sessionId: string) => {
-      const session = sessions.find((s) => s.id === sessionId);
-      if (!session) return;
+      const session = sessions.find(s => s.id === sessionId)
+      if (!session) return
 
       setRenameDialog({
         isOpen: true,
         sessionId,
         currentTitle: session.title,
         newTitle: session.title,
-      });
+      })
     },
-    [sessions],
-  );
+    [sessions]
+  )
 
   const renameSession = useCallback(
     (sessionId: string, newTitle: string) => {
-      setSessions((prev) => {
-        const updated = prev.map((s) =>
-          s.id === sessionId ? { ...s, title: newTitle } : s,
-        );
-        saveSessions(updated);
-        return updated;
-      });
+      setSessions(prev => {
+        const updated = prev.map(s =>
+          s.id === sessionId ? { ...s, title: newTitle } : s
+        )
+        saveSessions(updated)
+        return updated
+      })
 
       // Close dialog
       setRenameDialog({
@@ -441,24 +457,24 @@ export function Chat({
         sessionId: null,
         currentTitle: "",
         newTitle: "",
-      });
+      })
     },
-    [saveSessions],
-  );
+    [saveSessions]
+  )
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+    e.preventDefault()
     if (input.trim()) {
-      sendMessage({ text: input });
-      setInput("");
+      sendMessage({ text: input })
+      setInput("")
     }
-  };
+  }
 
   // Current agent icon (memoized)
   const AgentIcon = useMemo(
     () => getAgentIcon(currentAgentId),
-    [currentAgentId],
-  );
+    [currentAgentId]
+  )
 
   return (
     <div className={`flex h-full ${className || ""}`}>
@@ -490,9 +506,9 @@ export function Chat({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56">
-              {allAgents.map((agent) => {
-                const Icon = getAgentIcon(agent.id);
-                const isSelected = agent.id === currentAgentId;
+              {allAgents.map(agent => {
+                const Icon = getAgentIcon(agent.id)
+                const isSelected = agent.id === currentAgentId
                 return (
                   <DropdownMenuItem
                     key={agent.id}
@@ -512,7 +528,7 @@ export function Chat({
                       </div>
                     )}
                   </DropdownMenuItem>
-                );
+                )
               })}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -531,14 +547,14 @@ export function Chat({
                 sessions
                   .sort((a, b) => {
                     // Pinned sessions first
-                    if (a.isPinned && !b.isPinned) return -1;
-                    if (!a.isPinned && b.isPinned) return 1;
+                    if (a.isPinned && !b.isPinned) return -1
+                    if (!a.isPinned && b.isPinned) return 1
                     // Then by date (newest first)
-                    return b.createdAt.getTime() - a.createdAt.getTime();
+                    return b.createdAt.getTime() - a.createdAt.getTime()
                   })
-                  .map((session) => {
-                    const SessionIcon = getAgentIcon(session.agentId);
-                    const isEditing = editingSessionId === session.id;
+                  .map(session => {
+                    const SessionIcon = getAgentIcon(session.agentId)
+                    const isEditing = editingSessionId === session.id
                     return (
                       <div
                         key={session.id}
@@ -551,7 +567,10 @@ export function Chat({
                           }
                           ${!isEditing ? "cursor-pointer" : ""}
                         `}
-                        onClick={() => !isEditing && switchSession(session.id, session.agentId)}
+                        onClick={() =>
+                          !isEditing &&
+                          switchSession(session.id, session.agentId)
+                        }
                       >
                         {session.isPinned && (
                           <Pin className="w-3 h-3 text-orange-500 shrink-0" />
@@ -564,26 +583,26 @@ export function Chat({
                             <input
                               type="text"
                               value={editingTitle}
-                              onChange={(e) => setEditingTitle(e.target.value)}
-                              onKeyDown={(e) => {
+                              onChange={e => setEditingTitle(e.target.value)}
+                              onKeyDown={e => {
                                 if (e.key === "Enter" && editingTitle.trim()) {
-                                  renameSession(session.id, editingTitle.trim());
-                                  setEditingSessionId(null);
+                                  renameSession(session.id, editingTitle.trim())
+                                  setEditingSessionId(null)
                                 } else if (e.key === "Escape") {
-                                  setEditingSessionId(null);
+                                  setEditingSessionId(null)
                                 }
                               }}
-                              onClick={(e) => e.stopPropagation()}
+                              onClick={e => e.stopPropagation()}
                               className="flex-1 text-sm bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 rounded px-1.5 py-0.5 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-orange-500"
                               autoFocus
                             />
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
+                              onClick={e => {
+                                e.stopPropagation()
                                 if (editingTitle.trim()) {
-                                  renameSession(session.id, editingTitle.trim());
+                                  renameSession(session.id, editingTitle.trim())
                                 }
-                                setEditingSessionId(null);
+                                setEditingSessionId(null)
                               }}
                               className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded"
                               title="Save"
@@ -601,16 +620,24 @@ export function Chat({
                         {!isEditing && (
                           <DropdownMenu
                             open={sessionActionsOpen === session.id}
-                            onOpenChange={(open) => setSessionActionsOpen(open ? session.id : null)}
+                            onOpenChange={open =>
+                              setSessionActionsOpen(open ? session.id : null)
+                            }
                           >
                             <DropdownMenuTrigger asChild>
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSessionActionsOpen(sessionActionsOpen === session.id ? null : session.id);
+                                onClick={e => {
+                                  e.stopPropagation()
+                                  setSessionActionsOpen(
+                                    sessionActionsOpen === session.id
+                                      ? null
+                                      : session.id
+                                  )
                                 }}
                                 className={`opacity-0 group-hover:opacity-100 p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded transition-opacity ${
-                                  sessionActionsOpen === session.id ? "opacity-100" : ""
+                                  sessionActionsOpen === session.id
+                                    ? "opacity-100"
+                                    : ""
                                 }`}
                                 aria-label="Edit chat"
                               >
@@ -620,13 +647,13 @@ export function Chat({
                             <DropdownMenuContent
                               align="end"
                               className="w-40"
-                              onClick={(e) => e.stopPropagation()}
+                              onClick={e => e.stopPropagation()}
                             >
                               <DropdownMenuItem
                                 onClick={() => {
-                                  setEditingTitle(session.title);
-                                  setEditingSessionId(session.id);
-                                  setSessionActionsOpen(null);
+                                  setEditingTitle(session.title)
+                                  setEditingSessionId(session.id)
+                                  setSessionActionsOpen(null)
                                 }}
                                 className="cursor-pointer"
                               >
@@ -634,8 +661,8 @@ export function Chat({
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => {
-                                  pinSession(session.id);
-                                  setSessionActionsOpen(null);
+                                  pinSession(session.id)
+                                  setSessionActionsOpen(null)
                                 }}
                                 className="cursor-pointer"
                               >
@@ -643,8 +670,10 @@ export function Chat({
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => {
-                                  confirmDeleteSession(session.id, { stopPropagation: () => {} } as any);
-                                  setSessionActionsOpen(null);
+                                  confirmDeleteSession(session.id, {
+                                    stopPropagation: () => {},
+                                  } as any)
+                                  setSessionActionsOpen(null)
                                 }}
                                 className="cursor-pointer text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
                               >
@@ -654,7 +683,7 @@ export function Chat({
                           </DropdownMenu>
                         )}
                       </div>
-                    );
+                    )
                   })
               )}
             </div>
@@ -718,9 +747,10 @@ export function Chat({
             <>
               {messages.map((message, index) => {
                 // Skip animation for messages that were already seen (loaded from history)
-                const isNewMessage = message.id && !seenMessageIdsRef.current.has(message.id);
+                const isNewMessage =
+                  message.id && !seenMessageIdsRef.current.has(message.id)
                 if (message.id && isNewMessage) {
-                  seenMessageIdsRef.current.add(message.id);
+                  seenMessageIdsRef.current.add(message.id)
                 }
                 return (
                   <MessageRenderer
@@ -728,12 +758,21 @@ export function Chat({
                     message={message as any}
                     agentInfo={currentAgentInfo}
                     sessionId={currentSessionId || undefined}
-                    onRename={() => currentSessionId && openRenameDialog(currentSessionId)}
-                    onPin={() => currentSessionId && pinSession(currentSessionId)}
-                    onDelete={() => currentSessionId && confirmDeleteSession(currentSessionId, { stopPropagation: () => {} } as any)}
+                    onRename={() =>
+                      currentSessionId && openRenameDialog(currentSessionId)
+                    }
+                    onPin={() =>
+                      currentSessionId && pinSession(currentSessionId)
+                    }
+                    onDelete={() =>
+                      currentSessionId &&
+                      confirmDeleteSession(currentSessionId, {
+                        stopPropagation: () => {},
+                      } as any)
+                    }
                     skipAnimation={!isNewMessage}
                   />
-                );
+                )
               })}
               {error && (
                 <div className="p-3 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg">
@@ -751,7 +790,9 @@ export function Chat({
                 <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce delay-200" />
               </div>
               <span className="text-sm text-zinc-600 dark:text-zinc-400 animate-pulse">
-                {isLoading ? "AI is working on your query..." : "Loading messages..."}
+                {isLoading
+                  ? "AI is working on your query..."
+                  : "Loading messages..."}
               </span>
             </div>
           )}
@@ -764,7 +805,10 @@ export function Chat({
         >
           <div className="flex gap-2 items-center">
             {/* Model Selector */}
-            <DropdownMenu open={modelSelectorOpen} onOpenChange={setModelSelectorOpen}>
+            <DropdownMenu
+              open={modelSelectorOpen}
+              onOpenChange={setModelSelectorOpen}
+            >
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
@@ -772,50 +816,57 @@ export function Chat({
                   disabled={isLoading}
                 >
                   <span className="text-sm truncate">
-                    {modelOptions.find(m => m.id === currentModelId)?.name || "Select Model"}
+                    {modelOptions.find(m => m.id === currentModelId)?.name ||
+                      "Select Model"}
                   </span>
-                  <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform ${modelSelectorOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown
+                    className={`w-4 h-4 text-zinc-500 transition-transform ${modelSelectorOpen ? "rotate-180" : ""}`}
+                  />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56">
                 <div className="px-2 py-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                   ZAI Models
                 </div>
-                {modelOptions.filter(m => m.provider === "zai").map((model) => (
-                  <DropdownMenuItem
-                    key={model.id}
-                    onClick={() => setCurrentModelId(model.id)}
-                    className={`cursor-pointer ${currentModelId === model.id ? "bg-orange-50 dark:bg-orange-900/20" : ""}`}
-                  >
-                    <span className="flex-1">{model.name}</span>
-                    {currentModelId === model.id && (
-                      <div className="w-2 h-2 bg-orange-500 rounded-full" />
-                    )}
-                  </DropdownMenuItem>
-                ))}
+                {modelOptions
+                  .filter(m => m.provider === "zai")
+                  .map(model => (
+                    <DropdownMenuItem
+                      key={model.id}
+                      onClick={() => setCurrentModelId(model.id)}
+                      className={`cursor-pointer ${currentModelId === model.id ? "bg-orange-50 dark:bg-orange-900/20" : ""}`}
+                    >
+                      <span className="flex-1">{model.name}</span>
+                      {currentModelId === model.id && (
+                        <div className="w-2 h-2 bg-orange-500 rounded-full" />
+                      )}
+                    </DropdownMenuItem>
+                  ))}
                 <DropdownMenuSeparator />
                 <div className="px-2 py-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                   OpenAI Models
                 </div>
-                {modelOptions.filter(m => m.provider === "openai").map((model) => (
-                  <DropdownMenuItem
-                    key={model.id}
-                    onClick={() => setCurrentModelId(model.id)}
-                    className={`cursor-pointer ${currentModelId === model.id ? "bg-orange-50 dark:bg-orange-900/20" : ""}`}
-                  >
-                    <span className="flex-1">{model.name}</span>
-                    {currentModelId === model.id && (
-                      <div className="w-2 h-2 bg-orange-500 rounded-full" />
-                    )}
-                  </DropdownMenuItem>
-                ))}
+                {modelOptions
+                  .filter(m => m.provider === "openai")
+                  .map(model => (
+                    <DropdownMenuItem
+                      key={model.id}
+                      onClick={() => setCurrentModelId(model.id)}
+                      className={`cursor-pointer ${currentModelId === model.id ? "bg-orange-50 dark:bg-orange-900/20" : ""}`}
+                    >
+                      <span className="flex-1">{model.name}</span>
+                      {currentModelId === model.id && (
+                        <div className="w-2 h-2 bg-orange-500 rounded-full" />
+                      )}
+                    </DropdownMenuItem>
+                  ))}
               </DropdownMenuContent>
             </DropdownMenu>
 
             <input
               type="text"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={e => setInput(e.target.value)}
               placeholder="Type a message..."
               disabled={isLoading}
               className="flex-1 px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 disabled:opacity-50"
@@ -834,8 +885,8 @@ export function Chat({
       {/* Delete Confirmation Dialog */}
       <Dialog
         open={deleteDialog.isOpen}
-        onOpenChange={(open) =>
-          setDeleteDialog((prev) => ({ ...prev, isOpen: open }))
+        onOpenChange={open =>
+          setDeleteDialog(prev => ({ ...prev, isOpen: open }))
         }
       >
         <DialogContent>
@@ -874,8 +925,8 @@ export function Chat({
       {/* Rename Dialog */}
       <Dialog
         open={renameDialog.isOpen}
-        onOpenChange={(open) =>
-          setRenameDialog((prev) => ({ ...prev, isOpen: open }))
+        onOpenChange={open =>
+          setRenameDialog(prev => ({ ...prev, isOpen: open }))
         }
       >
         <DialogContent>
@@ -895,16 +946,19 @@ export function Chat({
             <Input
               id="chat-title"
               value={renameDialog.newTitle}
-              onChange={(e) =>
-                setRenameDialog((prev) => ({ ...prev, newTitle: e.target.value }))
+              onChange={e =>
+                setRenameDialog(prev => ({ ...prev, newTitle: e.target.value }))
               }
               placeholder="Enter chat title..."
               maxLength={100}
               className="mt-2"
-              onKeyDown={(e) => {
+              onKeyDown={e => {
                 if (e.key === "Enter" && renameDialog.newTitle.trim()) {
                   renameDialog.sessionId &&
-                    renameSession(renameDialog.sessionId, renameDialog.newTitle.trim());
+                    renameSession(
+                      renameDialog.sessionId,
+                      renameDialog.newTitle.trim()
+                    )
                 }
               }}
             />
@@ -926,7 +980,10 @@ export function Chat({
             <Button
               onClick={() =>
                 renameDialog.sessionId &&
-                renameSession(renameDialog.sessionId, renameDialog.newTitle.trim())
+                renameSession(
+                  renameDialog.sessionId,
+                  renameDialog.newTitle.trim()
+                )
               }
               disabled={!renameDialog.newTitle.trim()}
             >
@@ -936,5 +993,5 @@ export function Chat({
         </DialogContent>
       </Dialog>
     </div>
-  );
+  )
 }

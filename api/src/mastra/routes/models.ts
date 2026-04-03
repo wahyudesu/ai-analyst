@@ -3,12 +3,12 @@
  * Provides available model information to the frontend
  */
 
-import { registerApiRoute } from "@mastra/core/server";
+import { registerApiRoute } from "@mastra/core/server"
 import {
-  getFrontendModels,
   DEFAULT_MODEL_ID,
+  getFrontendModels,
   isValidModel,
-} from "../config/models.js";
+} from "../config/models.js"
 
 /**
  * GET /api/models
@@ -16,13 +16,13 @@ import {
  */
 export const modelsRoute = registerApiRoute("/models", {
   method: "GET",
-  handler: async (c) => {
+  handler: async c => {
     return c.json({
       models: getFrontendModels(),
       default: DEFAULT_MODEL_ID,
-    });
+    })
   },
-});
+})
 
 /**
  * GET /api/models/:modelId
@@ -30,19 +30,19 @@ export const modelsRoute = registerApiRoute("/models", {
  */
 export const modelCheckRoute = registerApiRoute("/models/:modelId", {
   method: "GET",
-  handler: async (c) => {
-    const modelId = c.req.param("modelId");
+  handler: async c => {
+    const modelId = c.req.param("modelId")
 
     if (!modelId) {
-      return c.json({ valid: false, error: "modelId is required" }, 400);
+      return c.json({ valid: false, error: "modelId is required" }, 400)
     }
 
-    const valid = isValidModel(modelId);
+    const valid = isValidModel(modelId)
 
     return c.json({
       valid,
       modelId,
       available: valid,
-    });
+    })
   },
-});
+})

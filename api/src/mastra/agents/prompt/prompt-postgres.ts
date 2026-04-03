@@ -139,4 +139,4 @@ If generateChart or generateMultipleCharts fails with "No suitable y-axis column
   - For time series: \`SELECT DATE(date_column) as date, COUNT(*) as count FROM table GROUP BY date\`
   - For existing numeric: \`SELECT category, SUM(numeric_column) as total FROM table GROUP BY category\`
 - Re-execute the new query and try the chart tool again
-`;
+`

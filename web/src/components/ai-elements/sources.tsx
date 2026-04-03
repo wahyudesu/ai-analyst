@@ -1,27 +1,27 @@
-"use client";
+"use client"
 
-import type { ComponentProps } from "react";
+import type { ComponentProps } from "react"
 
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { cn } from "@/lib/utils";
-import { BookIcon, ChevronDownIcon } from "lucide-react";
+} from "@/components/ui/collapsible"
+import { cn } from "@/lib/utils"
+import { BookIcon, ChevronDownIcon } from "lucide-react"
 
-export type SourcesProps = ComponentProps<"div">;
+export type SourcesProps = ComponentProps<"div">
 
 export const Sources = ({ className, ...props }: SourcesProps) => (
   <Collapsible
     className={cn("not-prose mb-4 text-primary text-xs", className)}
     {...props}
   />
-);
+)
 
 export type SourcesTriggerProps = ComponentProps<typeof CollapsibleTrigger> & {
-  count: number;
-};
+  count: number
+}
 
 export const SourcesTrigger = ({
   className,
@@ -40,9 +40,9 @@ export const SourcesTrigger = ({
       </>
     )}
   </CollapsibleTrigger>
-);
+)
 
-export type SourcesContentProps = ComponentProps<typeof CollapsibleContent>;
+export type SourcesContentProps = ComponentProps<typeof CollapsibleContent>
 
 export const SourcesContent = ({
   className,
@@ -56,9 +56,9 @@ export const SourcesContent = ({
     )}
     {...props}
   />
-);
+)
 
-export type SourceProps = ComponentProps<"a">;
+export type SourceProps = ComponentProps<"a">
 
 export const Source = ({ href, title, children, ...props }: SourceProps) => (
   <a
@@ -75,4 +75,4 @@ export const Source = ({ href, title, children, ...props }: SourceProps) => (
       </>
     )}
   </a>
-);
+)

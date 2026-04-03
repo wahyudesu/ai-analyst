@@ -1,50 +1,58 @@
-"use client";
+"use client"
 
-import { useEffect, useState, useCallback, useMemo } from "react";
-import { Plus, Pin, Edit2, Check, MessageSquare, Database, ChartBar } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { threadsClient } from "@/lib/threads-client";
-import { useRouter } from "next/navigation";
+} from "@/components/ui/dropdown-menu"
+import { threadsClient } from "@/lib/threads-client"
+import {
+  ChartBar,
+  Check,
+  Database,
+  Edit2,
+  MessageSquare,
+  Pin,
+  Plus,
+} from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 // Constants - hoisted outside component
-const DEFAULT_AGENT_ID = "data-analyst";
-const CHAT_SESSIONS_KEY = "chat-sessions";
-const THREAD_ID_DISPLAY_LENGTH = 8;
+const DEFAULT_AGENT_ID = "data-analyst"
+const CHAT_SESSIONS_KEY = "chat-sessions"
+const THREAD_ID_DISPLAY_LENGTH = 8
 
 const AGENT_ICONS = {
   "data-analyst": Database,
   "chart-agent": ChartBar,
   "supabase-agent": Database,
-} as const;
+} as const
 
-type AgentId = keyof typeof AGENT_ICONS;
+type AgentId = keyof typeof AGENT_ICONS
 
 interface ChatSession {
-  id: string;
-  title: string;
-  createdAt: Date;
-  agentId?: string;
-  isPinned?: boolean;
+  id: string
+  title: string
+  createdAt: Date
+  agentId?: string
+  isPinned?: boolean
 }
 
 interface DeleteDialogState {
-  isOpen: boolean;
-  sessionId: string | null;
-  sessionTitle: string;
+  isOpen: boolean
+  sessionId: string | null
+  sessionTitle: string
 }
 
 const INITIAL_DELETE_DIALOG: DeleteDialogState = {
   isOpen: false,
   sessionId: null,
   sessionTitle: "",
-};
+}
 
 // ============================================================================
 // Helper functions - hoisted outside component
@@ -52,40 +60,40 @@ const INITIAL_DELETE_DIALOG: DeleteDialogState = {
 
 function loadSessionsFromStorage(): ChatSession[] {
   try {
-    const stored = localStorage.getItem(CHAT_SESSIONS_KEY);
+    const stored = localStorage.getItem(CHAT_SESSIONS_KEY)
     if (stored) {
-      const parsed = JSON.parse(stored);
+      const parsed = JSON.parse(stored)
       return parsed.map((s: any) => ({
         ...s,
         createdAt: new Date(s.createdAt),
-      }));
+      }))
     }
   } catch (error) {
-    console.error("Failed to load chat sessions:", error);
+    console.error("Failed to load chat sessions:", error)
   }
-  return [];
+  return []
 }
 
 function saveSessionsToStorage(sessions: ChatSession[]): void {
   try {
-    localStorage.setItem(CHAT_SESSIONS_KEY, JSON.stringify(sessions));
+    localStorage.setItem(CHAT_SESSIONS_KEY, JSON.stringify(sessions))
   } catch (error) {
-    console.error("Failed to save chat sessions:", error);
+    console.error("Failed to save chat sessions:", error)
   }
 }
 
 function sortSessions(sessions: ChatSession[]): ChatSession[] {
   return [...sessions].sort((a, b) => {
     // Pinned sessions first
-    if (a.isPinned && !b.isPinned) return -1;
-    if (!a.isPinned && b.isPinned) return 1;
+    if (a.isPinned && !b.isPinned) return -1
+    if (!a.isPinned && b.isPinned) return 1
     // Then by creation date (newest first)
-    return b.createdAt.getTime() - a.createdAt.getTime();
-  });
+    return b.createdAt.getTime() - a.createdAt.getTime()
+  })
 }
 
 function getAgentIconComponent(agentId?: string): React.ElementType {
-  return AGENT_ICONS[agentId as AgentId] || MessageSquare;
+  return AGENT_ICONS[agentId as AgentId] || MessageSquare
 }
 
 // ============================================================================
@@ -93,114 +101,127 @@ function getAgentIconComponent(agentId?: string): React.ElementType {
 // ============================================================================
 
 export function ChatSidebar() {
-  const router = useRouter();
-  const currentThreadId = threadsClient.getOrCreateThreadId();
+  const router = useRouter()
+  const currentThreadId = threadsClient.getOrCreateThreadId()
 
-  const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
-  const [editingTitle, setEditingTitle] = useState("");
-  const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState>(INITIAL_DELETE_DIALOG);
-  const [sessionActionsOpen, setSessionActionsOpen] = useState<string | null>(null);
+  const [sessions, setSessions] = useState<ChatSession[]>([])
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
+  const [editingTitle, setEditingTitle] = useState("")
+  const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState>(
+    INITIAL_DELETE_DIALOG
+  )
+  const [sessionActionsOpen, setSessionActionsOpen] = useState<string | null>(
+    null
+  )
 
   // Load sessions on mount - empty deps since loadSessionsFromStorage is stable
   useEffect(() => {
-    setSessions(loadSessionsFromStorage());
-  }, []);
+    setSessions(loadSessionsFromStorage())
+  }, [])
 
   // Stable callbacks - no dependencies needed for localStorage operations
   const saveSessions = useCallback((updatedSessions: ChatSession[]) => {
-    saveSessionsToStorage(updatedSessions);
-  }, []);
+    saveSessionsToStorage(updatedSessions)
+  }, [])
 
   const startNewChat = useCallback(() => {
-    threadsClient.clearCurrentThreadId();
-    threadsClient.getOrCreateThreadId();
-    router.push("/chat");
+    threadsClient.clearCurrentThreadId()
+    threadsClient.getOrCreateThreadId()
+    router.push("/chat")
     // Force reload to reset the chat
-    window.location.reload();
-  }, [router]);
+    window.location.reload()
+  }, [router])
 
   const switchSession = useCallback(
     (sessionId: string) => {
-      threadsClient.setCurrentThreadId(sessionId);
-      router.push("/chat");
-      window.location.reload();
+      threadsClient.setCurrentThreadId(sessionId)
+      router.push("/chat")
+      window.location.reload()
     },
     [router]
-  );
+  )
 
   const deleteSession = useCallback(
     (sessionId: string) => {
-      setSessions((prev) => {
-        const updated = prev.filter((s) => s.id !== sessionId);
-        saveSessions(updated);
-        return updated;
-      });
+      setSessions(prev => {
+        const updated = prev.filter(s => s.id !== sessionId)
+        saveSessions(updated)
+        return updated
+      })
 
       if (sessionId === currentThreadId) {
-        startNewChat();
+        startNewChat()
       }
 
-      setDeleteDialog({ ...INITIAL_DELETE_DIALOG });
+      setDeleteDialog({ ...INITIAL_DELETE_DIALOG })
     },
     [currentThreadId, saveSessions, startNewChat]
-  );
+  )
 
   const pinSession = useCallback(
     (sessionId: string) => {
-      setSessions((prev) => {
-        const updated = prev.map((s) =>
+      setSessions(prev => {
+        const updated = prev.map(s =>
           s.id === sessionId ? { ...s, isPinned: !s.isPinned } : s
-        );
-        saveSessions(updated);
-        return updated;
-      });
+        )
+        saveSessions(updated)
+        return updated
+      })
     },
     [saveSessions]
-  );
+  )
 
   const renameSession = useCallback(
     (sessionId: string, newTitle: string) => {
-      setSessions((prev) => {
-        const updated = prev.map((s) =>
+      setSessions(prev => {
+        const updated = prev.map(s =>
           s.id === sessionId ? { ...s, title: newTitle } : s
-        );
-        saveSessions(updated);
-        return updated;
-      });
+        )
+        saveSessions(updated)
+        return updated
+      })
 
-      setEditingSessionId(null);
+      setEditingSessionId(null)
     },
     [saveSessions]
-  );
+  )
 
-  const confirmDeleteSession = useCallback((sessionId: string, sessionTitle: string) => {
-    setDeleteDialog({
-      isOpen: true,
-      sessionId,
-      sessionTitle,
-    });
-  }, []);
+  const confirmDeleteSession = useCallback(
+    (sessionId: string, sessionTitle: string) => {
+      setDeleteDialog({
+        isOpen: true,
+        sessionId,
+        sessionTitle,
+      })
+    },
+    []
+  )
 
   const startEditing = useCallback((sessionId: string, title: string) => {
-    setEditingTitle(title);
-    setEditingSessionId(sessionId);
-    setSessionActionsOpen(null);
-  }, []);
+    setEditingTitle(title)
+    setEditingSessionId(sessionId)
+    setSessionActionsOpen(null)
+  }, [])
 
-  const togglePinSession = useCallback((sessionId: string) => {
-    pinSession(sessionId);
-    setSessionActionsOpen(null);
-  }, [pinSession]);
+  const togglePinSession = useCallback(
+    (sessionId: string) => {
+      pinSession(sessionId)
+      setSessionActionsOpen(null)
+    },
+    [pinSession]
+  )
 
-  const requestDeleteSession = useCallback((sessionId: string) => {
-    const session = sessions.find((s) => s.id === sessionId);
-    confirmDeleteSession(sessionId, session?.title || "This chat");
-    setSessionActionsOpen(null);
-  }, [sessions, confirmDeleteSession]);
+  const requestDeleteSession = useCallback(
+    (sessionId: string) => {
+      const session = sessions.find(s => s.id === sessionId)
+      confirmDeleteSession(sessionId, session?.title || "This chat")
+      setSessionActionsOpen(null)
+    },
+    [sessions, confirmDeleteSession]
+  )
 
   // Sorted sessions - memoized to avoid resorting on every render
-  const sortedSessions = useMemo(() => sortSessions(sessions), [sessions]);
+  const sortedSessions = useMemo(() => sortSessions(sessions), [sessions])
 
   return (
     <div className="flex flex-col h-full">
@@ -227,7 +248,7 @@ export function ChatSidebar() {
               No chat history yet
             </p>
           ) : (
-            sortedSessions.map((session) => (
+            sortedSessions.map(session => (
               <SessionItem
                 key={session.id}
                 session={session}
@@ -258,7 +279,7 @@ export function ChatSidebar() {
         </p>
       </div>
     </div>
-  );
+  )
 }
 
 // ============================================================================
@@ -266,18 +287,18 @@ export function ChatSidebar() {
 // ============================================================================
 
 interface SessionItemProps {
-  session: ChatSession;
-  isActive: boolean;
-  isEditing: boolean;
-  editingTitle: string;
-  onEditingTitleChange: (title: string) => void;
-  onSwitch: (sessionId: string) => void;
-  onStartEdit: (sessionId: string, title: string) => void;
-  onSaveEdit: (sessionId: string, title: string) => void;
-  onTogglePin: (sessionId: string) => void;
-  onDelete: (sessionId: string) => void;
-  onActionsToggle: (sessionId: string | null) => void;
-  isActionsOpen: boolean;
+  session: ChatSession
+  isActive: boolean
+  isEditing: boolean
+  editingTitle: string
+  onEditingTitleChange: (title: string) => void
+  onSwitch: (sessionId: string) => void
+  onStartEdit: (sessionId: string, title: string) => void
+  onSaveEdit: (sessionId: string, title: string) => void
+  onTogglePin: (sessionId: string) => void
+  onDelete: (sessionId: string) => void
+  onActionsToggle: (sessionId: string | null) => void
+  isActionsOpen: boolean
 }
 
 function SessionItem({
@@ -294,32 +315,41 @@ function SessionItem({
   onActionsToggle,
   isActionsOpen,
 }: SessionItemProps) {
-  const SessionIcon = getAgentIconComponent(session.agentId);
+  const SessionIcon = getAgentIconComponent(session.agentId)
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && editingTitle.trim()) {
-      onSaveEdit(session.id, editingTitle.trim());
-    } else if (e.key === "Escape") {
-      onEditingTitleChange("");
-      onActionsToggle(null);
-    }
-  }, [editingTitle, session.id, onSaveEdit, onEditingTitleChange, onActionsToggle]);
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" && editingTitle.trim()) {
+        onSaveEdit(session.id, editingTitle.trim())
+      } else if (e.key === "Escape") {
+        onEditingTitleChange("")
+        onActionsToggle(null)
+      }
+    },
+    [
+      editingTitle,
+      session.id,
+      onSaveEdit,
+      onEditingTitleChange,
+      onActionsToggle,
+    ]
+  )
 
   const handleSaveEdit = useCallback(() => {
     if (editingTitle.trim()) {
-      onSaveEdit(session.id, editingTitle.trim());
+      onSaveEdit(session.id, editingTitle.trim())
     }
-  }, [editingTitle, session.id, onSaveEdit]);
+  }, [editingTitle, session.id, onSaveEdit])
 
   const handleToggleActions = useCallback(() => {
-    onActionsToggle(isActionsOpen ? null : session.id);
-  }, [isActionsOpen, session.id, onActionsToggle]);
+    onActionsToggle(isActionsOpen ? null : session.id)
+  }, [isActionsOpen, session.id, onActionsToggle])
 
   const handleClick = useCallback(() => {
     if (!isEditing) {
-      onSwitch(session.id);
+      onSwitch(session.id)
     }
-  }, [isEditing, session.id, onSwitch]);
+  }, [isEditing, session.id, onSwitch])
 
   return (
     <div
@@ -334,9 +364,7 @@ function SessionItem({
       `}
       onClick={handleClick}
     >
-      {session.isPinned && (
-        <Pin className="w-3 h-3 text-primary shrink-0" />
-      )}
+      {session.isPinned && <Pin className="w-3 h-3 text-primary shrink-0" />}
       <SessionIcon className="w-4 h-4 shrink-0" />
 
       {isEditing ? (
@@ -344,9 +372,9 @@ function SessionItem({
           <input
             type="text"
             value={editingTitle}
-            onChange={(e) => onEditingTitleChange(e.target.value)}
+            onChange={e => onEditingTitleChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
             className="flex-1 text-xs bg-background border border-border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-ring"
             autoFocus
           />
@@ -358,25 +386,23 @@ function SessionItem({
           </button>
         </div>
       ) : (
-        <span className="flex-1 text-xs truncate">
-          {session.title}
-        </span>
+        <span className="flex-1 text-xs truncate">{session.title}</span>
       )}
 
       {!isEditing && (
         <DropdownMenu
           open={isActionsOpen}
-          onOpenChange={(open) => {
+          onOpenChange={open => {
             if (open !== isActionsOpen) {
-              handleToggleActions();
+              handleToggleActions()
             }
           }}
         >
           <DropdownMenuTrigger asChild>
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleToggleActions();
+              onClick={e => {
+                e.stopPropagation()
+                handleToggleActions()
               }}
               className={`
                 opacity-0 group-hover:opacity-100 p-1 hover:bg-muted rounded transition-opacity
@@ -389,7 +415,7 @@ function SessionItem({
           <DropdownMenuContent
             align="end"
             className="w-40"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <DropdownMenuItem
               onClick={() => onStartEdit(session.id, session.title)}
@@ -413,5 +439,5 @@ function SessionItem({
         </DropdownMenu>
       )}
     </div>
-  );
+  )
 }
