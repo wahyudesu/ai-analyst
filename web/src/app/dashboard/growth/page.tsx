@@ -4,7 +4,9 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { RefreshButton } from "@/components/dashboard/RefreshButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, BarChart } from "@/components/charts";
+import { PieChart } from "@/components/charts/PieChart";
+import { BarChart } from "@/components/charts/BarChart";
+import { AreaChart } from "@/components/charts/AreaChart";
 import type { ChartConfig } from "@/components/charts/types";
 import { useDatabaseConfig } from "@/lib/use-database-config";
 import { DollarSign, TrendingUp, Percent, Users } from "lucide-react";
@@ -177,39 +179,35 @@ export default function GrowthPage() {
           </div>
 
           {/* Charts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Signups by Channel</CardTitle>
+          <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_2.5fr] gap-6">
+            <Card className="min-h-[320px]">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Signups by Channel</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="min-h-[240px] flex items-center justify-center">
                 {loading ? (
-                  <div className="h-64 flex items-center justify-center">
-                    <p className="text-zinc-500">Loading...</p>
-                  </div>
+                  <p className="text-zinc-500">Loading...</p>
                 ) : channelChartConfig ? (
                   <PieChart config={channelChartConfig} />
                 ) : (
-                  <div className="h-64 flex items-center justify-center">
-                    <p className="text-zinc-500">No data available</p>
-                  </div>
+                  <p className="text-zinc-500">No data available</p>
                 )}
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Weekly Signups Trend</CardTitle>
+            <Card className="min-h-[320px]">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Weekly Signups Trend</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="min-h-[240px]">
                 {loading ? (
-                  <div className="h-64 flex items-center justify-center">
+                  <div className="h-full flex items-center justify-center">
                     <p className="text-zinc-500">Loading...</p>
                   </div>
                 ) : weeklyTrendChartConfig ? (
-                  <BarChart config={weeklyTrendChartConfig} />
+                  <AreaChart config={weeklyTrendChartConfig} />
                 ) : (
-                  <div className="h-64 flex items-center justify-center">
+                  <div className="h-full flex items-center justify-center">
                     <p className="text-zinc-500">No data available</p>
                   </div>
                 )}
@@ -217,75 +215,78 @@ export default function GrowthPage() {
             </Card>
           </div>
 
-          {/* LTV:CAC Analysis */}
-          <Card>
-            <CardHeader>
-              <CardTitle>LTV:CAC Analysis</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
-                  <div>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">Current LTV:CAC Ratio</p>
-                    <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-                      {data?.metrics.ltvCacRatio.value || "0"}x
-                    </p>
+          {/* LTV:CAC Analysis & Growth Levers */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* LTV:CAC Analysis */}
+            <Card>
+              <CardHeader>
+                <CardTitle>LTV:CAC Analysis</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
+                    <div>
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400">Current LTV:CAC Ratio</p>
+                      <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+                        {data?.metrics.ltvCacRatio.value || "0"}x
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400">Benchmark: 3x+</p>
+                      <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                        {parseFloat(data?.metrics.ltvCacRatio.value || "0") >= 3 ? "Healthy" : "Needs Improvement"}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">Benchmark: 3x+</p>
-                    <p className="text-sm font-medium text-green-600 dark:text-green-400">
-                      {parseFloat(data?.metrics.ltvCacRatio.value || "0") >= 3 ? "Healthy" : "Needs Improvement"}
-                    </p>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                    <p className="text-sm text-green-700 dark:text-green-400">CAC Payback Period</p>
-                    <p className="text-xl font-bold text-green-900 dark:text-green-100">
-                      {Math.round((data?.metrics.cac.value || 45) / (data?.metrics.ltv.value || 792) * 12)} months
-                    </p>
-                  </div>
-                  <div className="p-4 bg-primary/10 dark:bg-primary/20 rounded-lg">
-                    <p className="text-sm text-primary">Repaying Rate</p>
-                    <p className="text-xl font-bold text-primary">
-                      {data?.metrics.repayingRate.value.toFixed(2) || 0}%
-                    </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                      <p className="text-sm text-green-700 dark:text-green-400">CAC Payback Period</p>
+                      <p className="text-xl font-bold text-green-900 dark:text-green-100">
+                        {Math.round((data?.metrics.cac.value || 45) / (data?.metrics.ltv.value || 792) * 12)} months
+                      </p>
+                    </div>
+                    <div className="p-4 bg-primary/10 dark:bg-primary/20 rounded-lg">
+                      <p className="text-sm text-primary">Repaying Rate</p>
+                      <p className="text-xl font-bold text-primary">
+                        {data?.metrics.repayingRate.value.toFixed(2) || 0}%
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Growth Levers */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Growth Levers</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg">
-                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50 mb-2">Referral Program</p>
-                  <p className="text-2xl font-bold text-primary mb-1">
-                    {data?.charts.channels.find(c => c.name === "Referral")?.value || 35}%
-                  </p>
-                  <p className="text-xs text-zinc-500">of signups from referrals</p>
+            {/* Growth Levers */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Growth Levers</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg">
+                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50 mb-2">Referral Program</p>
+                    <p className="text-2xl font-bold text-primary mb-1">
+                      {data?.charts.channels.find(c => c.name === "Referral")?.value || 35}%
+                    </p>
+                    <p className="text-xs text-zinc-500">of signups from referrals</p>
+                  </div>
+                  <div className="p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg">
+                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50 mb-2">Viral Coefficient</p>
+                    <p className="text-2xl font-bold text-primary mb-1">0.4</p>
+                    <p className="text-xs text-zinc-500">avg invites per user</p>
+                  </div>
+                  <div className="p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg">
+                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50 mb-2">Conversion Rate</p>
+                    <p className="text-2xl font-bold text-primary mb-1">
+                      {data?.metrics.payingRate.value.toFixed(2) || 0}%
+                    </p>
+                    <p className="text-xs text-zinc-500">signup to paying</p>
+                  </div>
                 </div>
-                <div className="p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg">
-                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50 mb-2">Viral Coefficient</p>
-                  <p className="text-2xl font-bold text-primary mb-1">0.4</p>
-                  <p className="text-xs text-zinc-500">avg invites per user</p>
-                </div>
-                <div className="p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg">
-                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50 mb-2">Conversion Rate</p>
-                  <p className="text-2xl font-bold text-primary mb-1">
-                    {data?.metrics.payingRate.value.toFixed(2) || 0}%
-                  </p>
-                  <p className="text-xs text-zinc-500">signup to paying</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </main>
     </div>

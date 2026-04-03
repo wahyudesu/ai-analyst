@@ -75,158 +75,107 @@ export async function POST(request: NextRequest) {
     const interval = getInterval(timeRange);
     const comparisonIntervals = getComparisonIntervals(comparisonMode);
 
-    // Get total users
-    const totalUsersResult = await queryNeon(`
-      SELECT COUNT(*) as count FROM profiles
-    `, [], databaseUrl);
+    // Parallel: Execute all independent queries simultaneously using Promise.all()
+    // This eliminates the waterfall pattern where each query waited for the previous one
+    const [
+      totalUsersResult,
+      totalAgentsResult,
+      totalConversationsResult,
+      totalMessagesResult,
+      activeSubscriptionsResult,
+      messagesCurrentResult,
+      messagesPreviousResult,
+      conversationsCurrentResult,
+      conversationsPreviousResult,
+      activatedUsersResult,
+      userGrowthResult,
+      newUsersOverTimeResult,
+      conversationsOverTimeResult,
+      messagesOverTimeResult,
+      agentsByModelResult,
+      subscriptionsByPlanResult,
+    ] = await Promise.all([
+      // Basic count queries
+      queryNeon(`SELECT COUNT(*) as count FROM profiles`, [], databaseUrl),
+      queryNeon(`SELECT COUNT(*) as count FROM agents`, [], databaseUrl),
+      queryNeon(`SELECT COUNT(*) as count FROM conversations`, [], databaseUrl),
+      queryNeon(`SELECT COUNT(*) as count FROM messages`, [], databaseUrl),
+      queryNeon(`SELECT COUNT(*) as count FROM billing_plan_subscriptions WHERE status = 'active'`, [], databaseUrl),
+      // Time-range queries for messages
+      queryNeon(`SELECT COUNT(*) as count FROM messages WHERE ${getDateFilter(timeRange, interval)}`, [], databaseUrl),
+      queryNeon(
+        `SELECT COUNT(*) as count FROM messages WHERE created_at >= NOW() - INTERVAL '${comparisonIntervals.previous}' AND created_at < NOW() - INTERVAL '${comparisonIntervals.current}'`,
+        [],
+        databaseUrl
+      ),
+      // Time-range queries for conversations
+      queryNeon(`SELECT COUNT(*) as count FROM conversations WHERE ${getDateFilter(timeRange, interval)}`, [], databaseUrl),
+      queryNeon(
+        `SELECT COUNT(*) as count FROM conversations WHERE created_at >= NOW() - INTERVAL '${comparisonIntervals.previous}' AND created_at < NOW() - INTERVAL '${comparisonIntervals.current}'`,
+        [],
+        databaseUrl
+      ),
+      // User-related queries
+      queryNeon(`SELECT COUNT(DISTINCT profile_id) as count FROM conversations`, [], databaseUrl),
+      queryNeon(
+        `WITH user_periods AS (
+          SELECT
+            CASE
+              WHEN created_at >= NOW() - INTERVAL '${comparisonIntervals.current}' THEN 'current'
+              WHEN created_at >= NOW() - INTERVAL '${comparisonIntervals.previous}' AND created_at < NOW() - INTERVAL '${comparisonIntervals.current}' THEN 'previous'
+            END as period,
+            COUNT(*) as count
+          FROM profiles
+          WHERE created_at >= NOW() - INTERVAL '${comparisonIntervals.previous}'
+          GROUP BY period
+        )
+        SELECT
+          (SELECT count FROM user_periods WHERE period = 'current') as current_period,
+          (SELECT count FROM user_periods WHERE period = 'previous') as previous_period`,
+        [],
+        databaseUrl
+      ),
+      // Time series queries (last 12 weeks)
+      queryNeon(
+        `SELECT DATE_TRUNC('week', created_at)::date as date, COUNT(*) as new_users FROM profiles WHERE created_at >= NOW() - INTERVAL '84 days' GROUP BY DATE_TRUNC('week', created_at)::date ORDER BY date DESC LIMIT 12`,
+        [],
+        databaseUrl
+      ),
+      queryNeon(
+        `SELECT DATE_TRUNC('week', created_at)::date as date, COUNT(*) as conversations FROM conversations WHERE created_at >= NOW() - INTERVAL '84 days' GROUP BY DATE_TRUNC('week', created_at)::date ORDER BY date DESC LIMIT 12`,
+        [],
+        databaseUrl
+      ),
+      queryNeon(
+        `SELECT DATE_TRUNC('week', created_at)::date as date, COUNT(*) as messages FROM messages WHERE created_at >= NOW() - INTERVAL '84 days' GROUP BY DATE_TRUNC('week', created_at)::date ORDER BY date DESC LIMIT 12`,
+        [],
+        databaseUrl
+      ),
+      // Distribution queries
+      queryNeon(`SELECT model, COUNT(*) as count FROM agents GROUP BY model ORDER BY count DESC`, [], databaseUrl),
+      queryNeon(`SELECT plan_key, COUNT(*) as count FROM billing_plan_subscriptions WHERE status = 'active' GROUP BY plan_key ORDER BY count DESC`, [], databaseUrl),
+    ]);
+
+    // Parse results from parallel queries
     const totalUsers = parseInt(totalUsersResult[0]?.count) || 0;
-
-    // Get total agents
-    const totalAgentsResult = await queryNeon(`
-      SELECT COUNT(*) as count FROM agents
-    `, [], databaseUrl);
     const totalAgents = parseInt(totalAgentsResult[0]?.count) || 0;
-
-    // Get total conversations
-    const totalConversationsResult = await queryNeon(`
-      SELECT COUNT(*) as count FROM conversations
-    `, [], databaseUrl);
     const totalConversations = parseInt(totalConversationsResult[0]?.count) || 0;
-
-    // Get total messages
-    const totalMessagesResult = await queryNeon(`
-      SELECT COUNT(*) as count FROM messages
-    `, [], databaseUrl);
     const totalMessages = parseInt(totalMessagesResult[0]?.count) || 0;
-
-    // Get active subscriptions
-    const activeSubscriptionsResult = await queryNeon(`
-      SELECT COUNT(*) as count FROM billing_plan_subscriptions
-      WHERE status = 'active'
-    `, [], databaseUrl);
     const activeSubscriptions = parseInt(activeSubscriptionsResult[0]?.count) || 0;
-
-    // Get messages in selected time range (current period)
-    const messagesCurrentResult = await queryNeon(`
-      SELECT COUNT(*) as count FROM messages
-      WHERE ${getDateFilter(timeRange, interval)}
-    `, [], databaseUrl);
     const messagesCurrent = parseInt(messagesCurrentResult[0]?.count) || 0;
-
-    // Get messages in previous period (for comparison)
-    const messagesPreviousResult = await queryNeon(`
-      SELECT COUNT(*) as count FROM messages
-      WHERE created_at >= NOW() - INTERVAL '${comparisonIntervals.previous}'
-        AND created_at < NOW() - INTERVAL '${comparisonIntervals.current}'
-    `, [], databaseUrl);
     const messagesPrevious = parseInt(messagesPreviousResult[0]?.count) || 0;
-
-    // Calculate percentage change
-    const messagesChange = messagesPrevious > 0
-      ? ((messagesCurrent - messagesPrevious) / messagesPrevious) * 100
-      : 0;
-
-    // Get conversations in selected time range (current period)
-    const conversationsCurrentResult = await queryNeon(`
-      SELECT COUNT(*) as count FROM conversations
-      WHERE ${getDateFilter(timeRange, interval)}
-    `, [], databaseUrl);
     const conversationsCurrent = parseInt(conversationsCurrentResult[0]?.count) || 0;
-
-    // Get conversations in previous period (for comparison)
-    const conversationsPreviousResult = await queryNeon(`
-      SELECT COUNT(*) as count FROM conversations
-      WHERE created_at >= NOW() - INTERVAL '${comparisonIntervals.previous}'
-        AND created_at < NOW() - INTERVAL '${comparisonIntervals.current}'
-    `, [], databaseUrl);
     const conversationsPrevious = parseInt(conversationsPreviousResult[0]?.count) || 0;
+    const activatedUsers = parseInt(activatedUsersResult[0]?.count) || 0;
+    const currentPeriodUsers = parseInt(userGrowthResult[0]?.current_period) || 0;
+    const previousPeriodUsers = parseInt(userGrowthResult[0]?.previous_period) || 1;
 
-    // Calculate percentage change
+    // Calculate derived values (must happen after queries complete)
+    const messagesChange = messagesPrevious > 0 ? ((messagesCurrent - messagesPrevious) / messagesPrevious) * 100 : 0;
     const conversationsChange = conversationsPrevious > 0
       ? ((conversationsCurrent - conversationsPrevious) / conversationsPrevious) * 100
       : 0;
-
-    // Get users with conversations (activated users)
-    const activatedUsersResult = await queryNeon(`
-      SELECT COUNT(DISTINCT profile_id) as count FROM conversations
-    `, [], databaseUrl);
-    const activatedUsers = parseInt(activatedUsersResult[0]?.count) || 0;
-
-    // Get user growth based on comparison mode
-    const userGrowthResult = await queryNeon(`
-      WITH user_periods AS (
-        SELECT
-          CASE
-            WHEN created_at >= NOW() - INTERVAL '${comparisonIntervals.current}' THEN 'current'
-            WHEN created_at >= NOW() - INTERVAL '${comparisonIntervals.previous}' AND created_at < NOW() - INTERVAL '${comparisonIntervals.current}' THEN 'previous'
-          END as period,
-          COUNT(*) as count
-        FROM profiles
-        WHERE created_at >= NOW() - INTERVAL '${comparisonIntervals.previous}'
-        GROUP BY period
-      )
-      SELECT
-        (SELECT count FROM user_periods WHERE period = 'current') as current_period,
-        (SELECT count FROM user_periods WHERE period = 'previous') as previous_period
-    `, [], databaseUrl);
-    const currentPeriodUsers = parseInt(userGrowthResult[0]?.current_period) || 0;
-    const previousPeriodUsers = parseInt(userGrowthResult[0]?.previous_period) || 1;
-    const userGrowthRate = previousPeriodUsers > 0
-      ? ((currentPeriodUsers - previousPeriodUsers) / previousPeriodUsers) * 100
-      : 0;
-
-    // Get new users over time (last 12 weeks)
-    const newUsersOverTimeResult = await queryNeon(`
-      SELECT
-        DATE_TRUNC('week', created_at)::date as date,
-        COUNT(*) as new_users
-      FROM profiles
-      WHERE created_at >= NOW() - INTERVAL '84 days'
-      GROUP BY DATE_TRUNC('week', created_at)::date
-      ORDER BY date DESC
-      LIMIT 12
-    `, [], databaseUrl);
-
-    // Get conversations over time (last 12 weeks)
-    const conversationsOverTimeResult = await queryNeon(`
-      SELECT
-        DATE_TRUNC('week', created_at)::date as date,
-        COUNT(*) as conversations
-      FROM conversations
-      WHERE created_at >= NOW() - INTERVAL '84 days'
-      GROUP BY DATE_TRUNC('week', created_at)::date
-      ORDER BY date DESC
-      LIMIT 12
-    `, [], databaseUrl);
-
-    // Get messages over time (last 12 weeks)
-    const messagesOverTimeResult = await queryNeon(`
-      SELECT
-        DATE_TRUNC('week', created_at)::date as date,
-        COUNT(*) as messages
-      FROM messages
-      WHERE created_at >= NOW() - INTERVAL '84 days'
-      GROUP BY DATE_TRUNC('week', created_at)::date
-      ORDER BY date DESC
-      LIMIT 12
-    `, [], databaseUrl);
-
-    // Get agent distribution by model
-    const agentsByModelResult = await queryNeon(`
-      SELECT model, COUNT(*) as count
-      FROM agents
-      GROUP BY model
-      ORDER BY count DESC
-    `, [], databaseUrl);
-
-    // Get subscription distribution by plan
-    const subscriptionsByPlanResult = await queryNeon(`
-      SELECT plan_key, COUNT(*) as count
-      FROM billing_plan_subscriptions
-      WHERE status = 'active'
-      GROUP BY plan_key
-      ORDER BY count DESC
-    `, [], databaseUrl);
+    const userGrowthRate = previousPeriodUsers > 0 ? ((currentPeriodUsers - previousPeriodUsers) / previousPeriodUsers) * 100 : 0;
 
     return NextResponse.json(
       {

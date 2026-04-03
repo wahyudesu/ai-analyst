@@ -4,7 +4,9 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { RefreshButton } from "@/components/dashboard/RefreshButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, BarChart } from "@/components/charts";
+import { LineChart } from "@/components/charts/LineChart";
+import { BarChart } from "@/components/charts/BarChart";
+import { AreaChart } from "@/components/charts/AreaChart";
 import type { ChartConfig } from "@/components/charts/types";
 import { useDatabaseConfig } from "@/lib/use-database-config";
 import { Activity, Users, Zap, Target } from "lucide-react";
@@ -152,7 +154,7 @@ export default function UsagePage() {
           />
 
           <main className="p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div className="max-w-7xl mx-auto space-y-4">
           {/* Key Metrics */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <MetricCard
@@ -189,7 +191,7 @@ export default function UsagePage() {
                 <CardTitle className="text-base">User Stickiness (DAU/MAU)</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-4">
                   {/* Compact Gauge */}
                   <div className="relative w-32 h-32 flex-shrink-0">
                     <svg className="w-full h-full transform -rotate-90">
@@ -266,7 +268,7 @@ export default function UsagePage() {
           </div>
 
           {/* Charts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card>
               <CardHeader>
                 <CardTitle>Daily Active Users Trend</CardTitle>
@@ -277,7 +279,7 @@ export default function UsagePage() {
                     <p className="text-zinc-500">Loading...</p>
                   </div>
                 ) : dailyTrendConfig ? (
-                  <LineChart config={dailyTrendConfig} />
+                  <AreaChart config={dailyTrendConfig} />
                 ) : (
                   <div className="h-64 flex items-center justify-center">
                     <p className="text-zinc-500">No data available</p>

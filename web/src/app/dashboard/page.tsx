@@ -1,13 +1,16 @@
 "use client";
 
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { MetricCard } from "@/components/dashboard/MetricCard";
+import { MetricCard, type SparklineData } from "@/components/dashboard/MetricCard";
 import { RefreshButton } from "@/components/dashboard/RefreshButton";
 import { TimelineFilter, TimeRange } from "@/components/dashboard/TimelineFilter";
 import { ComparisonMode } from "@/components/dashboard/ComparisonToggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { BarChart, LineChart } from "@/components/charts";
+import { BarChart } from "@/components/charts/BarChart";
+import { LineChart } from "@/components/charts/LineChart";
+import { AreaChart } from "@/components/charts/AreaChart";
 import type { ChartConfig } from "@/components/charts/types";
 import {
   MetricCardGridSkeleton,
@@ -15,7 +18,7 @@ import {
 } from "@/components/dashboard/Skeleton";
 import { useDashboardCache } from "@/hooks/useDashboardCache";
 import { useDatabaseConfig } from "@/lib/use-database-config";
-import { Users, Bot, MessageSquare, Send, CreditCard, TrendingUp, AlertCircle, Zap } from "lucide-react";
+import { Users, Bot, MessageSquare, Send, CreditCard, TrendingUp, AlertCircle, Zap, RefreshCw } from "lucide-react";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 
 interface OverviewData {
@@ -150,15 +153,18 @@ export default function OverviewPage() {
             />
             <main className="p-6">
           <div className="max-w-7xl mx-auto">
-            <Card className="border-destructive/50">
-              <CardContent className="p-6">
+            <Card className="border-destructive/50 shadow-sm">
+              <CardContent>
                 <div className="text-center">
-                  <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+                  <AlertCircle className="w-14 h-14 text-destructive mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-foreground mb-2">
                     Failed to load dashboard data
                   </h3>
-                  <p className="text-sm text-muted-foreground mb-4">{error}</p>
-                  <Button onClick={handleRefresh}>Try Again</Button>
+                  <p className="text-sm text-muted-foreground mb-6">{error}</p>
+                  <Button onClick={handleRefresh} className="gap-2">
+                    <RefreshCw className="w-4 h-4" />
+                    Try Again
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -437,7 +443,7 @@ export default function OverviewPage() {
               </div>
 
               {/* Metric Cards Grid - Bottom Row */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <MetricCard
                   title={`Messages (${timeRange === "all" ? "All" : timeRange})`}
                   value={data?.metrics.messagesLast30Days.value || 0}
@@ -449,6 +455,10 @@ export default function OverviewPage() {
                   onComparisonChange={setComparisonMode}
                   showComparisonToggle={true}
                   showPreviousValue={true}
+                  sparkline={data?.charts.messagesOverTime.values ? {
+                    data: data.charts.messagesOverTime.values,
+                    color: "auto",
+                  } : undefined}
                 />
                 <MetricCard
                   title={`Conversations (${timeRange === "all" ? "All" : timeRange})`}
@@ -461,77 +471,55 @@ export default function OverviewPage() {
                   onComparisonChange={setComparisonMode}
                   showComparisonToggle={true}
                   showPreviousValue={true}
+                  sparkline={data?.charts.conversationsOverTime.values ? {
+                    data: data.charts.conversationsOverTime.values,
+                    color: "auto",
+                  } : undefined}
                 />
-              </div>
-
-              {/* Activity Metrics */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Conversations ({timeRange === "all" ? "All" : timeRange})
-                        </p>
-                        <p className="text-2xl font-bold text-foreground mt-1">
-                          {data?.metrics.conversationsLast30Days.value || 0}
-                        </p>
-                        {data?.metrics.conversationsLast30Days.change !== undefined && (
-                          <p className={`text-sm mt-1 ${data.metrics.conversationsLast30Days.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {data.metrics.conversationsLast30Days.change >= 0 ? '+' : ''}{data.metrics.conversationsLast30Days.change.toFixed(1)}% vs previous
-                          </p>
-                        )}
-                      </div>
-                      <MessageSquare className="w-8 h-8 text-primary/20" />
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">
-                          User Growth ({comparisonMode.toUpperCase()})
-                        </p>
-                        <p className="text-2xl font-bold text-foreground mt-1">
-                          {data?.metrics.userGrowthRate.value.toFixed(2) || 0}%
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {data?.metrics.totalUsers.current || 0} vs {data?.metrics.totalUsers.previous || 0} users
-                        </p>
-                      </div>
-                      <TrendingUp className="w-8 h-8 text-green-500/20" />
-                    </div>
-                  </CardContent>
-                </Card>
+                <MetricCard
+                  title={`User Growth (${comparisonMode.toUpperCase()})`}
+                  value={Math.round((data?.metrics.userGrowthRate.value || 0) * 10) / 10}
+                  change={data?.metrics.userGrowthRate.change}
+                  previousValue={data?.metrics.totalUsers.previous}
+                  icon={TrendingUp}
+                  format="percentage"
+                  comparisonMode={comparisonMode}
+                  onComparisonChange={setComparisonMode}
+                  showComparisonToggle={true}
+                  showPreviousValue={true}
+                  sparkline={data?.charts.newUsersOverTime.values ? {
+                    data: data.charts.newUsersOverTime.values,
+                    color: "auto",
+                  } : undefined}
+                />
               </div>
 
               {/* Charts Row */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>New Users (12 Weeks)</CardTitle>
+                <Card className="border-border/50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">New Users (12 Weeks)</CardTitle>
                   </CardHeader>
-                    <CardContent>
+                    <CardContent className="min-h-[200px]">
                       {usersChartConfig ? (
                         <LineChart config={usersChartConfig} />
                       ) : (
-                        <div className="h-64 flex items-center justify-center">
-                          <p className="text-muted-foreground">No data available</p>
+                        <div className="h-full flex items-center justify-center">
+                          <p className="text-muted-foreground text-sm">No data available</p>
                         </div>
                       )}
                     </CardContent>
                 </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Conversations (12 Weeks)</CardTitle>
+                <Card className="border-border/50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Conversations (12 Weeks)</CardTitle>
                   </CardHeader>
-                    <CardContent>
+                    <CardContent className="min-h-[200px]">
                       {conversationsChartConfig ? (
                         <BarChart config={conversationsChartConfig} />
                       ) : (
-                        <div className="h-64 flex items-center justify-center">
-                          <p className="text-muted-foreground">No data available</p>
+                        <div className="h-full flex items-center justify-center">
+                          <p className="text-muted-foreground text-sm">No data available</p>
                         </div>
                       )}
                     </CardContent>
@@ -539,82 +527,52 @@ export default function OverviewPage() {
               </div>
 
               {/* Messages Chart */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Messages (12 Weeks)</CardTitle>
+              <Card className="border-border/50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Messages (12 Weeks)</CardTitle>
                 </CardHeader>
-                  <CardContent>
+                  <CardContent className="h-40">
                     {messagesChartConfig ? (
-                      <LineChart config={messagesChartConfig} />
+                      <AreaChart config={messagesChartConfig} />
                     ) : (
-                      <div className="h-64 flex items-center justify-center">
-                        <p className="text-muted-foreground">No data available</p>
+                      <div className="h-full flex items-center justify-center">
+                        <p className="text-muted-foreground text-sm">No data available</p>
                       </div>
                     )}
                   </CardContent>
               </Card>
 
-              {/* Distribution Charts */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Agents by Model</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {agentsChartConfig ? (
-                      <BarChart config={agentsChartConfig} />
-                    ) : (
-                        <div className="h-48 flex items-center justify-center">
-                          <p className="text-muted-foreground text-sm">No agent data available</p>
-                        </div>
-                    )}
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Active Subscriptions by Plan</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {subscriptionsChartConfig ? (
-                      <BarChart config={subscriptionsChartConfig} />
-                    ) : (
-                        <div className="h-48 flex items-center justify-center">
-                          <p className="text-muted-foreground text-sm">No subscription data available</p>
-                        </div>
-                    )}
+              {/* Distribution Charts & Activation Rate */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <MetricCard
+                  title="Agents by Model"
+                  value={data?.charts.agentsByModel.reduce((sum, a) => sum + a.count, 0) || 0}
+                  icon={Bot}
+                  format="number"
+                />
+                <MetricCard
+                  title="Active Subscriptions"
+                  value={data?.metrics.activeSubscriptions.value || 0}
+                  icon={CreditCard}
+                  format="number"
+                />
+                <Card className="border-border/50">
+                  <CardContent className="">
+                    <div className="space-y-1.5">
+                      <p className="text-sm text-muted-foreground">Activation Rate</p>
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="text-2xl font-semibold text-foreground">
+                          {Math.round((data?.metrics.activationRate.value || 0) * 10) / 10}%
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {data?.metrics.activatedUsers.value || 0} of {data?.metrics.totalUsers.value || 0}
+                        </p>
+                      </div>
+                      <Progress value={data?.metrics.activationRate.value || 0} className="h-1.5" />
+                    </div>
                   </CardContent>
                 </Card>
               </div>
-
-              {/* Activation Rate */}
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">
-                        Activation Rate
-                      </p>
-                      <p className="text-3xl font-bold text-primary mt-1">
-                        {data?.metrics.activationRate.value.toFixed(2) || 0}%
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Users who created at least one conversation
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground">
-                        {data?.metrics.activatedUsers.value || 0} of {data?.metrics.totalUsers.value || 0} users
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-4 h-3 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full transition-all"
-                      style={{ width: `${data?.metrics.activationRate.value || 0}%` }}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
             </>
           )}
         </div>

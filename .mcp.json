@@ -8,6 +8,10 @@
     "supabase": {
       "type": "http",
       "url": "https://mcp.supabase.com/mcp?project_ref=rpnmknovvsxvvhplmnds&read_only=true&features=database%2Cdocs"
+    },
+    "shoogle": {
+      "type": "http",
+      "url": "https://mcp.shoogle.dev/mcp"
     }
   }
 }

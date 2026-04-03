@@ -2,7 +2,7 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Database, ChartBar, ChevronDown, Send, Sparkles } from "lucide-react";
 
 import { MessageRenderer } from "@/components/MessageRenderer";
@@ -31,27 +31,28 @@ interface ModelOption {
   provider: "zai" | "openai";
 }
 
-// Constants
+// Constants - hoisted outside component
 const DEFAULT_AGENT_ID = "data-analyst";
 
-// Model options
 const MODEL_OPTIONS: ModelOption[] = [
   { id: "zai-coding-plan/glm-4.5", name: "GLM 4.5", provider: "zai" },
   { id: "zai-coding-plan/glm-4.5-flash", name: "GLM 4.5 Flash", provider: "zai" },
   { id: "openai/gpt-4o-mini", name: "GPT-4o Mini", provider: "openai" },
-];
+] as const;
 
 const DEFAULT_MODEL_ID = MODEL_OPTIONS[0].id;
 
-// Agent icons mapping
-const AGENT_ICONS: Record<string, React.ElementType> = {
+// Agent icons mapping - hoisted outside component
+const AGENT_ICONS = {
   "data-analyst": Database,
   "chart-agent": ChartBar,
   "supabase-agent": Database,
 } as const;
 
+type AgentId = keyof typeof AGENT_ICONS;
+
 function getAgentIcon(agentId?: string): React.ElementType {
-  return AGENT_ICONS[agentId || DEFAULT_AGENT_ID] || Database;
+  return AGENT_ICONS[agentId as AgentId] || Database;
 }
 
 export function ChatContent({
@@ -74,6 +75,7 @@ export function ChatContent({
   // Fetch all agents using shared query hook
   const { data: allAgents = [] } = useAgents();
 
+  // Transport params ref to avoid recreating transport unnecessarily
   const transportParamsRef = useRef({
     agentId: currentAgentId,
     modelId: currentModelId,
@@ -82,6 +84,7 @@ export function ChatContent({
     databaseUrl,
   });
 
+  // Update ref without triggering re-renders
   transportParamsRef.current = {
     agentId: currentAgentId,
     modelId: currentModelId,
@@ -90,41 +93,33 @@ export function ChatContent({
     databaseUrl,
   };
 
-  const transport = useMemo(
-    () =>
-      new DefaultChatTransport({
-        api: `/api/chat?agentId=${currentAgentId}`,
-        prepareSendMessagesRequest: ({ messages }) => ({
-          body: {
-            messages,
-            memory: {
-              thread: { id: transportParamsRef.current.threadId },
-              ...(transportParamsRef.current.resourceId && {
-                resource: transportParamsRef.current.resourceId,
-              }),
-            },
-            ...(transportParamsRef.current.databaseUrl && {
-              databaseUrl: transportParamsRef.current.databaseUrl,
-            }),
-            ...(transportParamsRef.current.modelId && {
-              modelId: transportParamsRef.current.modelId,
+  const { messages, status, sendMessage, error, setMessages } = useChat({
+    transport: new DefaultChatTransport({
+      api: `/api/chat?agentId=${currentAgentId}`,
+      prepareSendMessagesRequest: ({ messages }) => ({
+        body: {
+          messages,
+          memory: {
+            thread: { id: threadIdRef.current },
+            ...(resourceId && {
+              resource: resourceId,
             }),
           },
-        }),
+          ...(databaseUrl && {
+            databaseUrl,
+          }),
+          ...(transportParamsRef.current.modelId && {
+            modelId: transportParamsRef.current.modelId,
+          }),
+        },
       }),
-    [currentAgentId, currentModelId],
-  );
-
-  const { messages, status, sendMessage, error, setMessages } = useChat({
-    transport,
+    }),
   });
 
   const isLoading = status === "streaming" || status === "submitted";
 
-  const currentAgentInfo = useMemo(
-    () => allAgents.find((a) => a.id === currentAgentId) || null,
-    [allAgents, currentAgentId],
-  );
+  // Direct lookup - no useMemo needed for simple find operation
+  const currentAgentInfo = allAgents.find((a) => a.id === currentAgentId) || null;
 
   // Track seen message IDs to skip chart animation for already-rendered messages
   const seenMessageIdsRef = useRef<Set<string>>(new Set());
@@ -148,10 +143,12 @@ export function ChatContent({
     seenMessageIdsRef.current.clear();
   }, [threadId]);
 
+  // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Stable callbacks - primitive dependencies only
   const startNewChat = useCallback((agentId?: string) => {
     const agentToUse = agentId || DEFAULT_AGENT_ID;
     threadsClient.clearCurrentThreadId();
@@ -161,20 +158,23 @@ export function ChatContent({
     setMessages([]);
     setInput("");
     setCurrentModelId(DEFAULT_MODEL_ID);
-  }, [setMessages]);
+  }, [setMessages]); // setMessages is stable from useChat
 
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAgentChange = useCallback((agentId: string) => {
+    setCurrentAgentId(agentId);
+    startNewChat(agentId);
+  }, [startNewChat]);
+
+  const handleSubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (input.trim()) {
       sendMessage({ text: input });
       setInput("");
     }
-  };
+  }, [input, sendMessage]);
 
-  const AgentIcon = useMemo(
-    () => getAgentIcon(currentAgentId),
-    [currentAgentId],
-  );
+  // Direct icon lookup - no useMemo needed
+  const AgentIcon = getAgentIcon(currentAgentId);
 
   return (
     <div className={`flex flex-col h-full ${className || ""}`}>
@@ -195,10 +195,7 @@ export function ChatContent({
               return (
                 <DropdownMenuItem
                   key={agent.id}
-                  onClick={() => {
-                    setCurrentAgentId(agent.id);
-                    startNewChat(agent.id);
-                  }}
+                  onClick={() => handleAgentChange(agent.id)}
                   className="cursor-pointer"
                 >
                   <Icon className="w-4 h-4 mr-2" />
@@ -284,7 +281,7 @@ export function ChatContent({
       </div>
 
       {/* Input */}
-      <form onSubmit={onSubmit} className="p-4 border-t border-border bg-card">
+      <form onSubmit={handleSubmit} className="p-4 border-t border-border bg-card">
         <div className="flex gap-2 items-center max-w-4xl mx-auto">
           <DropdownMenu open={modelSelectorOpen} onOpenChange={setModelSelectorOpen}>
             <DropdownMenuTrigger asChild>

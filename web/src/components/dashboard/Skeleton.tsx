@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 export function MetricCardSkeleton() {
   return (
     <Card>
-      <CardContent className="p-6">
+      <CardContent>
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="h-4 w-24 bg-muted animate-pulse rounded mb-2" />

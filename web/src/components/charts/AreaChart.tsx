@@ -6,15 +6,19 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
 } from 'recharts';
-import { getChartColor } from './colors';
-import type { ChartConfig } from './types';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from '@/components/ui/chart';
+import type { ChartConfig as LegacyChartConfig } from './types';
 
 interface AreaChartProps {
-  config: ChartConfig;
+  config: LegacyChartConfig;
   className?: string;
   skipAnimation?: boolean;
 }
@@ -25,16 +29,17 @@ function formatXLabel(value: string): string {
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value) || /^\d{4}-\d{2}-\d{2}$/.test(value)) {
     const date = new Date(value);
     if (!isNaN(date.getTime())) {
-      const day = date.getDate();
-      const month = date.toLocaleDateString('en-US', { month: 'short' });
-      return `${month} ${day}`;
+      return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+      }).format(date);
     }
   }
   return value;
 }
 
 /**
- * Area chart component using Recharts
+ * Area chart component using Recharts with shadcn/ui pattern
  * Supports multiple series for showing magnitude over time
  */
 export function AreaChart({ config, className, skipAnimation }: AreaChartProps) {
@@ -43,22 +48,38 @@ export function AreaChart({ config, className, skipAnimation }: AreaChartProps) 
 
   if (series.length === 0 || !series[0]?.data?.length) {
     return (
-        <div className={`flex items-center justify-center h-64 text-muted-foreground ${className || ''}`}>
+      <div className={`flex items-center justify-center h-64 text-muted-foreground ${className || ''}`}>
         No data available
       </div>
     );
   }
 
-  // Prepare data for Recharts
+  // Build shadcn chart config from legacy config
+  // Use sanitized keys (no spaces) for CSS variables
+  const sanitizedKeys = series.map((s, idx) => ({
+    original: s.name,
+    sanitized: s.name.replace(/\s+/g, '-').toLowerCase(),
+    color: colors?.palette?.[idx] || s.color || `var(--chart-${(idx % 5) + 1})`,
+  }));
+
+  const shadcnConfig: ChartConfig = sanitizedKeys.reduce((acc, item) => {
+    acc[item.sanitized] = {
+      label: item.original,
+      color: item.color,
+    };
+    return acc;
+  }, {} as ChartConfig);
+
+  // Prepare data for Recharts with sanitized keys
   const chartData = series[0].data.map((point, index) => {
     const row: Record<string, unknown> = {
       _x: point.x,
       _label: point.label,
     };
 
-    series.forEach((s) => {
+    series.forEach((s, idx) => {
       if (s.data[index]) {
-        row[s.name] = s.data[index].y;
+        row[sanitizedKeys[idx].sanitized] = s.data[index].y;
       }
     });
 
@@ -66,53 +87,45 @@ export function AreaChart({ config, className, skipAnimation }: AreaChartProps) 
   });
 
   return (
-    <div className={className}>
-      <ResponsiveContainer width="100%" height={300}>
-        <RechartsAreaChart
-          data={chartData}
-          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-        >
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis
-                  dataKey="_x"
-                  stroke="var(--muted-foreground)"
-                  className="text-xs"
-                  tick={{ fill: 'currentColor', className: 'text-muted-foreground text-[10px]' }}
-                  tickLine={{ stroke: 'var(--muted-foreground)' }}
-                  tickFormatter={(value) => formatXLabel(String(value))}
-                />
-              <YAxis
-                stroke="var(--muted-foreground)"
-                className="text-xs"
-                tick={{ fill: 'currentColor', className: 'text-muted-foreground text-[10px]' }}
-                tickLine={{ stroke: 'var(--muted-foreground)' }}
-              />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'var(--popover)',
-                border: '1px solid var(--border)',
-                borderRadius: '0.5rem',
-                color: 'var(--popover-foreground)',
-              }}
-              itemStyle={{ color: 'var(--foreground)' }}
-              labelStyle={{ color: 'var(--muted-foreground)' }}
-            />
-            {options.legend && <Legend wrapperStyle={{ color: 'var(--foreground)' }} />}
-          {series.map((s, seriesIndex) => (
-            <Area
-              key={s.name}
-              type="monotone"
-              dataKey={s.name}
-              name={s.name}
-              stroke={getChartColor(seriesIndex)}
-              fill={getChartColor(seriesIndex)}
-              fillOpacity={0.6}
-              strokeWidth={2}
-              stackId={options.stacked ? 'stack' : undefined}
-            />
-          ))}
-        </RechartsAreaChart>
-      </ResponsiveContainer>
-    </div>
+    <ChartContainer config={shadcnConfig} className={className}>
+      <RechartsAreaChart
+        data={chartData}
+        margin={{ top: 10, right: 20, left: 10, bottom: 5 }}
+      >
+        <CartesianGrid vertical={false} strokeDasharray="3 3" />
+        <XAxis
+          dataKey="_x"
+          tickLine={false}
+          tickMargin={10}
+          axisLine={false}
+          tickFormatter={(value) => formatXLabel(String(value))}
+          interval="preserveStartEnd"
+          minTickGap={40}
+        />
+        <YAxis
+          tickLine={false}
+          axisLine={false}
+          tickFormatter={(value) =>
+            typeof value === 'number' ? value.toLocaleString() : String(value)
+          }
+        />
+        <ChartTooltip content={<ChartTooltipContent />} />
+        {options.legend && <ChartLegend content={<ChartLegendContent />} />}
+        {sanitizedKeys.map((item) => (
+          <Area
+            key={item.original}
+            type="monotone"
+            dataKey={item.sanitized}
+            name={item.original}
+            fill={`var(--color-${item.sanitized})`}
+            stroke={`var(--color-${item.sanitized})`}
+            fillOpacity={0.6}
+            strokeWidth={2}
+            stackId={options.stacked ? 'stack' : undefined}
+            animationDuration={skipAnimation ? 0 : 500}
+          />
+        ))}
+      </RechartsAreaChart>
+    </ChartContainer>
   );
 }

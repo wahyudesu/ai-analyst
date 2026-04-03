@@ -6,43 +6,62 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
 } from 'recharts';
-import { getChartColor } from './colors';
-import type { ChartConfig } from './types';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from '@/components/ui/chart';
+import type { ChartConfig as LegacyChartConfig } from './types';
 
 interface StackedAreaChartProps {
-  config: ChartConfig;
+  config: LegacyChartConfig;
   className?: string;
 }
 
 /**
- * Stacked area chart component for showing multiple data series stacked
+ * Stacked area chart component using Recharts with shadcn/ui pattern
  */
 export function StackedAreaChart({ config, className }: StackedAreaChartProps) {
-  const { data, xAxis, yAxis, options, colors } = config;
+  const { data, options, colors } = config;
   const series = data.series || [];
 
   if (series.length === 0 || !series[0]?.data?.length) {
     return (
-        <div className={`flex items-center justify-center h-64 text-muted-foreground ${className || ''}`}>
+      <div className={`flex items-center justify-center h-64 text-muted-foreground ${className || ''}`}>
         No data available
       </div>
     );
   }
 
-  // Prepare data for Recharts
+  // Build shadcn chart config from legacy config with sanitized keys
+  const sanitizedKeys = series.map((s, idx) => ({
+    original: s.name,
+    sanitized: s.name.replace(/\s+/g, '-').toLowerCase(),
+    color: colors?.palette?.[idx] || s.color || `var(--chart-${(idx % 5) + 1})`,
+  }));
+
+  const shadcnConfig: ChartConfig = sanitizedKeys.reduce((acc, item) => {
+    acc[item.sanitized] = {
+      label: item.original,
+      color: item.color,
+    };
+    return acc;
+  }, {} as ChartConfig);
+
+  // Prepare data for Recharts with sanitized keys
   const chartData = series[0].data.map((point, index) => {
     const row: Record<string, unknown> = {
       _x: point.x,
       _label: point.label,
     };
 
-    series.forEach((s) => {
+    series.forEach((s, idx) => {
       if (s.data[index]) {
-        row[s.name] = s.data[index].y;
+        row[sanitizedKeys[idx].sanitized] = s.data[index].y;
       }
     });
 
@@ -50,51 +69,42 @@ export function StackedAreaChart({ config, className }: StackedAreaChartProps) {
   });
 
   return (
-    <div className={className}>
-      <ResponsiveContainer width="100%" height={300}>
-        <RechartsAreaChart
-          data={chartData}
-          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-        >
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-            <XAxis
-              dataKey="_x"
-              stroke="var(--muted-foreground)"
-              className="text-xs"
-              tick={{ fill: 'currentColor', className: 'text-muted-foreground text-[10px]' }}
-              tickLine={{ stroke: 'var(--muted-foreground)' }}
-            />
-            <YAxis
-              stroke="var(--muted-foreground)"
-              className="text-xs"
-              tick={{ fill: 'currentColor', className: 'text-muted-foreground text-[10px]' }}
-              tickLine={{ stroke: 'var(--muted-foreground)' }}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'var(--popover)',
-                border: '1px solid var(--border)',
-                borderRadius: '0.5rem',
-                color: 'var(--popover-foreground)',
-              }}
-              itemStyle={{ color: 'var(--foreground)' }}
-              labelStyle={{ color: 'var(--muted-foreground)' }}
-            />
-            {options.legend && <Legend wrapperStyle={{ color: 'var(--foreground)' }} />}
-          {series.map((s, seriesIndex) => (
-            <Area
-              key={s.name}
-              type="monotone"
-              dataKey={s.name}
-              name={s.name}
-              stackId="stack"
-              stroke={getChartColor(seriesIndex)}
-              fill={getChartColor(seriesIndex)}
-              fillOpacity={0.6}
-            />
-          ))}
-        </RechartsAreaChart>
-      </ResponsiveContainer>
-    </div>
+    <ChartContainer config={shadcnConfig} className={className}>
+      <RechartsAreaChart
+        data={chartData}
+        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+      >
+        <CartesianGrid vertical={false} strokeDasharray="3 3" />
+        <XAxis
+          dataKey="_x"
+          tickLine={false}
+          tickMargin={10}
+          axisLine={false}
+          interval="preserveStartEnd"
+          minTickGap={40}
+        />
+        <YAxis
+          tickLine={false}
+          axisLine={false}
+          tickFormatter={(value) =>
+            typeof value === 'number' ? value.toLocaleString() : String(value)
+          }
+        />
+        <ChartTooltip content={<ChartTooltipContent />} />
+        {options.legend && <ChartLegend content={<ChartLegendContent />} />}
+        {sanitizedKeys.map((item) => (
+          <Area
+            key={item.original}
+            type="monotone"
+            dataKey={item.sanitized}
+            name={item.original}
+            fill={`var(--color-${item.sanitized})`}
+            stroke={`var(--color-${item.sanitized})`}
+            fillOpacity={0.6}
+            stackId="stack"
+          />
+        ))}
+      </RechartsAreaChart>
+    </ChartContainer>
   );
 }

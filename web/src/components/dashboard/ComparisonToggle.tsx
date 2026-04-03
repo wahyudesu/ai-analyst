@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -37,20 +38,28 @@ export function ComparisonToggle({
   className,
   size = "sm",
 }: ComparisonToggleProps) {
+  const [open, setOpen] = useState(false);
   const selectedOption = comparisonOptions.find((opt) => opt.value === value);
 
+  const handleSelect = (newValue: ComparisonMode) => {
+    onChange(newValue);
+    setOpen(false);
+  };
+
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
           size={size}
           className={cn(
-            "h-auto px-1.5 py-0.5 text-xs font-medium text-muted-foreground hover:text-foreground gap-1",
+            "h-auto px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50 gap-1.5 rounded-md",
+            "data-[state=open]:bg-accent/50 data-[state=open]:text-foreground",
+            "transition-colors",
             className
           )}
         >
-          <TrendingUp className="w-3 h-3" />
+          <TrendingUp className="w-3.5 h-3.5" />
           <span>{selectedOption?.label || "MoM"}</span>
         </Button>
       </DropdownMenuTrigger>
@@ -58,13 +67,13 @@ export function ComparisonToggle({
         {comparisonOptions.map((option) => (
           <DropdownMenuItem
             key={option.value}
-            onClick={() => onChange(option.value)}
+            onClick={() => handleSelect(option.value)}
             className={cn(
-              "flex flex-col items-start gap-0.5",
-              value === option.value && "bg-accent"
+              "flex flex-col items-start gap-0.5 py-2.5 cursor-pointer",
+              value === option.value && "bg-accent/50"
             )}
           >
-            <span className="font-medium text-sm">{option.label}</span>
+            <span className="text-sm font-medium">{option.label}</span>
             <span className="text-xs text-muted-foreground">
               {option.description}
             </span>

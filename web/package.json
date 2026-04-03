@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "biome check .",
-    "lint:fix": "biome check --write ."
+    "lint:fix": "biome check --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.25",
@@ -51,8 +55,9 @@
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-jsx-parser": "^2.4.1",
+    "react-resizable-panels": "^4.9.0",
     "react-use-measure": "^2.1.7",
-    "recharts": "^3.7.0",
+    "recharts": "^3.8.0",
     "shiki": "^3.22.0",
     "streamdown": "^2.1.0",
     "tailwind-merge": "^3.4.0",

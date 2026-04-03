@@ -33,7 +33,7 @@ export class DashboardErrorBoundary extends React.Component<Props, State> {
       return (
         <div className="flex items-center justify-center min-h-[400px]">
           <Card className="max-w-md w-full">
-            <CardContent className="p-6">
+            <CardContent>
               <div className="text-center">
                 <div className="w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
                   <AlertCircle className="w-6 h-6 text-destructive" />

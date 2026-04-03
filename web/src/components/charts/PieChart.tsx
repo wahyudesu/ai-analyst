@@ -4,15 +4,19 @@ import {
   PieChart as RechartsPieChart,
   Pie,
   Cell,
-  ResponsiveContainer,
-  Tooltip,
-  Legend,
 } from 'recharts';
-import { getChartColor } from './colors';
-import type { ChartConfig } from './types';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from '@/components/ui/chart';
+import type { ChartConfig as LegacyChartConfig } from './types';
 
 interface PieChartProps {
-  config: ChartConfig;
+  config: LegacyChartConfig;
   className?: string;
   skipAnimation?: boolean;
 }
@@ -20,12 +24,11 @@ interface PieChartProps {
 interface PieDataItem {
   name: string;
   value: number;
-  percentage?: number;
+  fill?: string;
 }
 
 /**
- * Pie chart component using Recharts
- * Shows proportions of a whole with customizable slices
+ * Pie chart component using Recharts with shadcn/ui pattern
  */
 export function PieChart({ config, className, skipAnimation }: PieChartProps) {
   const { data, colors, options } = config;
@@ -33,80 +36,62 @@ export function PieChart({ config, className, skipAnimation }: PieChartProps) {
 
   if (slices.length === 0) {
     return (
-        <div className={`flex items-center justify-center h-64 text-muted-foreground ${className || ''}`}>
+      <div className={`flex items-center justify-center h-64 text-muted-foreground ${className || ''}`}>
         No data available
       </div>
     );
   }
 
-  // Prepare data for Recharts
-  const chartData: PieDataItem[] = slices.map((slice) => ({
+  // Prepare data for Recharts with fill colors
+  const chartData: PieDataItem[] = slices.map((slice, index) => ({
     name: slice.name,
     value: slice.value,
-    percentage: slice.percentage,
+    fill: slice.color || colors?.palette?.[index] || `var(--chart-${(index % 5) + 1})`,
   }));
 
   // Calculate total for percentage
   const total = chartData.reduce((sum, item) => sum + item.value, 0);
 
+  // Build shadcn chart config from slices
+  const shadcnConfig: ChartConfig = slices.reduce((acc, slice, idx) => {
+    acc[slice.name] = {
+      label: slice.name,
+      color: slice.color || colors?.palette?.[idx] || `var(--chart-${(idx % 5) + 1})`,
+    };
+    return acc;
+  }, {} as ChartConfig);
+
   return (
-    <div className={className}>
-      <ResponsiveContainer width="100%" height={300}>
-        <RechartsPieChart margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-            <Pie
-              data={chartData}
-              cx="50%"
-              cy="50%"
-              labelLine={false}
-              label={({ cx, cy, midAngle, innerRadius, outerRadius, name, value }) => {
-                const RADIAN = Math.PI / 180;
-                const radius = innerRadius + (outerRadius - innerRadius) * 1.4;
-                const x = cx + radius * Math.cos(-(midAngle ?? 0) * RADIAN);
-                const y = cy + radius * Math.sin(-(midAngle ?? 0) * RADIAN);
-                const percent = total > 0 ? ((value || 0) / total * 100).toFixed(1) : '0';
-                const labelText = options.showDataLabels ? `${name}: ${percent}%` : name;
-                return (
-                    <text
-                      x={x}
-                      y={y}
-                      className="text-foreground text-[10px]"
-                      fill="currentColor"
-                      textAnchor={x > cx ? 'start' : 'end'}
-                      dominantBaseline="central"
-                    >
-                      {labelText}
-                    </text>
-                );
-              }}
-              outerRadius={80}
-              fill="#8884d8"
-              dataKey="value"
-            >
-            {slices.map((slice, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={getChartColor(index)}
-              />
-            ))}
-          </Pie>
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'var(--popover)',
-                border: '1px solid var(--border)',
-                borderRadius: '0.5rem',
-                color: 'var(--popover-foreground)',
-              }}
-              itemStyle={{ color: 'var(--foreground)' }}
-              labelStyle={{ color: 'var(--muted-foreground)' }}
-              formatter={(value?: number) => {
-              if (value === undefined) return ['', ''];
-              const percent = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
-              return [`${value} (${percent}%)`, ''];
-            }}
+    <ChartContainer config={shadcnConfig} className={className}>
+      <RechartsPieChart margin={{ top: 10, right: 10, left: 10, bottom: 60 }}>
+        <Pie
+          data={chartData}
+          cx="50%"
+          cy="45%"
+          labelLine={false}
+          label={options.showDataLabels ? ({ name, value }) => {
+            const percent = total > 0 ? ((value || 0) / total * 100).toFixed(1) : '0';
+            return `${percent}%`;
+          } : false}
+          outerRadius={70}
+          dataKey="value"
+          animationDuration={skipAnimation ? 0 : 500}
+        >
+          {chartData.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={entry.fill} />
+          ))}
+        </Pie>
+        <ChartTooltip
+          content={<ChartTooltipContent />}
+        />
+        {options.legend && (
+          <ChartLegend
+            content={<ChartLegendContent />}
+            verticalAlign="bottom"
+            align="center"
           />
-            {options.legend && <Legend wrapperStyle={{ color: 'var(--foreground)' }} />}
-        </RechartsPieChart>
-      </ResponsiveContainer>
-    </div>
+        )}
+      </RechartsPieChart>
+    </ChartContainer>
   );
 }

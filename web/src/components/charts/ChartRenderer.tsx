@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useCallback } from 'react';
 import { Download } from 'lucide-react';
 import { BarChart } from './BarChart';
 import { LineChart } from './LineChart';
@@ -14,12 +14,20 @@ interface ChartRendererProps {
   skipAnimation?: boolean;
 }
 
-/**
- * Download chart as image (PNG or SVG)
- */
+// Constants hoisted outside component
+const DEFAULT_FILENAME = 'chart';
+const CANVAS_SCALE = 2; // 2x for better quality
+const WHITE_BACKGROUND = '#ffffff';
+
+type ChartType = ChartConfig['chartType'];
+
+// ============================================================================
+// Download utility - hoisted outside component to avoid recreating
+// ============================================================================
+
 async function downloadChartAsImage(
   element: HTMLElement | null,
-  filename: string = 'chart'
+  filename: string = DEFAULT_FILENAME
 ): Promise<void> {
   if (!element) return;
 
@@ -43,13 +51,13 @@ async function downloadChartAsImage(
 
     // Create canvas for PNG conversion
     const canvas = document.createElement('canvas');
-    canvas.width = width * 2; // 2x for better quality
-    canvas.height = height * 2;
+    canvas.width = width * CANVAS_SCALE;
+    canvas.height = height * CANVAS_SCALE;
     const ctx = canvas.getContext('2d');
     if (!ctx) {
       throw new Error('Failed to get canvas context');
     }
-    ctx.scale(2, 2);
+    ctx.scale(CANVAS_SCALE, CANVAS_SCALE);
 
     // Create blob and image from SVG
     const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
@@ -58,7 +66,7 @@ async function downloadChartAsImage(
     const img = new Image();
     img.onload = () => {
       // Draw white background (for dark mode compatibility)
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = WHITE_BACKGROUND;
       ctx.fillRect(0, 0, width, height);
 
       // Draw the image
@@ -95,6 +103,35 @@ async function downloadChartAsImage(
   }
 }
 
+// ============================================================================
+// Chart render function - replaces IIFE pattern
+// ============================================================================
+
+function renderChart(config: ChartConfig, skipAnimation?: boolean) {
+  const { chartType } = config;
+
+  switch (chartType) {
+    case 'bar':
+      return <BarChart config={config} skipAnimation={skipAnimation} />;
+    case 'line':
+      return <LineChart config={config} skipAnimation={skipAnimation} />;
+    case 'area':
+      return <AreaChart config={config} skipAnimation={skipAnimation} />;
+    case 'pie':
+      return <PieChart config={config} skipAnimation={skipAnimation} />;
+    default:
+      return (
+        <div className="flex items-center justify-center h-64 text-muted-foreground">
+          Unknown chart type: {chartType}
+        </div>
+      );
+  }
+}
+
+// ============================================================================
+// Main component
+// ============================================================================
+
 /**
  * Main chart renderer component that switches based on chartType
  * Use this component to render any chart type from the backend configuration
@@ -103,48 +140,31 @@ export function ChartRenderer({ config, className, skipAnimation }: ChartRendere
   const chartRef = useRef<HTMLDivElement>(null);
   const { chartType, title, subtitle } = config;
 
-  const handleDownload = () => {
-    const filename = title ? title.replace(/\s+/g, '-') : 'chart';
+  const handleDownload = useCallback(() => {
+    const filename = title ? title.replace(/\s+/g, '-') : DEFAULT_FILENAME;
     downloadChartAsImage(chartRef.current, filename);
-  };
+  }, [title]);
 
-    return (
-      <div className={className}>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            {title && <h3 className="text-lg font-semibold text-foreground">{title}</h3>}
-            {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
-          </div>
-          <button
-            onClick={handleDownload}
-            className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted rounded-lg transition-colors"
-            title="Download chart as image"
-          >
-            <Download className="w-4 h-4" />
-            <span>Download</span>
-          </button>
+  return (
+    <div className={className}>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          {title && <h3 className="text-lg font-semibold text-foreground">{title}</h3>}
+          {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
         </div>
-
-        <div ref={chartRef}>
-          {(() => {
-            switch (chartType) {
-              case 'bar':
-                return <BarChart config={config} skipAnimation={skipAnimation} />;
-              case 'line':
-                return <LineChart config={config} skipAnimation={skipAnimation} />;
-              case 'area':
-                return <AreaChart config={config} skipAnimation={skipAnimation} />;
-              case 'pie':
-                return <PieChart config={config} skipAnimation={skipAnimation} />;
-              default:
-                return (
-                  <div className="flex items-center justify-center h-64 text-muted-foreground">
-                    Unknown chart type: {chartType}
-                  </div>
-                );
-            }
-          })()}
-        </div>
+        <button
+          onClick={handleDownload}
+          className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted rounded-lg transition-colors"
+          title="Download chart as image"
+        >
+          <Download className="w-4 h-4" />
+          <span>Download</span>
+        </button>
       </div>
-    );
+
+      <div ref={chartRef}>
+        {renderChart(config, skipAnimation)}
+      </div>
+    </div>
+  );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Plus, Pin, Edit2, Check, MessageSquare, Database, ChartBar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,15 +11,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { threadsClient } from "@/lib/threads-client";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
+// Constants - hoisted outside component
 const DEFAULT_AGENT_ID = "data-analyst";
+const CHAT_SESSIONS_KEY = "chat-sessions";
+const THREAD_ID_DISPLAY_LENGTH = 8;
 
-const AGENT_ICONS: Record<string, React.ElementType> = {
+const AGENT_ICONS = {
   "data-analyst": Database,
   "chart-agent": ChartBar,
   "supabase-agent": Database,
 } as const;
+
+type AgentId = keyof typeof AGENT_ICONS;
 
 interface ChatSession {
   id: string;
@@ -29,51 +34,87 @@ interface ChatSession {
   isPinned?: boolean;
 }
 
+interface DeleteDialogState {
+  isOpen: boolean;
+  sessionId: string | null;
+  sessionTitle: string;
+}
+
+const INITIAL_DELETE_DIALOG: DeleteDialogState = {
+  isOpen: false,
+  sessionId: null,
+  sessionTitle: "",
+};
+
+// ============================================================================
+// Helper functions - hoisted outside component
+// ============================================================================
+
+function loadSessionsFromStorage(): ChatSession[] {
+  try {
+    const stored = localStorage.getItem(CHAT_SESSIONS_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return parsed.map((s: any) => ({
+        ...s,
+        createdAt: new Date(s.createdAt),
+      }));
+    }
+  } catch (error) {
+    console.error("Failed to load chat sessions:", error);
+  }
+  return [];
+}
+
+function saveSessionsToStorage(sessions: ChatSession[]): void {
+  try {
+    localStorage.setItem(CHAT_SESSIONS_KEY, JSON.stringify(sessions));
+  } catch (error) {
+    console.error("Failed to save chat sessions:", error);
+  }
+}
+
+function sortSessions(sessions: ChatSession[]): ChatSession[] {
+  return [...sessions].sort((a, b) => {
+    // Pinned sessions first
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
+    // Then by creation date (newest first)
+    return b.createdAt.getTime() - a.createdAt.getTime();
+  });
+}
+
+function getAgentIconComponent(agentId?: string): React.ElementType {
+  return AGENT_ICONS[agentId as AgentId] || MessageSquare;
+}
+
+// ============================================================================
+// Main component
+// ============================================================================
+
 export function ChatSidebar() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  // Get current thread ID from localStorage or create new one
   const currentThreadId = threadsClient.getOrCreateThreadId();
 
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
-  const [deleteDialog, setDeleteDialog] = useState<{
-    isOpen: boolean;
-    sessionId: string | null;
-    sessionTitle: string;
-  }>({
-    isOpen: false,
-    sessionId: null,
-    sessionTitle: "",
-  });
+  const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState>(INITIAL_DELETE_DIALOG);
   const [sessionActionsOpen, setSessionActionsOpen] = useState<string | null>(null);
 
-  const loadSessions = useCallback(() => {
-    const stored = localStorage.getItem("chat-sessions");
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      setSessions(
-        parsed.map((s: any) => ({
-          ...s,
-          createdAt: new Date(s.createdAt),
-        }))
-      );
-    }
-  }, []);
-
-  const saveSessions = useCallback((updatedSessions: ChatSession[]) => {
-    localStorage.setItem("chat-sessions", JSON.stringify(updatedSessions));
-  }, []);
-
+  // Load sessions on mount - empty deps since loadSessionsFromStorage is stable
   useEffect(() => {
-    loadSessions();
-  }, [loadSessions]);
+    setSessions(loadSessionsFromStorage());
+  }, []);
+
+  // Stable callbacks - no dependencies needed for localStorage operations
+  const saveSessions = useCallback((updatedSessions: ChatSession[]) => {
+    saveSessionsToStorage(updatedSessions);
+  }, []);
 
   const startNewChat = useCallback(() => {
     threadsClient.clearCurrentThreadId();
-    const newThreadId = threadsClient.getOrCreateThreadId();
-    // Navigate to the new thread
+    threadsClient.getOrCreateThreadId();
     router.push("/chat");
     // Force reload to reset the chat
     window.location.reload();
@@ -100,7 +141,7 @@ export function ChatSidebar() {
         startNewChat();
       }
 
-      setDeleteDialog({ isOpen: false, sessionId: null, sessionTitle: "" });
+      setDeleteDialog({ ...INITIAL_DELETE_DIALOG });
     },
     [currentThreadId, saveSessions, startNewChat]
   );
@@ -108,9 +149,6 @@ export function ChatSidebar() {
   const pinSession = useCallback(
     (sessionId: string) => {
       setSessions((prev) => {
-        const session = prev.find((s) => s.id === sessionId);
-        if (!session) return prev;
-
         const updated = prev.map((s) =>
           s.id === sessionId ? { ...s, isPinned: !s.isPinned } : s
         );
@@ -136,14 +174,33 @@ export function ChatSidebar() {
     [saveSessions]
   );
 
-  const confirmDeleteSession = useCallback((sessionId: string) => {
-    const session = sessions.find((s) => s.id === sessionId);
+  const confirmDeleteSession = useCallback((sessionId: string, sessionTitle: string) => {
     setDeleteDialog({
       isOpen: true,
       sessionId,
-      sessionTitle: session?.title || "This chat",
+      sessionTitle,
     });
-  }, [sessions]);
+  }, []);
+
+  const startEditing = useCallback((sessionId: string, title: string) => {
+    setEditingTitle(title);
+    setEditingSessionId(sessionId);
+    setSessionActionsOpen(null);
+  }, []);
+
+  const togglePinSession = useCallback((sessionId: string) => {
+    pinSession(sessionId);
+    setSessionActionsOpen(null);
+  }, [pinSession]);
+
+  const requestDeleteSession = useCallback((sessionId: string) => {
+    const session = sessions.find((s) => s.id === sessionId);
+    confirmDeleteSession(sessionId, session?.title || "This chat");
+    setSessionActionsOpen(null);
+  }, [sessions, confirmDeleteSession]);
+
+  // Sorted sessions - memoized to avoid resorting on every render
+  const sortedSessions = useMemo(() => sortSessions(sessions), [sessions]);
 
   return (
     <div className="flex flex-col h-full">
@@ -165,138 +222,28 @@ export function ChatSidebar() {
           Recent Chats
         </h3>
         <div className="space-y-1">
-          {sessions.length === 0 ? (
+          {sortedSessions.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-4 px-2">
               No chat history yet
             </p>
           ) : (
-            sessions
-              .sort((a, b) => {
-                if (a.isPinned && !b.isPinned) return -1;
-                if (!a.isPinned && b.isPinned) return 1;
-                return b.createdAt.getTime() - a.createdAt.getTime();
-              })
-              .map((session) => {
-                const SessionIcon = AGENT_ICONS[session.agentId || ""] || MessageSquare;
-                const isActive = session.id === currentThreadId;
-                const isEditing = editingSessionId === session.id;
-
-                return (
-                  <div
-                    key={session.id}
-                    className={`
-                      group flex items-center gap-2 px-3 py-2 rounded-lg transition-colors
-                      ${
-                        isActive
-                          ? "bg-accent text-accent-foreground"
-                          : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
-                      }
-                      ${!isEditing ? "cursor-pointer" : ""}
-                    `}
-                    onClick={() => !isEditing && switchSession(session.id)}
-                  >
-                    {session.isPinned && (
-                      <Pin className="w-3 h-3 text-primary shrink-0" />
-                    )}
-                    <SessionIcon className="w-4 h-4 shrink-0" />
-
-                    {isEditing ? (
-                      <div className="flex-1 flex items-center gap-1">
-                        <input
-                          type="text"
-                          value={editingTitle}
-                          onChange={(e) => setEditingTitle(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && editingTitle.trim()) {
-                              renameSession(session.id, editingTitle.trim());
-                            } else if (e.key === "Escape") {
-                              setEditingSessionId(null);
-                            }
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                          className="flex-1 text-xs bg-background border border-border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-ring"
-                          autoFocus
-                        />
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (editingTitle.trim()) {
-                              renameSession(session.id, editingTitle.trim());
-                            }
-                          }}
-                          className="p-1 hover:bg-muted rounded"
-                        >
-                          <Check className="w-3 h-3 text-green-600" />
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="flex-1 text-xs truncate">
-                        {session.title}
-                      </span>
-                    )}
-
-                    {!isEditing && (
-                      <DropdownMenu
-                        open={sessionActionsOpen === session.id}
-                        onOpenChange={(open) =>
-                          setSessionActionsOpen(open ? session.id : null)
-                        }
-                      >
-                        <DropdownMenuTrigger asChild>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSessionActionsOpen(
-                                sessionActionsOpen === session.id ? null : session.id
-                              );
-                            }}
-                            className={`
-                              opacity-0 group-hover:opacity-100 p-1 hover:bg-muted rounded transition-opacity
-                              ${sessionActionsOpen === session.id ? "opacity-100" : ""}
-                            `}
-                          >
-                            <Edit2 className="w-3 h-3" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          className="w-40"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setEditingTitle(session.title);
-                              setEditingSessionId(session.id);
-                              setSessionActionsOpen(null);
-                            }}
-                            className="cursor-pointer text-xs"
-                          >
-                            Rename
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              pinSession(session.id);
-                              setSessionActionsOpen(null);
-                            }}
-                            className="cursor-pointer text-xs"
-                          >
-                            {session.isPinned ? "Unpin" : "Pin"}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              confirmDeleteSession(session.id);
-                              setSessionActionsOpen(null);
-                            }}
-                            className="cursor-pointer text-xs text-destructive focus:text-destructive"
-                          >
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                );
-              })
+            sortedSessions.map((session) => (
+              <SessionItem
+                key={session.id}
+                session={session}
+                isActive={session.id === currentThreadId}
+                isEditing={editingSessionId === session.id}
+                editingTitle={editingTitle}
+                onEditingTitleChange={setEditingTitle}
+                onSwitch={switchSession}
+                onStartEdit={startEditing}
+                onSaveEdit={renameSession}
+                onTogglePin={togglePinSession}
+                onDelete={requestDeleteSession}
+                onActionsToggle={setSessionActionsOpen}
+                isActionsOpen={sessionActionsOpen === session.id}
+              />
+            ))
           )}
         </div>
       </div>
@@ -304,9 +251,167 @@ export function ChatSidebar() {
       {/* Thread Info */}
       <div className="p-3 border-t border-border">
         <p className="text-xs text-muted-foreground">
-          Thread: <span className="font-mono">{currentThreadId.slice(0, 8)}</span>
+          Thread:{" "}
+          <span className="font-mono">
+            {currentThreadId.slice(0, THREAD_ID_DISPLAY_LENGTH)}
+          </span>
         </p>
       </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Session Item Sub-component
+// ============================================================================
+
+interface SessionItemProps {
+  session: ChatSession;
+  isActive: boolean;
+  isEditing: boolean;
+  editingTitle: string;
+  onEditingTitleChange: (title: string) => void;
+  onSwitch: (sessionId: string) => void;
+  onStartEdit: (sessionId: string, title: string) => void;
+  onSaveEdit: (sessionId: string, title: string) => void;
+  onTogglePin: (sessionId: string) => void;
+  onDelete: (sessionId: string) => void;
+  onActionsToggle: (sessionId: string | null) => void;
+  isActionsOpen: boolean;
+}
+
+function SessionItem({
+  session,
+  isActive,
+  isEditing,
+  editingTitle,
+  onEditingTitleChange,
+  onSwitch,
+  onStartEdit,
+  onSaveEdit,
+  onTogglePin,
+  onDelete,
+  onActionsToggle,
+  isActionsOpen,
+}: SessionItemProps) {
+  const SessionIcon = getAgentIconComponent(session.agentId);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && editingTitle.trim()) {
+      onSaveEdit(session.id, editingTitle.trim());
+    } else if (e.key === "Escape") {
+      onEditingTitleChange("");
+      onActionsToggle(null);
+    }
+  }, [editingTitle, session.id, onSaveEdit, onEditingTitleChange, onActionsToggle]);
+
+  const handleSaveEdit = useCallback(() => {
+    if (editingTitle.trim()) {
+      onSaveEdit(session.id, editingTitle.trim());
+    }
+  }, [editingTitle, session.id, onSaveEdit]);
+
+  const handleToggleActions = useCallback(() => {
+    onActionsToggle(isActionsOpen ? null : session.id);
+  }, [isActionsOpen, session.id, onActionsToggle]);
+
+  const handleClick = useCallback(() => {
+    if (!isEditing) {
+      onSwitch(session.id);
+    }
+  }, [isEditing, session.id, onSwitch]);
+
+  return (
+    <div
+      className={`
+        group flex items-center gap-2 px-3 py-2 rounded-lg transition-colors
+        ${
+          isActive
+            ? "bg-accent text-accent-foreground"
+            : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+        }
+        ${!isEditing ? "cursor-pointer" : ""}
+      `}
+      onClick={handleClick}
+    >
+      {session.isPinned && (
+        <Pin className="w-3 h-3 text-primary shrink-0" />
+      )}
+      <SessionIcon className="w-4 h-4 shrink-0" />
+
+      {isEditing ? (
+        <div className="flex-1 flex items-center gap-1">
+          <input
+            type="text"
+            value={editingTitle}
+            onChange={(e) => onEditingTitleChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onClick={(e) => e.stopPropagation()}
+            className="flex-1 text-xs bg-background border border-border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-ring"
+            autoFocus
+          />
+          <button
+            onClick={handleSaveEdit}
+            className="p-1 hover:bg-muted rounded"
+          >
+            <Check className="w-3 h-3 text-green-600" />
+          </button>
+        </div>
+      ) : (
+        <span className="flex-1 text-xs truncate">
+          {session.title}
+        </span>
+      )}
+
+      {!isEditing && (
+        <DropdownMenu
+          open={isActionsOpen}
+          onOpenChange={(open) => {
+            if (open !== isActionsOpen) {
+              handleToggleActions();
+            }
+          }}
+        >
+          <DropdownMenuTrigger asChild>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggleActions();
+              }}
+              className={`
+                opacity-0 group-hover:opacity-100 p-1 hover:bg-muted rounded transition-opacity
+                ${isActionsOpen ? "opacity-100" : ""}
+              `}
+            >
+              <Edit2 className="w-3 h-3" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="w-40"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DropdownMenuItem
+              onClick={() => onStartEdit(session.id, session.title)}
+              className="cursor-pointer text-xs"
+            >
+              Rename
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onTogglePin(session.id)}
+              className="cursor-pointer text-xs"
+            >
+              {session.isPinned ? "Unpin" : "Pin"}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onDelete(session.id)}
+              className="cursor-pointer text-xs text-destructive focus:text-destructive"
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </div>
   );
 }
