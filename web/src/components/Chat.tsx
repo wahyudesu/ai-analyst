@@ -270,8 +270,8 @@ export function Chat({
       }
     }
 
-    loadSessions()
-    loadModels()
+    // Run in parallel for better performance
+    Promise.all([loadSessions(), loadModels()])
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -396,21 +396,17 @@ export function Chat({
     []
   )
 
-  const confirmDeleteSession = useCallback(
-    (sessionId: string, e: React.MouseEvent) => {
-      e.stopPropagation()
-      // Find session from current state (not from dependency)
-      setDeleteDialog(prev => {
-        const session = sessions.find(s => s.id === sessionId)
-        return {
-          isOpen: true,
-          sessionId,
-          sessionTitle: session?.title || "This chat",
-        }
-      })
-    },
-    [sessions]
-  )
+  const confirmDeleteSession = useCallback((sessionId: string) => {
+    // Find session from current state (not from dependency)
+    setDeleteDialog(prev => {
+      const session = sessions.find(s => s.id === sessionId)
+      return {
+        isOpen: true,
+        sessionId,
+        sessionTitle: session?.title || "This chat",
+      }
+    })
+  }, [sessions])
 
   const deleteSession = useCallback(
     (sessionId: string) => {
@@ -683,9 +679,7 @@ export function Chat({
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => {
-                                  confirmDeleteSession(session.id, {
-                                    stopPropagation: () => {},
-                                  } as any)
+                                  confirmDeleteSession(session.id)
                                   setSessionActionsOpen(null)
                                 }}
                                 className="cursor-pointer text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
@@ -774,10 +768,7 @@ export function Chat({
                         currentSessionId && pinSession(currentSessionId)
                       }
                       onDelete={() =>
-                        currentSessionId &&
-                        confirmDeleteSession(currentSessionId, {
-                          stopPropagation: () => {},
-                        } as any)
+                        currentSessionId && confirmDeleteSession(currentSessionId)
                       }
                       skipAnimation={!isNewMessage}
                     />

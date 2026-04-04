@@ -6,7 +6,7 @@ import { LineChart } from "@/components/charts/LineChart"
 import { MetricCard } from "@/components/dashboard/MetricCard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertTriangle, Rocket, ShieldCheck, Timer } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 interface ReliabilityData {
   metrics: {
@@ -29,6 +29,29 @@ interface ServiceStatus {
   data90: ReturnType<typeof generateUptimeData>
   data60: ReturnType<typeof generateUptimeData>
   data30: ReturnType<typeof generateUptimeData>
+}
+
+// Hoist these functions outside component to avoid recreation on every render (rendering-hoist-jsx)
+const getStatusColor = (status: ServiceStatus["status"]) => {
+  switch (status) {
+    case "Operational":
+      return "bg-emerald-500 dark:bg-emerald-500"
+    case "Degraded":
+      return "bg-yellow-500 dark:bg-yellow-500"
+    case "Downtime":
+      return "bg-red-500 dark:bg-red-500"
+  }
+}
+
+const getStatusTextColor = (status: ServiceStatus["status"]) => {
+  switch (status) {
+    case "Operational":
+      return "text-emerald-600 dark:text-emerald-400"
+    case "Degraded":
+      return "text-yellow-600 dark:text-yellow-400"
+    case "Downtime":
+      return "text-red-600 dark:text-red-400"
+  }
 }
 
 export default function ReliabilityPage() {
@@ -56,61 +79,42 @@ export default function ReliabilityPage() {
   const uptimeStatus =
     uptime >= 99.9 ? "excellent" : uptime >= 99.5 ? "good" : "fair"
 
-  // Generate service status data
-  const services: ServiceStatus[] = [
-    {
-      name: "API Services",
-      url: "api.example.com",
-      status: "Operational",
-      uptime: 99.95,
-      data90: generateUptimeData(90, 99.95),
-      data60: generateUptimeData(60, 99.95),
-      data30: generateUptimeData(30, 99.95),
-    },
-    {
-      name: "Database",
-      url: "db.example.com",
-      status: "Operational",
-      uptime: 99.98,
-      data90: generateUptimeData(90, 99.98),
-      data60: generateUptimeData(60, 99.98),
-      data30: generateUptimeData(30, 99.98),
-    },
-    {
-      name: "Web Application",
-      url: "app.example.com",
-      status: "Operational",
-      uptime: 99.92,
-      data90: generateUptimeData(90, 99.92),
-      data60: generateUptimeData(60, 99.92),
-      data30: generateUptimeData(30, 99.92),
-    },
-  ]
+  // Use useMemo to avoid recreating services array on every render (rerender-memo)
+  const services: ServiceStatus[] = useMemo(
+    () => [
+      {
+        name: "API Services",
+        url: "api.example.com",
+        status: "Operational",
+        uptime: 99.95,
+        data90: generateUptimeData(90, 99.95),
+        data60: generateUptimeData(60, 99.95),
+        data30: generateUptimeData(30, 99.95),
+      },
+      {
+        name: "Database",
+        url: "db.example.com",
+        status: "Operational",
+        uptime: 99.98,
+        data90: generateUptimeData(90, 99.98),
+        data60: generateUptimeData(60, 99.98),
+        data30: generateUptimeData(30, 99.98),
+      },
+      {
+        name: "Web Application",
+        url: "app.example.com",
+        status: "Operational",
+        uptime: 99.92,
+        data90: generateUptimeData(90, 99.92),
+        data60: generateUptimeData(60, 99.92),
+        data30: generateUptimeData(30, 99.92),
+      },
+    ],
+    []
+  )
 
   // Use 30 days data for card display
   const trackerDataDays = 30
-
-  const getStatusColor = (status: ServiceStatus["status"]) => {
-    switch (status) {
-      case "Operational":
-        return "bg-emerald-500 dark:bg-emerald-500"
-      case "Degraded":
-        return "bg-yellow-500 dark:bg-yellow-500"
-      case "Downtime":
-        return "bg-red-500 dark:bg-red-500"
-    }
-  }
-
-  const getStatusTextColor = (status: ServiceStatus["status"]) => {
-    switch (status) {
-      case "Operational":
-        return "text-emerald-600 dark:text-emerald-400"
-      case "Degraded":
-        return "text-yellow-600 dark:text-yellow-400"
-      case "Downtime":
-        return "text-red-600 dark:text-red-400"
-    }
-  }
 
   return (
     <main className="p-6">

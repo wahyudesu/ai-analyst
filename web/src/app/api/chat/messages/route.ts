@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-const MASTRA_URL = process.env.MASTRA_URL || "http://localhost:4111"
+// Use NEXT_PUBLIC_MASTRA_URL for client-side accessible config
+// The API route runs server-side, so we can use MASTRA_URL directly
+const MASTRA_URL = process.env.MASTRA_URL || process.env.NEXT_PUBLIC_MASTRA_URL || "http://localhost:4111"
 
 /**
  * API route to fetch message history for a thread

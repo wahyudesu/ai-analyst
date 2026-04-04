@@ -224,7 +224,7 @@ export function ChatSidebar() {
   const sortedSessions = useMemo(() => sortSessions(sessions), [sessions])
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full border-r border-border">
       {/* New Chat Button */}
       <div className="p-4 border-b border-border">
         <Button

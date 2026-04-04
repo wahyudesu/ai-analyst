@@ -16,7 +16,7 @@ export async function GET() {
 
     // Insights generated (AI usage)
     const insightsResult = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4111"}/api/agents`,
+      `${process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_MASTRA_URL || "http://localhost:4111"}/api/agents`,
       {
         method: "GET",
       }

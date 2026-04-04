@@ -220,7 +220,7 @@ export function AppLayout({
 
         {/* Right sidebar (optional) */}
         {rightSidebar && (
-          <aside className="hidden w-72 shrink-0 border-l lg:flex lg:flex-col">
+          <aside className="hidden w-72 shrink-0 border-l lg:flex lg:flex-col h-full">
             {rightSidebar}
           </aside>
         )}

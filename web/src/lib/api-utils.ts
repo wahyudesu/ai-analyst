@@ -2,7 +2,10 @@
  * Shared utilities for Next.js API routes that proxy to Mastra server
  */
 
-const MASTRA_URL = process.env.MASTRA_URL || "http://localhost:4111"
+const MASTRA_URL =
+  process.env.MASTRA_URL ||
+  process.env.NEXT_PUBLIC_MASTRA_URL ||
+  "http://localhost:4111"
 
 interface ProxyOptions {
   method?: "GET" | "POST" | "PUT" | "DELETE"

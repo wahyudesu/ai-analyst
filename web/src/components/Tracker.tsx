@@ -1,6 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
+import { memo } from "react"
 
 export type UptimeStatus = "Operational" | "Downtime" | "Degraded" | "Inactive"
 
@@ -21,7 +22,7 @@ interface TrackerProps {
   className?: string
 }
 
-export function Tracker({ data, className }: TrackerProps) {
+export const Tracker = memo(function Tracker({ data, className }: TrackerProps) {
   return (
     <div className={cn("flex gap-1", className)}>
       {data.map((item, index) => {
@@ -41,7 +42,7 @@ export function Tracker({ data, className }: TrackerProps) {
       })}
     </div>
   )
-}
+})
 
 // Helper function to generate uptime data for a given period
 export function generateUptimeData(

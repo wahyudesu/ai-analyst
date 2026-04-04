@@ -57,6 +57,22 @@ interface ModelOption {
 
 const DEFAULT_AGENT_ID = "data-analyst"
 
+// Static icon component - hoisted outside for better performance (rendering-hoist-jsx)
+const ChartBarIcon = ({ className }: { className?: string }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M3 3v18h18" />
+    <path d="M18 9l-5 5-4-4-3 3" />
+  </svg>
+)
+
 const MODEL_OPTIONS: ModelOption[] = [
   { id: "zai-coding-plan/glm-4.5", name: "GLM 4.5", provider: "zai" },
   {
@@ -72,20 +88,7 @@ const DEFAULT_MODEL_ID = MODEL_OPTIONS[0].id
 
 const AGENT_ICONS = {
   "data-analyst": Database,
-  "chart-agent": ({ className }: { className?: string }) => (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M3 3v18h18" />
-      <path d="M18 9l-5 5-4-4-3 3" />
-    </svg>
-  ),
+  "chart-agent": ChartBarIcon,
   "supabase-agent": Database,
 } as const
 
@@ -220,7 +223,7 @@ export function ChatContent({
   )
 
   return (
-    <div className={`flex flex-col h-full ${className || ""}`}>
+    <div className={`flex flex-col ${className || ""}`}>
       {/* Agent Selector Bar */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
         <DropdownMenu>
