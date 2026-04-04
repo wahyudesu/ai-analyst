@@ -66,7 +66,10 @@ export function PieChart({ config, className, skipAnimation }: PieChartProps) {
   }, {} as ChartConfig)
 
   return (
-    <ChartContainer config={shadcnConfig} className={className}>
+    <ChartContainer
+      config={shadcnConfig}
+      className={`aspect-square w-full max-h-[320px] ${className || ""}`}
+    >
       <RechartsPieChart margin={{ top: 10, right: 10, left: 10, bottom: 60 }}>
         <Pie
           data={chartData}
@@ -82,7 +85,7 @@ export function PieChart({ config, className, skipAnimation }: PieChartProps) {
                 }
               : false
           }
-          outerRadius={70}
+          outerRadius={80}
           dataKey="value"
           animationDuration={skipAnimation ? 0 : 500}
         >

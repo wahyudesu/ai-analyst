@@ -6,9 +6,11 @@ import {
   ChartBar,
   Check,
   ChevronDown,
+  Copy,
   Database,
   Edit2,
   Menu,
+  MessageSquare,
   Pin,
   Plus,
   X,
@@ -16,6 +18,25 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+
+// AI Elements components
+import {
+  Conversation,
+  ConversationContent,
+  ConversationEmptyState,
+  ConversationScrollButton,
+} from "@/components/ai-elements/conversation"
+import { Persona } from "@/components/ai-elements/persona"
+import {
+  PromptInput,
+  PromptInputBody,
+  PromptInputButton,
+  PromptInputFooter,
+  PromptInputHeader,
+  PromptInputSubmit,
+  PromptInputTextarea,
+  PromptInputTools,
+} from "@/components/ai-elements/prompt-input"
 import {
   Dialog,
   DialogContent,
@@ -462,14 +483,6 @@ export function Chat({
     [saveSessions]
   )
 
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (input.trim()) {
-      sendMessage({ text: input })
-      setInput("")
-    }
-  }
-
   // Current agent icon (memoized)
   const AgentIcon = useMemo(
     () => getAgentIcon(currentAgentId),
@@ -723,163 +736,152 @@ export function Chat({
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-          {messages.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-center">
-              <div className="max-w-2xl">
-                <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <AgentIcon className="w-8 h-8 text-orange-600 dark:text-orange-400" />
-                </div>
-                <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
-                  {currentAgentInfo?.name || "AI Agent"}
-                </h2>
-                <p className="text-zinc-600 dark:text-zinc-400">
-                  {currentAgentInfo?.description ||
-                    "Start a conversation with the AI agent."}
-                </p>
-                <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-4">
-                  Session: {threadId}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <>
-              {messages.map((message, index) => {
-                // Skip animation for messages that were already seen (loaded from history)
-                const isNewMessage =
-                  message.id && !seenMessageIdsRef.current.has(message.id)
-                if (message.id && isNewMessage) {
-                  seenMessageIdsRef.current.add(message.id)
+        {/* Messages - Using AI Elements Conversation */}
+        <Conversation>
+          <ConversationContent>
+            {messages.length === 0 ? (
+              <ConversationEmptyState
+                icon={
+                  <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center">
+                    <AgentIcon className="w-8 h-8 text-orange-600 dark:text-orange-400" />
+                  </div>
                 }
-                return (
-                  <MessageRenderer
-                    key={message.id || index}
-                    message={message as any}
-                    agentInfo={currentAgentInfo}
-                    sessionId={currentSessionId || undefined}
-                    onRename={() =>
-                      currentSessionId && openRenameDialog(currentSessionId)
-                    }
-                    onPin={() =>
-                      currentSessionId && pinSession(currentSessionId)
-                    }
-                    onDelete={() =>
-                      currentSessionId &&
-                      confirmDeleteSession(currentSessionId, {
-                        stopPropagation: () => {},
-                      } as any)
-                    }
-                    skipAnimation={!isNewMessage}
-                  />
-                )
-              })}
-              {error && (
-                <div className="p-3 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg">
-                  Error: {error.message}
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </>
-          )}
-          {(isLoading || isLoadingMessages) && (
-            <div className="flex flex-col items-center gap-3 py-8">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce" />
-                <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce delay-100" />
-                <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce delay-200" />
-              </div>
-              <span className="text-sm text-zinc-600 dark:text-zinc-400 animate-pulse">
-                {isLoading
-                  ? "AI is working on your query..."
-                  : "Loading messages..."}
-              </span>
-            </div>
-          )}
-        </div>
+                title={currentAgentInfo?.name || "AI Data Analyst"}
+                description={
+                  currentAgentInfo?.description ||
+                  "Ask questions about your database using natural language."
+                }
+              />
+            ) : (
+              <>
+                {messages.map((message, index) => {
+                  // Skip animation for messages that were already seen (loaded from history)
+                  const isNewMessage =
+                    message.id && !seenMessageIdsRef.current.has(message.id)
+                  if (message.id && isNewMessage) {
+                    seenMessageIdsRef.current.add(message.id)
+                  }
+                  return (
+                    <MessageRenderer
+                      key={message.id || index}
+                      message={message as any}
+                      agentInfo={currentAgentInfo}
+                      sessionId={currentSessionId || undefined}
+                      onRename={() =>
+                        currentSessionId && openRenameDialog(currentSessionId)
+                      }
+                      onPin={() =>
+                        currentSessionId && pinSession(currentSessionId)
+                      }
+                      onDelete={() =>
+                        currentSessionId &&
+                        confirmDeleteSession(currentSessionId, {
+                          stopPropagation: () => {},
+                        } as any)
+                      }
+                      skipAnimation={!isNewMessage}
+                    />
+                  )
+                })}
+                {error && (
+                  <div className="p-3 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg">
+                    Error: {error.message}
+                  </div>
+                )}
+              </>
+            )}
+          </ConversationContent>
 
-        {/* Input */}
-        <form
-          onSubmit={onSubmit}
-          className="border-t border-zinc-200 dark:border-zinc-800 px-6 py-4"
-        >
-          <div className="flex gap-2 items-center">
-            {/* Model Selector */}
-            <DropdownMenu
-              open={modelSelectorOpen}
-              onOpenChange={setModelSelectorOpen}
-            >
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 min-w-[140px] justify-between"
-                  disabled={isLoading}
+          {/* Scroll to bottom button */}
+          <ConversationScrollButton />
+        </Conversation>
+
+        {/* Input - Using AI Elements PromptInput */}
+        <div className="border-t border-zinc-200 dark:border-zinc-800 px-6 py-4">
+          <PromptInput
+            onSubmit={({ text }) => {
+              sendMessage({ text })
+              setInput("")
+            }}
+            className="max-w-4xl mx-auto"
+          >
+            <PromptInputBody>
+              {/* Header: Model Selector */}
+              <PromptInputHeader>
+                <DropdownMenu
+                  open={modelSelectorOpen}
+                  onOpenChange={setModelSelectorOpen}
                 >
-                  <span className="text-sm truncate">
-                    {modelOptions.find(m => m.id === currentModelId)?.name ||
-                      "Select Model"}
-                  </span>
-                  <ChevronDown
-                    className={`w-4 h-4 text-zinc-500 transition-transform ${modelSelectorOpen ? "rotate-180" : ""}`}
-                  />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56">
-                <div className="px-2 py-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                  ZAI Models
-                </div>
-                {modelOptions
-                  .filter(m => m.provider === "zai")
-                  .map(model => (
-                    <DropdownMenuItem
-                      key={model.id}
-                      onClick={() => setCurrentModelId(model.id)}
-                      className={`cursor-pointer ${currentModelId === model.id ? "bg-orange-50 dark:bg-orange-900/20" : ""}`}
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="px-3 py-1.5 border border-zinc-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 min-w-[140px] justify-between text-sm"
+                      disabled={isLoading}
                     >
-                      <span className="flex-1">{model.name}</span>
-                      {currentModelId === model.id && (
-                        <div className="w-2 h-2 bg-orange-500 rounded-full" />
-                      )}
-                    </DropdownMenuItem>
-                  ))}
-                <DropdownMenuSeparator />
-                <div className="px-2 py-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                  OpenAI Models
-                </div>
-                {modelOptions
-                  .filter(m => m.provider === "openai")
-                  .map(model => (
-                    <DropdownMenuItem
-                      key={model.id}
-                      onClick={() => setCurrentModelId(model.id)}
-                      className={`cursor-pointer ${currentModelId === model.id ? "bg-orange-50 dark:bg-orange-900/20" : ""}`}
-                    >
-                      <span className="flex-1">{model.name}</span>
-                      {currentModelId === model.id && (
-                        <div className="w-2 h-2 bg-orange-500 rounded-full" />
-                      )}
-                    </DropdownMenuItem>
-                  ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                      <span className="truncate">
+                        {modelOptions.find(m => m.id === currentModelId)
+                          ?.name || "Select Model"}
+                      </span>
+                      <ChevronDown
+                        className={`w-3.5 h-3.5 text-zinc-500 transition-transform ${modelSelectorOpen ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    <div className="px-2 py-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                      ZAI Models
+                    </div>
+                    {modelOptions
+                      .filter(m => m.provider === "zai")
+                      .map(model => (
+                        <DropdownMenuItem
+                          key={model.id}
+                          onClick={() => setCurrentModelId(model.id)}
+                          className={`cursor-pointer ${currentModelId === model.id ? "bg-orange-50 dark:bg-orange-900/20" : ""}`}
+                        >
+                          <span className="flex-1 text-sm">{model.name}</span>
+                          {currentModelId === model.id && (
+                            <div className="w-2 h-2 bg-orange-500 rounded-full" />
+                          )}
+                        </DropdownMenuItem>
+                      ))}
+                    <DropdownMenuSeparator />
+                    <div className="px-2 py-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                      OpenAI Models
+                    </div>
+                    {modelOptions
+                      .filter(m => m.provider === "openai")
+                      .map(model => (
+                        <DropdownMenuItem
+                          key={model.id}
+                          onClick={() => setCurrentModelId(model.id)}
+                          className={`cursor-pointer ${currentModelId === model.id ? "bg-orange-50 dark:bg-orange-900/20" : ""}`}
+                        >
+                          <span className="flex-1 text-sm">{model.name}</span>
+                          {currentModelId === model.id && (
+                            <div className="w-2 h-2 bg-orange-500 rounded-full" />
+                          )}
+                        </DropdownMenuItem>
+                      ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </PromptInputHeader>
 
-            <input
-              type="text"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              placeholder="Type a message..."
-              disabled={isLoading}
-              className="flex-1 px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 disabled:opacity-50"
-            />
-            <button
-              type="submit"
-              disabled={isLoading || !input.trim()}
-              className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-zinc-400 disabled:cursor-not-allowed"
-            >
-              Send
-            </button>
-          </div>
-        </form>
+              {/* Text Area */}
+              <PromptInputTextarea
+                value={input}
+                onChange={e => setInput(e.currentTarget.value)}
+                placeholder="Ask about your data..."
+              />
+
+              {/* Footer */}
+              <PromptInputFooter>
+                <PromptInputTools />
+                <PromptInputSubmit status={status} onStop={() => stop()} />
+              </PromptInputFooter>
+            </PromptInputBody>
+          </PromptInput>
+        </div>
       </div>
 
       {/* Delete Confirmation Dialog */}

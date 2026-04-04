@@ -1,7 +1,7 @@
 import { queryNeon } from "@/lib/db"
 import { type NextRequest, NextResponse } from "next/server"
 
-export const revalidate = 300
+export const revalidate = 600
 export const dynamic = "force-dynamic"
 
 export async function GET(request: NextRequest) {
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       databaseUrl
     )
 
-    const mrrByPlan = subscriptionsResult.map((r: any) => ({
+    const mrrByPlan = subscriptionsResult.map((r) => ({
       plan: r.plan_key,
       mrr: 0, // no price per plan in schema, show subscriber count only
       subscribers: Number.parseInt(r.subscribers) || 0,
@@ -124,19 +124,19 @@ export async function POST(request: NextRequest) {
           mrrByPlan,
           funnel,
           engagement: {
-            labels: engagementResult.map((r: any) => r.week),
+            labels: engagementResult.map((r) => String(r.week)),
             conversations: engagementResult.map(
-              (r: any) => Number.parseInt(r.conversations) || 0
+              (r) => Number.parseInt(r.conversations) || 0
             ),
             messages: engagementResult.map(
-              (r: any) => Number.parseInt(r.messages) || 0
+              (r) => Number.parseInt(r.messages) || 0
             ),
           },
         },
       },
       {
         headers: {
-          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+          "Cache-Control": "public, s-maxage=600, stale-while-revalidate=1200",
         },
       }
     )

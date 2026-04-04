@@ -21,7 +21,7 @@ interface LineChartProps {
   skipAnimation?: boolean
 }
 
-// Format date strings to readable format
+// Format date strings to readable format (shortened for better display)
 function formatXLabel(value: string): string {
   // Check if it's an ISO date string
   if (
@@ -30,11 +30,9 @@ function formatXLabel(value: string): string {
   ) {
     const date = new Date(value)
     if (!isNaN(date.getTime())) {
-      // Use Intl.DateTimeFormat for proper "MMM DD, YYYY" format
       return new Intl.DateTimeFormat("en-US", {
         month: "short",
         day: "numeric",
-        year: "numeric",
       }).format(date)
     }
   }

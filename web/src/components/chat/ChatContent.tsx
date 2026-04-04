@@ -1,9 +1,11 @@
 "use client"
 
 import { useChat } from "@ai-sdk/react"
+import type { FileUIPart } from "ai"
 import { DefaultChatTransport } from "ai"
-import { ChartBar, ChevronDown, Database, Send, Sparkles } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { ChevronDown, Database, Loader2, Send, Sparkles } from "lucide-react"
+import type { FormEvent } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { MessageRenderer } from "@/components/MessageRenderer"
 import { Button } from "@/components/ui/button"
@@ -19,6 +21,28 @@ import { type Agent, useAgents, useMessages } from "@/lib/api/queries"
 import { threadsClient } from "@/lib/threads-client"
 import { useDatabaseConfig } from "@/lib/use-database-config"
 
+// AI Elements components
+import {
+  Conversation,
+  ConversationContent,
+  ConversationEmptyState,
+  ConversationScrollButton,
+} from "@/components/ai-elements/conversation"
+import { Message, MessageContent } from "@/components/ai-elements/message"
+import {
+  PromptInput,
+  PromptInputBody,
+  PromptInputFooter,
+  PromptInputHeader,
+  PromptInputSubmit,
+  PromptInputTextarea,
+  PromptInputTools,
+} from "@/components/ai-elements/prompt-input"
+
+// ============================================================================
+// Types & Constants
+// ============================================================================
+
 interface ChatContentProps {
   agentId?: string
   connectionString?: string
@@ -31,7 +55,6 @@ interface ModelOption {
   provider: "zai" | "openai"
 }
 
-// Constants - hoisted outside component
 const DEFAULT_AGENT_ID = "data-analyst"
 
 const MODEL_OPTIONS: ModelOption[] = [
@@ -42,22 +65,37 @@ const MODEL_OPTIONS: ModelOption[] = [
     provider: "zai",
   },
   { id: "openai/gpt-4o-mini", name: "GPT-4o Mini", provider: "openai" },
+  { id: "openai/gpt-4o", name: "GPT-4o", provider: "openai" },
 ] as const
 
 const DEFAULT_MODEL_ID = MODEL_OPTIONS[0].id
 
-// Agent icons mapping - hoisted outside component
 const AGENT_ICONS = {
   "data-analyst": Database,
-  "chart-agent": ChartBar,
+  "chart-agent": ({ className }: { className?: string }) => (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M3 3v18h18" />
+      <path d="M18 9l-5 5-4-4-3 3" />
+    </svg>
+  ),
   "supabase-agent": Database,
 } as const
 
-type AgentId = keyof typeof AGENT_ICONS
-
-function getAgentIcon(agentId?: string): React.ElementType {
-  return AGENT_ICONS[agentId as AgentId] || Database
+function getAgentIcon(agentId?: string) {
+  return AGENT_ICONS[agentId as keyof typeof AGENT_ICONS] || Database
 }
+
+// ============================================================================
+// Main Component
+// ============================================================================
 
 export function ChatContent({
   agentId: propAgentId,
@@ -67,7 +105,6 @@ export function ChatContent({
   const [input, setInput] = useState("")
   const [currentAgentId, setCurrentAgentId] = useState<string>(DEFAULT_AGENT_ID)
   const [currentModelId, setCurrentModelId] = useState<string>(DEFAULT_MODEL_ID)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
   const { databaseUrl } = useDatabaseConfig()
 
   const threadIdRef = useRef<string>(threadsClient.getOrCreateThreadId())
@@ -76,10 +113,10 @@ export function ChatContent({
 
   const [modelSelectorOpen, setModelSelectorOpen] = useState(false)
 
-  // Fetch all agents using shared query hook
+  // Fetch agents
   const { data: allAgents = [] } = useAgents()
 
-  // Transport params ref to avoid recreating transport unnecessarily
+  // Transport params ref
   const transportParamsRef = useRef({
     agentId: currentAgentId,
     modelId: currentModelId,
@@ -88,7 +125,6 @@ export function ChatContent({
     databaseUrl,
   })
 
-  // Update ref without triggering re-renders
   transportParamsRef.current = {
     agentId: currentAgentId,
     modelId: currentModelId,
@@ -97,7 +133,7 @@ export function ChatContent({
     databaseUrl,
   }
 
-  const { messages, status, sendMessage, error, setMessages } = useChat({
+  const { messages, status, sendMessage, error, setMessages, stop } = useChat({
     transport: new DefaultChatTransport({
       api: `/api/chat?agentId=${currentAgentId}`,
       prepareSendMessagesRequest: ({ messages }) => ({
@@ -122,37 +158,29 @@ export function ChatContent({
 
   const isLoading = status === "streaming" || status === "submitted"
 
-  // Direct lookup - no useMemo needed for simple find operation
+  // Current agent info
   const currentAgentInfo = allAgents.find(a => a.id === currentAgentId) || null
 
-  // Track seen message IDs to skip chart animation for already-rendered messages
+  // Track seen message IDs
   const seenMessageIdsRef = useRef<Set<string>>(new Set())
 
-  // Fetch message history using shared query hook
+  // Fetch message history
   const { data: fetchedMessages } = useMessages(threadId, currentAgentId)
 
-  // Update messages when fetched data changes
   useEffect(() => {
     if (fetchedMessages) {
       setMessages(fetchedMessages)
-      // Mark all fetched messages as seen (skip chart animation for these)
       fetchedMessages.forEach((m: { id?: string }) => {
         if (m.id) seenMessageIdsRef.current.add(m.id)
       })
     }
   }, [fetchedMessages, setMessages])
 
-  // Clear seen message IDs when switching sessions
   useEffect(() => {
     seenMessageIdsRef.current.clear()
   }, [threadId])
 
-  // Auto-scroll to bottom
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
-
-  // Stable callbacks - primitive dependencies only
+  // Callbacks
   const startNewChat = useCallback(
     (agentId?: string) => {
       const agentToUse = agentId || DEFAULT_AGENT_ID
@@ -165,7 +193,7 @@ export function ChatContent({
       setCurrentModelId(DEFAULT_MODEL_ID)
     },
     [setMessages]
-  ) // setMessages is stable from useChat
+  )
 
   const handleAgentChange = useCallback(
     (agentId: string) => {
@@ -176,18 +204,20 @@ export function ChatContent({
   )
 
   const handleSubmit = useCallback(
-    (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault()
-      if (input.trim()) {
-        sendMessage({ text: input })
-        setInput("")
-      }
+    (
+      { text, files }: { text: string; files: FileUIPart[] },
+      _event: FormEvent<HTMLFormElement>
+    ) => {
+      sendMessage({ text })
+      setInput("")
     },
-    [input, sendMessage]
+    [sendMessage]
   )
 
-  // Direct icon lookup - no useMemo needed
-  const AgentIcon = getAgentIcon(currentAgentId)
+  const AgentIcon = useMemo(
+    () => getAgentIcon(currentAgentId),
+    [currentAgentId]
+  )
 
   return (
     <div className={`flex flex-col h-full ${className || ""}`}>
@@ -234,120 +264,124 @@ export function ChatContent({
         </Button>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-center">
-            <div className="max-w-md">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <AgentIcon className="w-8 h-8 text-primary" />
-              </div>
-              <h2 className="text-xl font-semibold text-foreground mb-2">
-                {currentAgentInfo?.name || "AI Analyst"}
-              </h2>
-              <p className="text-muted-foreground">
-                {currentAgentInfo?.description ||
-                  "Ask questions about your data and get insights with visualizations."}
-              </p>
-              <p className="text-xs text-muted-foreground mt-4">
-                Session: {threadId}
-              </p>
-            </div>
-          </div>
-        ) : (
-          <>
-            {messages.map((message, index) => {
-              // Skip animation for messages that were already seen (loaded from history)
-              const isNewMessage =
-                message.id && !seenMessageIdsRef.current.has(message.id)
-              if (message.id && isNewMessage) {
-                seenMessageIdsRef.current.add(message.id)
-              }
-              return (
-                <MessageRenderer
-                  key={message.id || index}
-                  message={message as any}
-                  agentInfo={currentAgentInfo}
-                  sessionId={threadId}
-                  skipAnimation={!isNewMessage}
-                />
-              )
-            })}
-            {error && (
-              <div className="p-4 bg-destructive/10 text-destructive rounded-lg">
-                Error: {error.message}
-              </div>
+      {/* Chat Area with AI Elements Conversation */}
+      <div className="flex-1 overflow-hidden">
+        <Conversation>
+          <ConversationContent>
+            {messages.length === 0 ? (
+              <ConversationEmptyState
+                icon={
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                    <AgentIcon className="w-8 h-8 text-primary" />
+                  </div>
+                }
+                title={currentAgentInfo?.name || "AI Data Analyst"}
+                description={
+                  currentAgentInfo?.description ||
+                  "Ask questions about your data and get insights with visualizations."
+                }
+              />
+            ) : (
+              <>
+                {messages.map((message, index) => {
+                  const isNewMessage =
+                    message.id && !seenMessageIdsRef.current.has(message.id)
+                  if (message.id && isNewMessage) {
+                    seenMessageIdsRef.current.add(message.id)
+                  }
+                  return (
+                    <MessageRenderer
+                      key={message.id || index}
+                      message={message as any}
+                      agentInfo={currentAgentInfo}
+                      sessionId={threadId}
+                      skipAnimation={!isNewMessage}
+                    />
+                  )
+                })}
+                {error && (
+                  <div className="p-4 bg-destructive/10 text-destructive rounded-lg">
+                    Error: {error.message}
+                  </div>
+                )}
+              </>
             )}
-            <div ref={messagesEndRef} />
-          </>
-        )}
-        {isLoading && (
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" />
-            <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce delay-100" />
-            <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce delay-200" />
-          </div>
-        )}
+          </ConversationContent>
+
+          {/* Loading State */}
+          {isLoading && (
+            <Message from="assistant">
+              <MessageContent>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm">Thinking...</span>
+                </div>
+              </MessageContent>
+            </Message>
+          )}
+
+          {/* Scroll to Bottom Button */}
+          <ConversationScrollButton />
+        </Conversation>
       </div>
 
-      {/* Input */}
-      <form
-        onSubmit={handleSubmit}
-        className="p-4 border-t border-border bg-card"
-      >
-        <div className="flex gap-2 items-center max-w-4xl mx-auto">
-          <DropdownMenu
-            open={modelSelectorOpen}
-            onOpenChange={setModelSelectorOpen}
-          >
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="px-3 py-2 text-sm border border-input rounded-lg bg-background hover:bg-accent transition-colors flex items-center gap-2 min-w-[120px] justify-between"
-                disabled={isLoading}
+      {/* Input Area with AI Elements PromptInput */}
+      <div className="border-t border-border bg-card p-4">
+        <PromptInput onSubmit={handleSubmit}>
+          <PromptInputBody>
+            {/* Model Selector in Header */}
+            <PromptInputHeader>
+              <DropdownMenu
+                open={modelSelectorOpen}
+                onOpenChange={setModelSelectorOpen}
               >
-                <span className="truncate">
-                  {MODEL_OPTIONS.find(m => m.id === currentModelId)?.name ||
-                    "Model"}
-                </span>
-                <ChevronDown
-                  className={`w-4 h-4 text-muted-foreground transition-transform ${modelSelectorOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-48">
-              {MODEL_OPTIONS.map(model => (
-                <DropdownMenuItem
-                  key={model.id}
-                  onClick={() => setCurrentModelId(model.id)}
-                  className={`cursor-pointer ${currentModelId === model.id ? "bg-accent" : ""}`}
-                >
-                  <span className="flex-1">{model.name}</span>
-                  {currentModelId === model.id && (
-                    <div className="w-2 h-2 bg-primary rounded-full" />
-                  )}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="px-3 py-1.5 border border-input rounded-md bg-background hover:bg-accent transition-colors flex items-center gap-2 min-w-[120px] justify-between text-sm"
+                    disabled={isLoading}
+                  >
+                    <span className="truncate">
+                      {MODEL_OPTIONS.find(m => m.id === currentModelId)?.name ||
+                        "Model"}
+                    </span>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${modelSelectorOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  {MODEL_OPTIONS.map(model => (
+                    <DropdownMenuItem
+                      key={model.id}
+                      onClick={() => setCurrentModelId(model.id)}
+                      className={currentModelId === model.id ? "bg-accent" : ""}
+                    >
+                      <span className="flex-1 text-sm">{model.name}</span>
+                      {currentModelId === model.id && (
+                        <div className="w-2 h-2 bg-primary rounded-full" />
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </PromptInputHeader>
 
-          <Input
-            type="text"
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            placeholder="Ask about your data..."
-            disabled={isLoading}
-            className="flex-1"
-          />
-          <Button
-            type="submit"
-            size="icon"
-            disabled={isLoading || !input.trim()}
-          >
-            <Send className="w-4 h-4" />
-          </Button>
-        </div>
-      </form>
+            {/* Text Area */}
+            <PromptInputTextarea
+              value={input}
+              onChange={e => setInput(e.currentTarget.value)}
+              placeholder="Ask about your data..."
+            />
+
+            {/* Footer with Submit Button */}
+            <PromptInputFooter>
+              <PromptInputTools />
+              <PromptInputSubmit status={status} onStop={() => stop()} />
+            </PromptInputFooter>
+          </PromptInputBody>
+        </PromptInput>
+      </div>
     </div>
   )
 }

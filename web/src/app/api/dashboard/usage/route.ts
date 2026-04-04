@@ -1,8 +1,8 @@
 import { queryNeon } from "@/lib/db"
 import { type NextRequest, NextResponse } from "next/server"
 
-// Cache for 2 minutes (120 seconds)
-export const revalidate = 120
+// Cache for 10 minutes (600 seconds)
+export const revalidate = 600
 export const dynamic = "force-dynamic"
 
 export async function GET(request: NextRequest) {
@@ -142,7 +142,13 @@ export async function POST(request: NextRequest) {
         },
         charts: {
           dailyTrend: {
-            labels: (dailyTrendResult as any[]).map((r: any) => r.date),
+            labels: (dailyTrendResult as any[]).map((r: any) => {
+              const date = new Date(r.date)
+              return date.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })
+            }),
             dau: (dailyTrendResult as any[]).map((r: any) =>
               Number.parseInt(r.dau)
             ),
@@ -158,7 +164,7 @@ export async function POST(request: NextRequest) {
       },
       {
         headers: {
-          "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300",
+          "Cache-Control": "public, s-maxage=600, stale-while-revalidate=1200",
         },
       }
     )

@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server"
 
+// Cache for 10 minutes (600 seconds)
+export const revalidate = 600
+export const dynamic = "force-dynamic"
+
 export async function GET() {
   try {
     // Reliability metrics (simulated - in production these would come from monitoring)
@@ -18,40 +22,43 @@ export async function GET() {
       }
     ).catch(() => null)
 
-    return NextResponse.json({
-      metrics: {
-        uptime: {
-          value: uptime,
-          format: "percentage",
+    return NextResponse.json(
+      {
+        metrics: {
+          uptime: {
+            value: uptime,
+            format: "percentage",
+          },
+          incidents: {
+            value: incidents,
+            format: "number",
+          },
+          avgResponseTime: {
+            value: avgResponseTime,
+            format: "number",
+          },
+          weeklyDeployments: {
+            value: weeklyDeployments,
+            format: "number",
+          },
         },
-        incidents: {
-          value: incidents,
-          format: "number",
-        },
-        avgResponseTime: {
-          value: avgResponseTime,
-          format: "number",
-        },
-        weeklyDeployments: {
-          value: weeklyDeployments,
-          format: "number",
-        },
-      },
-      charts: {
-        uptimeHistory: {
-          labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-          values: [99.9, 99.92, 99.88, 99.95, 99.93, 99.95],
-        },
-        deploymentsHistory: {
-          labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
-          values: [4, 3, 5, 3],
-        },
-        responseTimeHistory: {
-          labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-          values: [142, 155, 138, 162, 145, 132, 128],
+        charts: {
+          uptimeHistory: {
+            labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+            values: [99.9, 99.92, 99.88, 99.95, 99.93, 99.95],
+          },
+          deploymentsHistory: {
+            labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
+            values: [4, 3, 5, 3],
+          },
         },
       },
-    })
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=600, stale-while-revalidate=1200",
+        },
+      }
+    )
   } catch (error) {
     console.error("Reliability API error:", error)
     return NextResponse.json(

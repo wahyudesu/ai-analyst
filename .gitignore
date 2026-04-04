@@ -46,3 +46,6 @@ coverage/
 
 # Misc
 .output.txt
+
+# Moat task system
+.moat/

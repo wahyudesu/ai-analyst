@@ -1,8 +1,8 @@
 import { queryNeon } from "@/lib/db"
 import { type NextRequest, NextResponse } from "next/server"
 
-// Cache for 5 minutes (300 seconds)
-export const revalidate = 300
+// Cache for 10 minutes (600 seconds)
+export const revalidate = 600
 export const dynamic = "force-dynamic"
 
 // Time range types
@@ -315,7 +315,7 @@ export async function POST(request: NextRequest) {
       },
       {
         headers: {
-          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+          "Cache-Control": "public, s-maxage=600, stale-while-revalidate=1200",
         },
       }
     )

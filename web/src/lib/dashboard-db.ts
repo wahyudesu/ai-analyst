@@ -3,8 +3,10 @@
  */
 
 export interface MetricRow {
-  [key: string]: any
+  [key: string]: string | number | boolean | null
 }
+
+export type QueryValue = string | number | boolean | null
 
 /**
  * Execute SQL query against Neon PostgreSQL database
@@ -14,9 +16,9 @@ export interface MetricRow {
  */
 export async function queryNeon(
   sql: string,
-  params: any[] = [],
+  params: QueryValue[] = [],
   databaseUrl?: string
-): Promise<any[]> {
+): Promise<MetricRow[]> {
   try {
     // Use the internal API route to query the database
     const response = await fetch("/api/dashboard/query", {
@@ -79,14 +81,15 @@ export function getDateRange(days = 30): { start: Date; end: Date } {
  * Convert database row to chart data point
  */
 export function rowToDataPoint(
-  row: any,
+  row: MetricRow,
   xKey: string,
   yKey: string,
   labelKey?: string
 ): { x: string | number; y: number; label?: string } {
+  const xValue = row[xKey]
   return {
-    x: row[xKey],
-    y: row[yKey],
-    label: labelKey ? row[labelKey] : undefined,
+    x: xValue === null ? "" : (typeof xValue === "boolean" ? String(xValue) : xValue),
+    y: Number(row[yKey] ?? 0),
+    label: labelKey ? (row[labelKey] === null ? undefined : String(row[labelKey])) : undefined,
   }
 }

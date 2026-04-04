@@ -22,7 +22,7 @@ interface BarChartProps {
   skipAnimation?: boolean
 }
 
-// Format date strings to readable format
+// Format date strings to readable format (shortened for better display)
 function formatXLabel(value: string): string {
   // Check if it's an ISO date string
   if (
@@ -34,7 +34,6 @@ function formatXLabel(value: string): string {
       return new Intl.DateTimeFormat("en-US", {
         month: "short",
         day: "numeric",
-        year: "numeric",
       }).format(date)
     }
   }
@@ -117,11 +116,14 @@ export function BarChart({ config, className, skipAnimation }: BarChartProps) {
           minTickGap={40}
         />
         <YAxis
+          dataKey={isHorizontal ? "_x" : undefined}
+          type={isHorizontal ? "category" : "number"}
           tickLine={false}
           axisLine={false}
           tickFormatter={value =>
             typeof value === "number" ? value.toLocaleString() : String(value)
           }
+          width={isHorizontal ? 80 : undefined}
         />
         <ChartTooltip
           content={<ChartTooltipContent />}
