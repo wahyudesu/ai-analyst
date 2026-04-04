@@ -50,15 +50,6 @@ export function HorizontalBarChart({
     }))
   }, [series])
 
-  // Build shadcn chart config
-  const seriesName = series[0]?.name || "value"
-  const shadcnConfig: ChartConfig = {
-    [seriesName]: {
-      label: seriesName,
-      color: colors?.palette?.[0] || series[0]?.color || `var(--chart-1)`,
-    },
-  }
-
   // Build shadcn chart config with sanitized key
   const originalName = series[0]?.name || "value"
   const sanitizedName = originalName.replace(/\s+/g, "-").toLowerCase()
