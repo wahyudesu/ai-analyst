@@ -15,10 +15,10 @@ import { supabaseAgent } from "./agents/supabase"
 import { chartAgent } from "./agents/testingagent"
 import { casualChatMemory, chatMemory, dataAnalystMemory } from "./memory"
 import { checkAuthRoute, loginRoute } from "./routes/auth"
-import { customChatRoute } from "./routes/chat"
 import { modelCheckRoute, modelsRoute } from "./routes/models"
 import { sqlRoute } from "./routes/sql"
 import * as threads from "./routes/threads"
+// MCP Routes will be added lazily to avoid circular dependency
 
 /**
  * LibSQL storage for Mastra
@@ -34,10 +34,12 @@ const storage = new LibSQLStore({
 // Export memories for use in API routes
 export { chatMemory, dataAnalystMemory, casualChatMemory }
 
+// Agent keys must match the agent IDs used in frontend
+// The key here is what's used in the URL: /chat/:agentId
 const agents = {
-  sqlagent,
-  chartAgent,
-  ...(supabaseAgent && { supabaseAgent }),
+  "data-analyst": sqlagent,
+  ...(chartAgent && { chartagent: chartAgent }),
+  ...(supabaseAgent && { supabase: supabaseAgent }),
 }
 
 export const mastra = new Mastra({
@@ -65,90 +67,13 @@ export const mastra = new Mastra({
   }),
   server: {
     apiRoutes: [
-      // Authentication routes (no auth required for login itself)
-      loginRoute,
-      checkAuthRoute,
-      // Model configuration routes
-      modelsRoute,
-      modelCheckRoute,
-      // Direct SQL execution route for dashboard (bypasses agent reasoning)
-      sqlRoute,
-      // Custom chat route with dynamic model selection
-      // Accepts modelId parameter to override agent's default model
-      customChatRoute,
-      // Thread/Session management routes
-      // Using Mastra's built-in memory routes
-      // Threads are managed via Mastra Memory API automatically
-      // The chat endpoint accepts memory options: { thread: string, resource?: string }
-
-      // Custom API route to fetch message history for a thread
-      registerApiRoute("/messages", {
-        method: "GET",
-        handler: async c => {
-          const threadId = c.req.query("threadId")
-          const agentId = c.req.query("agentId")
-          const page = Number.parseInt(c.req.query("page") || "0")
-          const perPage = Number.parseInt(c.req.query("perPage") || "100")
-
-          if (!threadId) {
-            return c.json({ error: "threadId is required" }, 400)
-          }
-
-          try {
-            const result = await threads.getThreadMessages({
-              threadId,
-              agentId: agentId || undefined,
-              page,
-              perPage,
-            })
-
-            return c.json(result)
-          } catch (error) {
-            console.error("Error fetching messages:", error)
-            return c.json(
-              { error: "Failed to fetch messages", messages: [] },
-              500
-            )
-          }
-        },
-      }),
-
-      // Custom API route to list threads with message counts
-      registerApiRoute("/threads", {
-        method: "GET",
-        handler: async c => {
-          const agentId = c.req.query("agentId")
-          const resourceId = c.req.query("resourceId")
-          const page = Number.parseInt(c.req.query("page") || "0")
-          const perPage = Number.parseInt(c.req.query("perPage") || "50")
-
-          if (!agentId) {
-            return c.json({ error: "agentId is required" }, 400)
-          }
-
-          try {
-            const result = await threads.listThreadsWithMessageCount({
-              agentId,
-              resourceId: resourceId || undefined,
-              page,
-              perPage,
-            })
-
-            return c.json({ threads: result })
-          } catch (error) {
-            console.error("Error listing threads:", error)
-            return c.json({ error: "Failed to list threads", threads: [] }, 500)
-          }
-        },
+      // Chat route - using Mastra's built-in AI SDK streaming
+      // Supports dynamic agent routing via :agentId parameter
+      chatRoute({
+        path: "/chat/:agentId",
       }),
     ],
   },
-  deployer: new CloudflareDeployer({
-    name: "ai-analyst-api",
-    vars: {
-      NODE_ENV: "production",
-    },
-  }),
 })
 
 // Export thread helpers for custom API routes if needed

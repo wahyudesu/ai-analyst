@@ -1,14 +1,13 @@
 /**
  * Thread/Session Management Client
  *
- * Manages chat sessions using Mastra's Memory API
- *
- * NOTE: This is a simplified client for thread management.
- * For production, you'd want to create a Next.js API route that proxies
- * to the Mastra server to avoid CORS issues.
+ * Manages chat sessions with message persistence
  */
 
 const MASTRA_URL = process.env.NEXT_PUBLIC_MASTRA_URL || "http://localhost:4111"
+
+// Storage keys
+const MESSAGES_KEY = "chat-messages"
 
 export interface Thread {
   id: string
@@ -26,13 +25,15 @@ export interface CreateThreadInput {
   initialMemory?: string
 }
 
+export interface ChatMessage {
+  id: string
+  role: "user" | "assistant" | "system"
+  content: string
+  createdAt: Date
+}
+
 /**
- * Thread API Client
- *
- * For now, threads are managed via Mastra's built-in chat endpoint
- * by passing memory options: { thread: string, resource?: string }
- *
- * Full thread CRUD can be added later via Next.js API routes
+ * Thread API Client with message persistence
  */
 export const threadsClient = {
   /**
@@ -67,7 +68,6 @@ export const threadsClient = {
 
   /**
    * Get resource ID (user ID) from localStorage
-   * Useful for multi-user scenarios with persistent memory
    */
   getResourceId(): string {
     if (typeof window === "undefined") return "anonymous"
@@ -81,6 +81,81 @@ export const threadsClient = {
     if (typeof window === "undefined") return
     localStorage.setItem("resourceId", resourceId)
   },
+
+  /**
+   * Get messages for a specific thread from localStorage
+   */
+  getMessages(threadId: string): ChatMessage[] {
+    if (typeof window === "undefined") return []
+    try {
+      const stored = localStorage.getItem(MESSAGES_KEY)
+      if (stored) {
+        const allMessages = JSON.parse(stored) as Record<string, ChatMessage[]>
+        const threadMessages = allMessages[threadId] || []
+        return threadMessages.map((m: any) => ({
+          ...m,
+          createdAt: new Date(m.createdAt),
+        }))
+      }
+    } catch (error) {
+      console.error("Failed to load chat messages:", error)
+    }
+    return []
+  },
+
+  /**
+   * Save messages for a specific thread to localStorage
+   */
+  saveMessages(threadId: string, messages: ChatMessage[]): void {
+    if (typeof window === "undefined") return
+    try {
+      const stored = localStorage.getItem(MESSAGES_KEY)
+      const allMessages = stored ? JSON.parse(stored) : {}
+      allMessages[threadId] = messages
+      localStorage.setItem(MESSAGES_KEY, JSON.stringify(allMessages))
+    } catch (error) {
+      console.error("Failed to save chat messages:", error)
+    }
+  },
+
+  /**
+   * Add a single message to a thread
+   */
+  addMessage(threadId: string, message: Omit<ChatMessage, "id" | "createdAt">): ChatMessage {
+    const newMessage: ChatMessage = {
+      ...message,
+      id: crypto.randomUUID(),
+      createdAt: new Date(),
+    }
+    const messages = this.getMessages(threadId)
+    messages.push(newMessage)
+    this.saveMessages(threadId, messages)
+    return newMessage
+  },
+
+  /**
+   * Clear messages for a specific thread
+   */
+  clearMessages(threadId: string): void {
+    if (typeof window === "undefined") return
+    try {
+      const stored = localStorage.getItem(MESSAGES_KEY)
+      if (stored) {
+        const allMessages = JSON.parse(stored)
+        delete allMessages[threadId]
+        localStorage.setItem(MESSAGES_KEY, JSON.stringify(allMessages))
+      }
+    } catch (error) {
+      console.error("Failed to clear chat messages:", error)
+    }
+  },
+
+  /**
+   * Delete messages for a thread (when deleting session)
+   */
+  deleteMessages(threadId: string): void {
+    this.clearMessages(threadId)
+  },
 }
 
 /**
@@ -93,7 +168,6 @@ export function buildChatOptions(agentId: string) {
   return {
     threadId,
     resourceId,
-    // Pass to chat endpoint via memory options
     memoryOptions: {
       thread: threadId,
       resource: resourceId,

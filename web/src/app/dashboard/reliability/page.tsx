@@ -276,8 +276,8 @@ export default function ReliabilityPage() {
         {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Card className="min-h-[260px]">
-            <CardHeader>
-              <CardTitle>Deployment Frequency</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Deployment Frequency</CardTitle>
             </CardHeader>
             <CardContent className="min-h-[190px]">
               {loading ? (
@@ -330,8 +330,8 @@ export default function ReliabilityPage() {
           </Card>
 
           <Card className="min-h-[260px]">
-            <CardHeader>
-              <CardTitle>Uptime Trend (6 Months)</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Uptime Trend (6 Months)</CardTitle>
             </CardHeader>
             <CardContent className="min-h-[190px]">
               {loading ? (

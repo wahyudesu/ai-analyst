@@ -100,7 +100,7 @@ export function BarChart({ config, className, skipAnimation }: BarChartProps) {
       <RechartsBarChart
         data={chartData}
         layout={isHorizontal ? "vertical" : "horizontal"}
-        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+        margin={{ top: 20, right: 30, left: 10, bottom: 5 }}
       >
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
         <XAxis

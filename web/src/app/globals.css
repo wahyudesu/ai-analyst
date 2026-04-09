@@ -47,8 +47,8 @@
   --shadow-color: #1a1a1a;
   --shadow-2xs: 0px 1px 3px 0px hsl(0 0% 10.1961% / 0.05);
   --shadow-xs: 0px 1px 3px 0px hsl(0 0% 10.1961% / 0.05);
-  --shadow-sm: 0px 1px 3px 0px hsl(0 0% 10.1961% / 0.1), 0px 1px 2px -1px
-    hsl(0 0% 10.1961% / 0.1);
+  --shadow-sm: 0px 1px 3px 0px hsl(0 0% 10.1961% / 0.05), 0px 1px 2px -1px
+    hsl(0 0% 10.1961% / 0.05);
   --shadow: 0px 1px 3px 0px hsl(0 0% 10.1961% / 0.1), 0px 1px 2px -1px
     hsl(0 0% 10.1961% / 0.1);
   --shadow-md: 0px 1px 3px 0px hsl(0 0% 10.1961% / 0.1), 0px 2px 4px -1px
@@ -105,8 +105,10 @@
   --shadow-spread: 0px;
   --shadow-opacity: 0.1;
   --shadow-color: #1a1a1a;
-  --shadow-2xs: 0px 1px 3px 0px hsl(0 0% 10.1961% / 0.05);
-  --shadow-xs: 0px 1px 3px 0px hsl(0 0% 10.1961% / 0.05);
+  --shadow-2xs: 0px 1px 3px 0px hsl(0 0% 10.1961% / 0.05), 0px 1px 2px -1px
+    hsl(0 0% 10.1961% / 0.05);
+  --shadow-xs: 0px 1px 3px 0px hsl(0 0% 10.1961% / 0.05), 0px 1px 2px -1px
+    hsl(0 0% 10.1961% / 0.05);
   --shadow-sm: 0px 1px 3px 0px hsl(0 0% 10.1961% / 0.1), 0px 1px 2px -1px
     hsl(0 0% 10.1961% / 0.1);
   --shadow: 0px 1px 3px 0px hsl(0 0% 10.1961% / 0.1), 0px 1px 2px -1px
@@ -171,6 +173,12 @@
   --shadow-lg: var(--shadow-lg);
   --shadow-xl: var(--shadow-xl);
   --shadow-2xl: var(--shadow-2xl);
+
+  /* Animation duration utilities */
+  --animate-in: 0.2s ease-out;
+  --animate-out: 0.15s ease-in;
+  --fade-in: 0.2s ease-out;
+  --fade-out: 0.15s ease-in;
 }
 
 @layer base {
@@ -179,6 +187,370 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Custom Tailwind animation utilities for shadcn/ui */
+@layer utilities {
+  /* Animation in/out utilities */
+  .animate-in {
+    animation: enter var(--animate-in) forwards;
+  }
+
+  .animate-out {
+    animation: exit var(--animate-out) forwards;
+  }
+
+  /* Fade animations with delays */
+  .fade-in-0 {
+    animation: fadeIn 0.2s ease-out forwards;
+  }
+
+  .fade-in-100 {
+    animation: fadeIn 0.3s ease-out forwards;
+    animation-delay: 0.1s;
+  }
+
+  .fade-in-200 {
+    animation: fadeIn 0.3s ease-out forwards;
+    animation-delay: 0.2s;
+  }
+
+  .fade-out-0 {
+    animation: fadeOut 0.15s ease-in forwards;
+  }
+
+  /* Zoom/scale animations */
+  .zoom-in-95 {
+    animation: scale-in 0.2s ease-out forwards;
+  }
+
+  .zoom-out-95 {
+    animation: scale-out 0.15s ease-in forwards;
+  }
+
+  .zoom-in-100 {
+    animation: scale-in 0.2s ease-out forwards;
+  }
+
+  .zoom-out-100 {
+    animation: scale-out 0.15s ease-in forwards;
+  }
+
+  /* Slide in animations */
+  .slide-in-from-top-2 {
+    animation: slide-in-from-top 0.2s ease-out forwards;
+  }
+
+  .slide-in-from-bottom-2 {
+    animation: slide-in-from-bottom 0.2s ease-out forwards;
+  }
+
+  .slide-in-from-left-2 {
+    animation: slide-in-from-left 0.2s ease-out forwards;
+  }
+
+  .slide-in-from-right-2 {
+    animation: slide-in-from-right 0.2s ease-out forwards;
+  }
+
+  /* Duration utilities */
+  .duration-200 {
+    animation-duration: 200ms;
+  }
+
+  .duration-300 {
+    animation-duration: 300ms;
+  }
+
+  .duration-150 {
+    animation-duration: 150ms;
+  }
+
+  /* Ease utilities */
+  .ease-in {
+    animation-timing-function: cubic-bezier(0.4, 0, 1, 1);
+  }
+
+  .ease-out {
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
+
+  /* Fill mode utilities */
+  .forwards {
+    animation-fill-mode: forwards;
+  }
+}
+
+/* Animation keyframes for shadcn/ui */
+@layer base {
+  /* Accordion animations */
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+
+  /* Fade animations */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  /* Slide animations */
+  @keyframes slide-in-from-top {
+    from {
+      transform: translateY(-100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slide-in-from-bottom {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slide-in-from-left {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slide-in-from-right {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slideInFromTop {
+    from {
+      transform: translateY(-10%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideInFromBottom {
+    from {
+      transform: translateY(10%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  /* Scale animations */
+  @keyframes scale-in {
+    from {
+      transform: scale(0.95);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes scale-out {
+    from {
+      transform: scale(1);
+      opacity: 1;
+    }
+    to {
+      transform: scale(0.95);
+      opacity: 0;
+    }
+  }
+
+  @keyframes enter {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes exit {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+  }
+
+  /* Spin animation */
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Ping animation */
+  @keyframes ping {
+    75%, 100% {
+      transform: scale(2);
+      opacity: 0;
+    }
+  }
+
+  /* Pulse animation */
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  /* Shimmer animation */
+  @keyframes shimmer {
+    from {
+      background-position: 0 0;
+    }
+    to {
+      background-position: -200% 0;
+    }
+  }
+
+  /* Bounce animation */
+  @keyframes bounce {
+    0%, 100% {
+      transform: translateY(-5%);
+      animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+    }
+    50% {
+      transform: translateY(0);
+      animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+    }
+  }
+
+  /* Dialog content animations */
+  @keyframes dialog-content-show {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes dialog-content-hide {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+  }
+
+  /* Dropdown menu animations */
+  @keyframes dropdown-menu-content-show {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Popover animations */
+  @keyframes popover-content-show {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Tooltip animations */
+  @keyframes tooltip-content-show {
+    from {
+      opacity: 0;
+      transform: translateX(0) translateY(5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0) translateY(0);
+    }
   }
 }
 

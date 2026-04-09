@@ -11,6 +11,8 @@
     "dev": "mastra dev",
     "build": "mastra build",
     "start": "mastra start",
+    "chat-server": "tsx src/chat-server.ts",
+    "mcp": "node dist/mcp-standalone.js",
     "lint": "biome check .",
     "lint:fix": "biome check --write ."
   },

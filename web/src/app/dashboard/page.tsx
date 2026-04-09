@@ -14,6 +14,7 @@ import { RefreshButton } from "@/components/dashboard/RefreshButton"
 import {
   ChartSkeleton,
   MetricCardGridSkeleton,
+  MetricCardSkeleton,
 } from "@/components/dashboard/Skeleton"
 import {
   type TimeRange,
@@ -115,9 +116,13 @@ export default function OverviewPage() {
   const [data, setData] = useState<OverviewData | null>(
     cachedData && cacheValid ? cachedData : null
   )
-  const [loading, setLoading] = useState(!cachedData || !cacheValid)
-  const [error, setError] = useState<string | null>(null)
+  // Initial loading - only true on first load when no cache
+  const [initialLoading, setInitialLoading] = useState(!cachedData || !cacheValid)
+  // Refreshing state - true when updating data after filter change
   const [isRefreshing, setIsRefreshing] = useState(false)
+  // Track which sections are currently loading
+  const [refreshingSections, setRefreshingSections] = useState<Set<keyof OverviewData['charts']> | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const { databaseUrl } = useDatabaseConfig()
   const { setHeaderActions } = useDashboard()
 
@@ -175,17 +180,28 @@ export default function OverviewPage() {
   }, [fetchFromAPI, setCachedData, databaseUrl])
 
   useEffect(() => {
-    // Skip if we're refreshing
+    // Skip if we're manually refreshing
     if (isRefreshing) return
 
     async function loadData() {
-      setLoading(true)
+      // For initial load, show skeleton
+      if (!data) {
+        setInitialLoading(true)
+      }
+      // Set refreshing state when changing time range with existing data
+      if (data) {
+        setIsRefreshing(true)
+        setRefreshingSections(new Set(['newUsersOverTime', 'conversationsOverTime', 'messagesOverTime']))
+      }
+
       const freshData = await fetchFromAPI()
       if (freshData) {
         setData(freshData)
         setCachedData(freshData)
       }
-      setLoading(false)
+      setInitialLoading(false)
+      setIsRefreshing(false)
+      setRefreshingSections(null)
     }
     loadData()
   }, [timeRange]) // Refetch when timeRange changes
@@ -195,7 +211,7 @@ export default function OverviewPage() {
     setHeaderActions(
       <div className="flex items-center gap-3">
         <TimelineFilter value={timeRange} onChange={setTimeRange} />
-        {!loading && (
+        {!initialLoading && (
           <RefreshButton
             onRefresh={handleRefresh}
             isRefreshing={isRefreshing}
@@ -207,7 +223,7 @@ export default function OverviewPage() {
   }, [
     setHeaderActions,
     timeRange,
-    loading,
+    initialLoading,
     handleRefresh,
     isRefreshing,
     getLastRefreshTime,
@@ -235,6 +251,31 @@ export default function OverviewPage() {
         </div>
       </main>
     )
+  }
+
+  // Wrapper component for metric cards with skeleton on refresh
+  const RefreshableMetricCard = ({ children, showSkeleton }: { children: React.ReactNode; showSkeleton?: boolean }) => {
+    if (showSkeleton && isRefreshing) {
+      return <MetricCardSkeleton />
+    }
+    return children
+  }
+
+  // Wrapper component for charts with skeleton on refresh
+  const RefreshableChart = ({ children, showSkeleton }: { children: React.ReactNode; showSkeleton?: boolean }) => {
+    if (showSkeleton && isRefreshing) {
+      return (
+        <Card className="border-border/50">
+          <CardHeader className="pb-3">
+            <div className="h-6 w-48 bg-muted animate-pulse rounded" />
+          </CardHeader>
+          <CardContent className="min-h-[200px]">
+            <div className="h-full bg-muted animate-pulse rounded" />
+          </CardContent>
+        </Card>
+      )
+    }
+    return children
   }
 
   // Helper for chart title based on time range
@@ -413,7 +454,7 @@ export default function OverviewPage() {
     if (!data || data.charts.subscriptionsByPlan.length === 0) return null
     return {
       chartType: "bar",
-      title: "Active Subscriptions by Plan",
+      title: "Total Active Subscriptions",
       data: {
         series: [
           {
@@ -453,7 +494,7 @@ export default function OverviewPage() {
   return (
     <main className="p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        {loading ? (
+        {initialLoading ? (
           <>
             <MetricCardGridSkeleton count={6} />
             <ChartSkeleton />
@@ -489,7 +530,7 @@ export default function OverviewPage() {
                 format="number"
               />
               <MetricCard
-                title="Active Subscriptions"
+                title="Total Active Subscriptions"
                 value={data?.metrics.activeSubscriptions.value || 0}
                 icon={CreditCard}
                 format="number"
@@ -497,166 +538,167 @@ export default function OverviewPage() {
             </div>
 
             {/* Metric Cards Grid - Bottom Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <MetricCard
-                title={`Messages (${timeRange === "all" ? "All" : timeRange})`}
-                value={data?.metrics.messagesLast30Days.value || 0}
-                change={data?.metrics.messagesLast30Days.change}
-                previousValue={data?.metrics.messagesLast30Days.previous}
-                icon={Zap}
-                format="number"
-                showPreviousValue={true}
-                sparkline={
-                  data?.charts.messagesOverTime.values
-                    ? {
-                        data: data.charts.messagesOverTime.values,
-                        color: "auto",
-                      }
-                    : undefined
-                }
-              />
-              <MetricCard
-                title={`Conversations (${timeRange === "all" ? "All" : timeRange})`}
-                value={data?.metrics.conversationsLast30Days.value || 0}
-                change={data?.metrics.conversationsLast30Days.change}
-                previousValue={data?.metrics.conversationsLast30Days.previous}
-                icon={MessageSquare}
-                format="number"
-                showPreviousValue={true}
-                sparkline={
-                  data?.charts.conversationsOverTime.values
-                    ? {
-                        data: data.charts.conversationsOverTime.values,
-                        color: "auto",
-                      }
-                    : undefined
-                }
-              />
-              <MetricCard
-                title="User Growth"
-                value={
-                  Math.round((data?.metrics.userGrowthRate.value || 0) * 10) /
-                  10
-                }
-                change={data?.metrics.userGrowthRate.change}
-                previousValue={data?.metrics.totalUsers.previous}
-                icon={TrendingUp}
-                format="percentage"
-                showPreviousValue={true}
-                sparkline={
-                  data?.charts.newUsersOverTime.values
-                    ? {
-                        data: data.charts.newUsersOverTime.values,
-                        color: "auto",
-                      }
-                    : undefined
-                }
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <RefreshableMetricCard showSkeleton>
+                <MetricCard
+                  title={`Messages (${timeRange === "all" ? "All" : timeRange})`}
+                  value={data?.metrics.messagesLast30Days.value || 0}
+                  change={data?.metrics.messagesLast30Days.change}
+                  previousValue={data?.metrics.messagesLast30Days.previous}
+                  icon={Zap}
+                  format="number"
+                  showPreviousValue={false}
+                  sparkline={
+                    data?.charts.messagesOverTime.values
+                      ? {
+                          data: data.charts.messagesOverTime.values,
+                          color: "auto",
+                        }
+                      : undefined
+                  }
+                />
+              </RefreshableMetricCard>
+              <RefreshableMetricCard showSkeleton>
+                <MetricCard
+                  title={`Conversations (${timeRange === "all" ? "All" : timeRange})`}
+                  value={data?.metrics.conversationsLast30Days.value || 0}
+                  change={data?.metrics.conversationsLast30Days.change}
+                  previousValue={data?.metrics.conversationsLast30Days.previous}
+                  icon={MessageSquare}
+                  format="number"
+                  showPreviousValue={false}
+                  sparkline={
+                    data?.charts.conversationsOverTime.values
+                      ? {
+                          data: data.charts.conversationsOverTime.values,
+                          color: "auto",
+                        }
+                      : undefined
+                  }
+                />
+              </RefreshableMetricCard>
+              <RefreshableMetricCard showSkeleton>
+                <MetricCard
+                  title="User Growth"
+                  value={
+                    Math.round((data?.metrics.userGrowthRate.value || 0) * 10) /
+                    10
+                  }
+                  change={data?.metrics.userGrowthRate.change}
+                  previousValue={data?.metrics.totalUsers.previous}
+                  icon={TrendingUp}
+                  format="percentage"
+                  showPreviousValue={false}
+                  sparkline={
+                    data?.charts.newUsersOverTime.values
+                      ? {
+                          data: data.charts.newUsersOverTime.values,
+                          color: "auto",
+                        }
+                      : undefined
+                  }
+                />
+              </RefreshableMetricCard>
+              {/* Activation Rate Card */}
+              {isRefreshing ? (
+                <MetricCardSkeleton />
+              ) : (
+                <Card className="border-border/50 hover:shadow-md hover:border-primary/20 transition-all duration-200">
+                  <CardContent>
+                    <div className="flex flex-col gap-2.5 h-full justify-center">
+                      <div className="flex items-center gap-1.5">
+                        <TrendingUp className="w-4 h-4 text-muted-foreground/70" />
+                        <p className="text-xs sm:text-sm text-muted-foreground font-medium">
+                          Activation Rate
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <p className="text-lg sm:text-xl font-bold text-foreground leading-tight tracking-tight tabular-nums">
+                            {Math.round(
+                              (data?.metrics.activationRate.value || 0) * 10
+                            ) / 10}
+                            %
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {data?.metrics.activatedUsers.value || 0} of{" "}
+                            {data?.metrics.totalUsers.value || 0}
+                          </p>
+                        </div>
+                        <Progress
+                          value={data?.metrics.activationRate.value || 0}
+                          className="h-3"
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             {/* Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <Card className="border-border/50">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">
-                    New Users (12 Weeks)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="min-h-[200px]">
-                  {usersChartConfig ? (
-                    <LineChart config={usersChartConfig} />
-                  ) : (
-                    <div className="h-full flex items-center justify-center">
-                      <p className="text-muted-foreground text-sm">
-                        No data available
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-              <Card className="border-border/50">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">
-                    Conversations (12 Weeks)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="min-h-[200px]">
-                  {conversationsChartConfig ? (
-                    <BarChart config={conversationsChartConfig} />
-                  ) : (
-                    <div className="h-full flex items-center justify-center">
-                      <p className="text-muted-foreground text-sm">
-                        No data available
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <RefreshableChart showSkeleton>
+                <Card className="border-border/50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">
+                      New Users (12 Weeks)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="min-h-[200px] p-0">
+                    {usersChartConfig ? (
+                      <LineChart config={usersChartConfig} />
+                    ) : (
+                      <div className="h-full flex items-center justify-center">
+                        <p className="text-muted-foreground text-sm">
+                          No data available
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </RefreshableChart>
+              <RefreshableChart showSkeleton>
+                <Card className="border-border/50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">
+                      Conversations (12 Weeks)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="min-h-[200px] p-0">
+                    {conversationsChartConfig ? (
+                      <BarChart config={conversationsChartConfig} />
+                    ) : (
+                      <div className="h-full flex items-center justify-center">
+                        <p className="text-muted-foreground text-sm">
+                          No data available
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </RefreshableChart>
             </div>
 
             {/* Messages Chart */}
-            <Card className="border-border/50">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Messages (12 Weeks)</CardTitle>
-              </CardHeader>
-              <CardContent className="h-40">
-                {messagesChartConfig ? (
-                  <AreaChart config={messagesChartConfig} />
-                ) : (
-                  <div className="h-full flex items-center justify-center">
-                    <p className="text-muted-foreground text-sm">
-                      No data available
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Distribution Charts & Activation Rate */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <MetricCard
-                title="Agents by Model"
-                value={
-                  data?.charts.agentsByModel.reduce(
-                    (sum, a) => sum + a.count,
-                    0
-                  ) || 0
-                }
-                icon={Bot}
-                format="number"
-              />
-              <MetricCard
-                title="Active Subscriptions"
-                value={data?.metrics.activeSubscriptions.value || 0}
-                icon={CreditCard}
-                format="number"
-              />
+            <RefreshableChart showSkeleton>
               <Card className="border-border/50">
-                <CardContent className="">
-                  <div className="space-y-1.5">
-                    <p className="text-sm text-muted-foreground">
-                      Activation Rate
-                    </p>
-                    <div className="flex items-baseline justify-between gap-2">
-                      <p className="text-2xl font-semibold text-foreground">
-                        {Math.round(
-                          (data?.metrics.activationRate.value || 0) * 10
-                        ) / 10}
-                        %
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {data?.metrics.activatedUsers.value || 0} of{" "}
-                        {data?.metrics.totalUsers.value || 0}
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Messages (12 Weeks)</CardTitle>
+                </CardHeader>
+                <CardContent className="h-40 p-0">
+                  {messagesChartConfig ? (
+                    <AreaChart config={messagesChartConfig} />
+                  ) : (
+                    <div className="h-full flex items-center justify-center">
+                      <p className="text-muted-foreground text-sm">
+                        No data available
                       </p>
                     </div>
-                    <Progress
-                      value={data?.metrics.activationRate.value || 0}
-                      className="h-1.5"
-                    />
-                  </div>
+                  )}
                 </CardContent>
               </Card>
-            </div>
+            </RefreshableChart>
           </>
         )}
       </div>

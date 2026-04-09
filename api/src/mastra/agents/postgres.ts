@@ -24,23 +24,23 @@ export const sqlagent = new Agent({
   scorers: {
     relevancy: {
       scorer: createAnswerRelevancyScorer({
-        model: { id: "zai/GLM-5", url: "https://api.z.ai/api/paas/v4/" },
+        model: { id: "zai-coding-plan/glm-4.5" },
       }),
       sampling: { type: "ratio", rate: 0.5 },
     },
     safety: {
       scorer: createToxicityScorer({
-        model: { id: "zai/GLM-5", url: "https://api.z.ai/api/paas/v4/" },
+        model: { id: "zai-coding-plan/glm-4.5" },
       }),
       sampling: { type: "ratio", rate: 1 },
     },
     // completeness: {
-    //   scorer: createCompletenessScorer({ model: {id: "zai/GLM-5", url: "https://api.z.ai/api/paas/v4/"} }),
+    //   scorer: createCompletenessScorer({ model: { id: "zai-coding-plan/glm-4.5" } }),
     //   sampling: { type: 'ratio', rate: 1 },
     // },
     faithfulness: {
       scorer: createFaithfulnessScorer({
-        model: { id: "zai/GLM-5", url: "https://api.z.ai/api/paas/v4/" },
+        model: { id: "zai-coding-plan/glm-4.5" },
       }),
       sampling: { type: "ratio", rate: 1 },
     },

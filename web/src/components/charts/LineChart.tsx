@@ -98,7 +98,7 @@ export function LineChart({
     <ChartContainer config={shadcnConfig} className={className}>
       <RechartsLineChart
         data={chartData}
-        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+        margin={{ top: 20, right: 30, left: 10, bottom: 5 }}
       >
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
         <XAxis

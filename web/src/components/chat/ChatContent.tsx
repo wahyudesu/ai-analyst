@@ -3,11 +3,12 @@
 import { useChat } from "@ai-sdk/react"
 import type { FileUIPart } from "ai"
 import { DefaultChatTransport } from "ai"
-import { ChevronDown, Database, Loader2, Send, Sparkles } from "lucide-react"
+import { ChevronDown, Database, Loader2, Sparkles } from "lucide-react"
 import type { FormEvent } from "react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { MessageRenderer } from "@/components/MessageRenderer"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -16,7 +17,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
 import { type Agent, useAgents, useMessages } from "@/lib/api/queries"
 import { threadsClient } from "@/lib/threads-client"
 import { useDatabaseConfig } from "@/lib/use-database-config"
@@ -28,7 +28,25 @@ import {
   ConversationEmptyState,
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation"
-import { Message, MessageContent } from "@/components/ai-elements/message"
+import {
+  Message,
+  MessageContent,
+  MessageResponse,
+} from "@/components/ai-elements/message"
+import {
+  ModelSelector,
+  ModelSelectorContent,
+  ModelSelectorEmpty,
+  ModelSelectorGroup,
+  ModelSelectorInput,
+  ModelSelectorItem,
+  ModelSelectorList,
+  ModelSelectorLogo,
+  ModelSelectorLogoGroup,
+  ModelSelectorName,
+  ModelSelectorSeparator,
+  ModelSelectorTrigger,
+} from "@/components/ai-elements/model-selector"
 import {
   PromptInput,
   PromptInputBody,
@@ -52,7 +70,7 @@ interface ChatContentProps {
 interface ModelOption {
   id: string
   name: string
-  provider: "zai" | "openai"
+  provider: "zai-coding-plan" | "openai"
 }
 
 const DEFAULT_AGENT_ID = "data-analyst"
@@ -74,11 +92,15 @@ const ChartBarIcon = ({ className }: { className?: string }) => (
 )
 
 const MODEL_OPTIONS: ModelOption[] = [
-  { id: "zai-coding-plan/glm-4.5", name: "GLM 4.5", provider: "zai" },
+  {
+    id: "zai-coding-plan/glm-4.5",
+    name: "GLM 4.5",
+    provider: "zai-coding-plan",
+  },
   {
     id: "zai-coding-plan/glm-4.5-flash",
     name: "GLM 4.5 Flash",
-    provider: "zai",
+    provider: "zai-coding-plan",
   },
   { id: "openai/gpt-4o-mini", name: "GPT-4o Mini", provider: "openai" },
   { id: "openai/gpt-4o", name: "GPT-4o", provider: "openai" },
@@ -225,44 +247,57 @@ export function ChatContent({
   return (
     <div className={`flex flex-col ${className || ""}`}>
       {/* Agent Selector Bar */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Sparkles className="w-4 h-4" />
-              <span>{currentAgentInfo?.name || "AI Analyst"}</span>
-              <ChevronDown className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            {allAgents.map(agent => {
-              const Icon = getAgentIcon(agent.id)
-              const isSelected = agent.id === currentAgentId
-              return (
-                <DropdownMenuItem
-                  key={agent.id}
-                  onClick={() => handleAgentChange(agent.id)}
-                  className="cursor-pointer"
-                >
-                  <Icon className="w-4 h-4 mr-2" />
-                  <div className="flex flex-col">
-                    <span className="font-medium">{agent.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {agent.description}
-                    </span>
-                  </div>
-                  {isSelected && (
-                    <div className="ml-auto">
-                      <div className="w-2 h-2 bg-primary rounded-full" />
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card/50 backdrop-blur-sm">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <AgentIcon className="w-4 h-4 text-primary" />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-2 hover:bg-accent/50"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>{currentAgentInfo?.name || "AI Analyst"}</span>
+                <ChevronDown className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              {allAgents.map(agent => {
+                const Icon = getAgentIcon(agent.id)
+                const isSelected = agent.id === currentAgentId
+                return (
+                  <DropdownMenuItem
+                    key={agent.id}
+                    onClick={() => handleAgentChange(agent.id)}
+                    className="cursor-pointer"
+                  >
+                    <Icon className="w-4 h-4 mr-2" />
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sm">{agent.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {agent.description}
+                      </span>
                     </div>
-                  )}
-                </DropdownMenuItem>
-              )
-            })}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <Button variant="outline" size="sm" onClick={() => startNewChat()}>
+                    {isSelected && (
+                      <div className="ml-auto">
+                        <div className="w-2 h-2 bg-primary rounded-full" />
+                      </div>
+                    )}
+                  </DropdownMenuItem>
+                )
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => startNewChat()}
+          className="hover:bg-accent"
+        >
           New Chat
         </Button>
       </div>
@@ -274,8 +309,8 @@ export function ChatContent({
             {messages.length === 0 ? (
               <ConversationEmptyState
                 icon={
-                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                    <AgentIcon className="w-8 h-8 text-primary" />
+                  <div className="w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/5 rounded-2xl flex items-center justify-center shadow-sm">
+                    <AgentIcon className="w-10 h-10 text-primary" />
                   </div>
                 }
                 title={currentAgentInfo?.name || "AI Data Analyst"}
@@ -303,8 +338,11 @@ export function ChatContent({
                   )
                 })}
                 {error && (
-                  <div className="p-4 bg-destructive/10 text-destructive rounded-lg">
-                    Error: {error.message}
+                  <div className="mx-auto max-w-lg">
+                    <div className="p-4 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl">
+                      <p className="text-sm font-medium">Error</p>
+                      <p className="text-xs mt-1 opacity-90">{error.message}</p>
+                    </div>
                   </div>
                 )}
               </>
@@ -317,7 +355,7 @@ export function ChatContent({
               <MessageContent>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-sm">Thinking...</span>
+                  <span className="text-sm">Analyzing your data...</span>
                 </div>
               </MessageContent>
             </Message>
@@ -329,45 +367,85 @@ export function ChatContent({
       </div>
 
       {/* Input Area with AI Elements PromptInput */}
-      <div className="border-t border-border bg-card p-4">
+      <div className="border-t border-border bg-card/50 backdrop-blur-sm p-4">
         <PromptInput onSubmit={handleSubmit}>
           <PromptInputBody>
             {/* Model Selector in Header */}
             <PromptInputHeader>
-              <DropdownMenu
+              <ModelSelector
                 open={modelSelectorOpen}
                 onOpenChange={setModelSelectorOpen}
               >
-                <DropdownMenuTrigger asChild>
+                <ModelSelectorTrigger asChild>
                   <button
                     type="button"
-                    className="px-3 py-1.5 border border-input rounded-md bg-background hover:bg-accent transition-colors flex items-center gap-2 min-w-[120px] justify-between text-sm"
+                    className="flex items-center gap-2 px-3 py-1.5 text-xs bg-background/50 border border-muted hover:bg-accent/50 rounded-md transition-colors"
                     disabled={isLoading}
                   >
+                    <ModelSelectorLogoGroup>
+                      <ModelSelectorLogo
+                        provider={
+                          MODEL_OPTIONS.find(m => m.id === currentModelId)
+                            ?.provider as any
+                        }
+                      />
+                    </ModelSelectorLogoGroup>
                     <span className="truncate">
-                      {MODEL_OPTIONS.find(m => m.id === currentModelId)?.name ||
-                        "Model"}
+                      {MODEL_OPTIONS.find(m => m.id === currentModelId)?.name}
                     </span>
-                    <ChevronDown
-                      className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${modelSelectorOpen ? "rotate-180" : ""}`}
-                    />
+                    <Sparkles className="w-3 h-3 text-muted-foreground ml-auto" />
                   </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48">
-                  {MODEL_OPTIONS.map(model => (
-                    <DropdownMenuItem
-                      key={model.id}
-                      onClick={() => setCurrentModelId(model.id)}
-                      className={currentModelId === model.id ? "bg-accent" : ""}
-                    >
-                      <span className="flex-1 text-sm">{model.name}</span>
-                      {currentModelId === model.id && (
-                        <div className="w-2 h-2 bg-primary rounded-full" />
+                </ModelSelectorTrigger>
+                <ModelSelectorContent>
+                  <ModelSelectorInput placeholder="Search models..." />
+                  <ModelSelectorList>
+                    <ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
+                    <ModelSelectorGroup heading="Zai Models">
+                      {MODEL_OPTIONS.filter(
+                        m => m.provider === "zai-coding-plan"
+                      ).map(model => (
+                        <ModelSelectorItem
+                          key={model.id}
+                          value={model.name}
+                          onSelect={() => {
+                            setCurrentModelId(model.id)
+                            setModelSelectorOpen(false)
+                          }}
+                        >
+                          <ModelSelectorLogoGroup>
+                            <ModelSelectorLogo
+                              provider={model.provider as any}
+                            />
+                          </ModelSelectorLogoGroup>
+                          <ModelSelectorName>{model.name}</ModelSelectorName>
+                        </ModelSelectorItem>
+                      ))}
+                    </ModelSelectorGroup>
+                    <ModelSelectorSeparator />
+                    <ModelSelectorGroup heading="OpenAI Models">
+                      {MODEL_OPTIONS.filter(m => m.provider === "openai").map(
+                        model => (
+                          <ModelSelectorItem
+                            key={model.id}
+                            value={model.name}
+                            onSelect={() => {
+                              setCurrentModelId(model.id)
+                              setModelSelectorOpen(false)
+                            }}
+                          >
+                            <ModelSelectorLogoGroup>
+                              <ModelSelectorLogo
+                                provider={model.provider as any}
+                              />
+                            </ModelSelectorLogoGroup>
+                            <ModelSelectorName>{model.name}</ModelSelectorName>
+                          </ModelSelectorItem>
+                        )
                       )}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    </ModelSelectorGroup>
+                  </ModelSelectorList>
+                </ModelSelectorContent>
+              </ModelSelector>
             </PromptInputHeader>
 
             {/* Text Area */}
@@ -375,6 +453,7 @@ export function ChatContent({
               value={input}
               onChange={e => setInput(e.currentTarget.value)}
               placeholder="Ask about your data..."
+              className="text-sm"
             />
 
             {/* Footer with Submit Button */}
@@ -384,6 +463,9 @@ export function ChatContent({
             </PromptInputFooter>
           </PromptInputBody>
         </PromptInput>
+        <p className="text-[10px] text-muted-foreground text-center mt-2">
+          AI responses may be inaccurate. Always verify important information.
+        </p>
       </div>
     </div>
   )

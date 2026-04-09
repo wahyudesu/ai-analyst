@@ -8,6 +8,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Separator } from "@/components/ui/separator"
+import { Badge } from "@/components/ui/badge"
 import { threadsClient } from "@/lib/threads-client"
 import {
   ChartBar,
@@ -17,6 +20,7 @@ import {
   MessageSquare,
   Pin,
   Plus,
+  Sparkles,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -125,6 +129,10 @@ export function ChatSidebar() {
   }, [])
 
   const startNewChat = useCallback(() => {
+    // Clear messages from current thread before switching
+    const currentThread = threadsClient.getOrCreateThreadId()
+    threadsClient.clearMessages(currentThread)
+
     threadsClient.clearCurrentThreadId()
     threadsClient.getOrCreateThreadId()
     router.push("/chat")
@@ -148,6 +156,9 @@ export function ChatSidebar() {
         saveSessions(updated)
         return updated
       })
+
+      // Delete messages from localStorage
+      threadsClient.deleteMessages(sessionId)
 
       if (sessionId === currentThreadId) {
         startNewChat()
@@ -224,59 +235,102 @@ export function ChatSidebar() {
   const sortedSessions = useMemo(() => sortSessions(sessions), [sessions])
 
   return (
-    <div className="flex flex-col h-full border-r border-border">
-      {/* New Chat Button */}
-      <div className="p-4 border-b border-border">
+    <div className="flex flex-col h-full border-r border-border bg-background">
+      {/* Header with New Chat Button */}
+      <div className="p-4 border-b border-border bg-card/50">
         <Button
           onClick={startNewChat}
-          className="w-full justify-start"
+          className="w-full justify-start gap-2"
           size="sm"
         >
-          <Plus className="w-4 h-4 mr-2" />
-          New Chat
+          <Plus className="w-4 h-4" />
+          <span>New Chat</span>
+          <Badge variant="secondary" className="ml-auto text-xs">
+            {sortedSessions.filter(s => !s.isPinned).length}
+          </Badge>
         </Button>
       </div>
 
       {/* Sessions List */}
-      <div className="flex-1 overflow-y-auto p-3">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">
-          Recent Chats
-        </h3>
-        <div className="space-y-1">
-          {sortedSessions.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-4 px-2">
-              No chat history yet
-            </p>
-          ) : (
-            sortedSessions.map(session => (
-              <SessionItem
-                key={session.id}
-                session={session}
-                isActive={session.id === currentThreadId}
-                isEditing={editingSessionId === session.id}
-                editingTitle={editingTitle}
-                onEditingTitleChange={setEditingTitle}
-                onSwitch={switchSession}
-                onStartEdit={startEditing}
-                onSaveEdit={renameSession}
-                onTogglePin={togglePinSession}
-                onDelete={requestDeleteSession}
-                onActionsToggle={setSessionActionsOpen}
-                isActionsOpen={sessionActionsOpen === session.id}
-              />
-            ))
+      <ScrollArea className="flex-1">
+        <div className="p-3">
+          {/* Pinned Sessions */}
+          {sortedSessions.some(s => s.isPinned) && (
+            <>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2 flex items-center gap-1.5">
+                <Pin className="w-3 h-3" />
+                Pinned
+              </h3>
+              <div className="space-y-1 mb-4">
+                {sortedSessions.filter(s => s.isPinned).map(session => (
+                  <SessionItem
+                    key={session.id}
+                    session={session}
+                    isActive={session.id === currentThreadId}
+                    isEditing={editingSessionId === session.id}
+                    editingTitle={editingTitle}
+                    onEditingTitleChange={setEditingTitle}
+                    onSwitch={switchSession}
+                    onStartEdit={startEditing}
+                    onSaveEdit={renameSession}
+                    onTogglePin={togglePinSession}
+                    onDelete={requestDeleteSession}
+                    onActionsToggle={setSessionActionsOpen}
+                    isActionsOpen={sessionActionsOpen === session.id}
+                  />
+                ))}
+              </div>
+              <Separator className="mb-4" />
+            </>
           )}
-        </div>
-      </div>
 
-      {/* Thread Info */}
-      <div className="p-3 border-t border-border">
-        <p className="text-xs text-muted-foreground">
-          Thread:{" "}
-          <span className="font-mono">
+          {/* Recent Sessions */}
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2 flex items-center gap-1.5">
+            <Sparkles className="w-3 h-3" />
+            Recent
+          </h3>
+          <div className="space-y-1">
+            {sortedSessions.filter(s => !s.isPinned).length === 0 ? (
+              <div className="text-center py-8 px-2">
+                <MessageSquare className="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
+                <p className="text-xs text-muted-foreground">
+                  No recent chats
+                </p>
+                <p className="text-[10px] text-muted-foreground/70 mt-1">
+                  Start a new conversation
+                </p>
+              </div>
+            ) : (
+              sortedSessions.filter(s => !s.isPinned).map(session => (
+                <SessionItem
+                  key={session.id}
+                  session={session}
+                  isActive={session.id === currentThreadId}
+                  isEditing={editingSessionId === session.id}
+                  editingTitle={editingTitle}
+                  onEditingTitleChange={setEditingTitle}
+                  onSwitch={switchSession}
+                  onStartEdit={startEditing}
+                  onSaveEdit={renameSession}
+                  onTogglePin={togglePinSession}
+                  onDelete={requestDeleteSession}
+                  onActionsToggle={setSessionActionsOpen}
+                  isActionsOpen={sessionActionsOpen === session.id}
+                />
+              ))
+            )}
+          </div>
+        </div>
+      </ScrollArea>
+
+      {/* Thread Info Footer */}
+      <div className="p-3 border-t border-border bg-muted/30">
+        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+          <span>Thread ID</span>
+          <Badge variant="outline" className="font-mono text-[10px] px-1.5 py-0">
             {currentThreadId.slice(0, THREAD_ID_DISPLAY_LENGTH)}
-          </span>
-        </p>
+          </Badge>
+        </div>
       </div>
     </div>
   )
@@ -354,39 +408,39 @@ function SessionItem({
   return (
     <div
       className={`
-        group flex items-center gap-2 px-3 py-2 rounded-lg transition-colors
+        group flex items-center gap-2 px-3 py-2.5 rounded-lg transition-all duration-200
         ${
           isActive
-            ? "bg-accent text-accent-foreground"
-            : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+            ? "bg-primary text-primary-foreground shadow-sm"
+            : "hover:bg-accent/80 text-muted-foreground hover:text-foreground"
         }
         ${!isEditing ? "cursor-pointer" : ""}
       `}
       onClick={handleClick}
     >
-      {session.isPinned && <Pin className="w-3 h-3 text-primary shrink-0" />}
+      {session.isPinned && <Pin className="w-3 h-3 shrink-0 fill-current" />}
       <SessionIcon className="w-4 h-4 shrink-0" />
 
       {isEditing ? (
-        <div className="flex-1 flex items-center gap-1">
+        <div className="flex-1 flex items-center gap-1.5">
           <input
             type="text"
             value={editingTitle}
             onChange={e => onEditingTitleChange(e.target.value)}
             onKeyDown={handleKeyDown}
             onClick={e => e.stopPropagation()}
-            className="flex-1 text-xs bg-background border border-border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-ring"
+            className="flex-1 text-xs bg-background border border-input rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-0"
             autoFocus
           />
           <button
             onClick={handleSaveEdit}
-            className="p-1 hover:bg-muted rounded"
+            className="p-1.5 bg-green-500 hover:bg-green-600 text-white rounded-md transition-colors"
           >
-            <Check className="w-3 h-3 text-green-600" />
+            <Check className="w-3 h-3" />
           </button>
         </div>
       ) : (
-        <span className="flex-1 text-xs truncate">{session.title}</span>
+        <span className="flex-1 text-xs truncate font-medium">{session.title}</span>
       )}
 
       {!isEditing && (
@@ -405,7 +459,7 @@ function SessionItem({
                 handleToggleActions()
               }}
               className={`
-                opacity-0 group-hover:opacity-100 p-1 hover:bg-muted rounded transition-opacity
+                opacity-0 group-hover:opacity-100 p-1.5 hover:bg-accent/50 rounded-md transition-all
                 ${isActionsOpen ? "opacity-100" : ""}
               `}
             >
@@ -421,14 +475,17 @@ function SessionItem({
               onClick={() => onStartEdit(session.id, session.title)}
               className="cursor-pointer text-xs"
             >
+              <Edit2 className="w-3.5 h-3.5 mr-2" />
               Rename
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => onTogglePin(session.id)}
               className="cursor-pointer text-xs"
             >
+              <Pin className="w-3.5 h-3.5 mr-2" />
               {session.isPinned ? "Unpin" : "Pin"}
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => onDelete(session.id)}
               className="cursor-pointer text-xs text-destructive focus:text-destructive"

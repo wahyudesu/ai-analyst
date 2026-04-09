@@ -1,73 +1,66 @@
-import { handleChatStream } from "@mastra/ai-sdk"
 import { registerApiRoute } from "@mastra/core/server"
-import {
-  setRequestContext,
-  withRequestContext,
-} from "../lib/request-context.js"
+import { Mastra } from "@mastra/core/mastra"
 
-// Import mastra instance lazily to avoid circular dependency
-const getMastra = () => {
-  // Dynamic import to avoid circular dependency
-  return import("../index").then(m => m.mastra)
+// Get Mastra instance - will be initialized at runtime
+let mastraInstance: Mastra | null = null
+
+function getMastra(): Mastra {
+  if (!mastraInstance) {
+    // Dynamic import to avoid circular dependency
+    return import("../index").then(m => {
+      mastraInstance = m.mastra
+      return m.mastra
+    })
+  }
+  return Promise.resolve(mastraInstance)
 }
 
 /**
- * Custom chat route that supports dynamic model selection
- * Extends the default chatRoute to allow modelId parameter
- *
- * SECURITY: databaseUrl is stored in AsyncLocalStorage context,
- * NOT exposed to LLM in conversation history
+ * Custom chat route that handles agent communication with streaming
+ * Supports dynamic agent selection via URL parameter
  */
-export const customChatRoute = registerApiRoute("/chat/:agentId", {
+export const chatRoute = registerApiRoute("/chat/:agentId", {
   method: "POST",
-  handler: async c => {
+  handler: async (c) => {
     const agentId = c.req.param("agentId")
-    const body = await c.req.json()
+    const body = await c.req.json().catch(() => ({}))
+    const { messages = [], memory } = body
 
-    const { modelId, databaseUrl, ...restBody } = body
+    if (!agentId) {
+      return c.json({ error: "agentId is required" }, 400)
+    }
 
-    // Wrap the entire request handling in secure context
-    return withRequestContext({ databaseUrl }, async () => {
-      // Get mastra instance
+    try {
       const mastra = await getMastra()
+      const agent = mastra.getAgent(agentId)
 
-      // Prepare the request context with modelId if provided
-      const requestContext = modelId
-        ? {
-            model: {
-              id: modelId,
-            },
-          }
-        : undefined
-
-      // Prepare params - NO databaseUrl in messages (security)
-      const params = {
-        ...restBody,
-        messages: body.messages ?? [],
-        // Add request context if modelId is provided
-        ...(requestContext && { requestContext }),
+      if (!agent) {
+        return c.json({ error: `Agent "${agentId}" not found` }, 404)
       }
 
-      try {
-        // Use Mastra's handleChatStream for AI SDK-compatible streaming
-        const stream = await handleChatStream({
-          mastra,
-          agentId,
-          params,
-        })
+      // Stream the agent's response
+      const stream = await agent.stream({
+        messages,
+        ...(memory && { memory }),
+      })
 
-        // Return the stream as a response
-        return new Response(stream, {
-          headers: {
-            "Content-Type": "text/event-stream",
-            "Cache-Control": "no-cache",
-            Connection: "keep-alive",
-          },
-        })
-      } catch (error) {
-        console.error("Chat API error:", error)
-        return c.json({ error: "Failed to process chat request" }, 500)
-      }
-    })
+      // Return the stream as SSE
+      return c.newResponse(stream.toDataStream(), {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        },
+      })
+    } catch (error) {
+      console.error("Chat route error:", error)
+      return c.json(
+        {
+          error: "Failed to process chat request",
+          message: error instanceof Error ? error.message : "Unknown error",
+        },
+        500
+      )
+    }
   },
 })

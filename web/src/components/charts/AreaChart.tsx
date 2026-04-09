@@ -99,7 +99,7 @@ export function AreaChart({
     <ChartContainer config={shadcnConfig} className={className}>
       <RechartsAreaChart
         data={chartData}
-        margin={{ top: 10, right: 20, left: 10, bottom: 5 }}
+        margin={{ top: 10, right: 20, left: 5, bottom: 5 }}
       >
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
         <XAxis
@@ -118,7 +118,29 @@ export function AreaChart({
             typeof value === "number" ? value.toLocaleString() : String(value)
           }
         />
-        <ChartTooltip content={<ChartTooltipContent />} />
+        <ChartTooltip
+          content={
+            <ChartTooltipContent
+              labelFormatter={(value) => {
+                // Format ISO date strings for tooltip
+                if (
+                  typeof value === "string" &&
+                  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)
+                ) {
+                  const date = new Date(value)
+                  if (!isNaN(date.getTime())) {
+                    return new Intl.DateTimeFormat("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    }).format(date)
+                  }
+                }
+                return value
+              }}
+            />
+          }
+        />
         {options.legend && <ChartLegend content={<ChartLegendContent />} />}
         {sanitizedKeys.map(item => (
           <Area

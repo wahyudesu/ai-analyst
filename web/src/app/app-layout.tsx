@@ -51,6 +51,10 @@ const PAGE_TITLES: Record<string, { title: string; subtitle?: string }> = {
     title: "System Reliability",
     subtitle: "Uptime and performance metrics",
   },
+  "/chat": {
+    title: "AI Data Analyst",
+    subtitle: "Query your database with natural language",
+  },
 }
 
 // Neon logo SVG
@@ -188,7 +192,7 @@ export function AppLayout({
       <AppSidebar />
       <SidebarInset>
         {/* Header with toggle button */}
-        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-card/30 backdrop-blur-sm px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
           <div className="flex flex-1 flex-col justify-center gap-0.5">
@@ -213,16 +217,20 @@ export function AppLayout({
           )}
         </header>
 
-        {/* Main content */}
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <DashboardErrorBoundary>{children}</DashboardErrorBoundary>
-        </div>
-
-        {/* Right sidebar (optional) */}
-        {rightSidebar && (
-          <aside className="hidden w-72 shrink-0 border-l lg:flex lg:flex-col h-full">
-            {rightSidebar}
-          </aside>
+        {/* Main content area with right sidebar */}
+        {rightSidebar ? (
+          <div className="flex flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden">
+              <DashboardErrorBoundary>{children}</DashboardErrorBoundary>
+            </div>
+            <aside className="w-72 shrink-0 border-l flex flex-col h-full">
+              {rightSidebar}
+            </aside>
+          </div>
+        ) : (
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <DashboardErrorBoundary>{children}</DashboardErrorBoundary>
+          </div>
         )}
       </SidebarInset>
 
