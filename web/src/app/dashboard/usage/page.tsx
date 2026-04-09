@@ -98,13 +98,13 @@ export default function UsagePage() {
         {/* Key Metrics */}
         <div className="grid grid-cols-[repeat(4,minmax(140px,1fr))] gap-3">
           <MetricCard
-            title="DAU"
+            title="DAU (Today)"
             value={data?.metrics.dau.value || 0}
             icon={Activity}
             format="number"
           />
           <MetricCard
-            title="MAU"
+            title="MAU (last 30 days)"
             value={data?.metrics.mau.value || 0}
             icon={Users}
             format="number"

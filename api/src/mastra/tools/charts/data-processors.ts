@@ -366,10 +366,11 @@ export function buildChartResult(
     colorScheme = "default",
   } = input
 
+  // Build the result, ensuring no undefined values
   const result: GenerateChartOutput = {
     chartType,
     title,
-    subtitle,
+    subtitle: subtitle ?? undefined,
     data: processedData,
     options: {
       legend: options.legend,
@@ -399,5 +400,12 @@ export function buildChartResult(
     result.yAxis = yAxisLabels.map(label => ({ label }))
   }
 
-  return result
+  // Ensure no undefined values in the result by stripping them
+  // This prevents structured output validation errors
+  return JSON.parse(JSON.stringify(result), (key, value) => {
+    if (value === undefined) {
+      return undefined
+    }
+    return value
+  })
 }

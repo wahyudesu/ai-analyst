@@ -156,7 +156,7 @@ Use this when user wants to see a demo chart or test the visualization without r
     const isMultiSeries = selectedData.columns.length > 2
     const valueColumns = selectedData.columns.slice(1)
 
-    return {
+    const result = {
       chartType,
       title: finalTitle,
       data: {
@@ -181,7 +181,7 @@ Use this when user wants to see a demo chart or test the visualization without r
       },
       xAxis: {
         label: selectedData.columns[0],
-        type: "category",
+        type: "category" as const,
       },
       yAxis: valueColumns.map(col => ({ label: col })),
       options: {
@@ -199,5 +199,8 @@ Use this when user wants to see a demo chart or test the visualization without r
         generatedAt: new Date().toISOString(),
       },
     }
-  },
+
+    // Strip undefined values to prevent structured output validation errors
+    return JSON.parse(JSON.stringify(result), (k, v) => v === undefined ? undefined : v)
+  }
 })
