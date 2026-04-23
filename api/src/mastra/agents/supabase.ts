@@ -1,8 +1,9 @@
-import { Composio } from "@composio/core"
 import { Agent } from "@mastra/core/agent"
 import { MCPClient } from "@mastra/mcp"
+import { DEFAULT_MODEL_ID } from "../config/models.js"
 import { dataAnalystMemory } from "../memory"
 import { DATA_ANALYST_INSTRUCTIONS } from "./prompt/prompt-supabase"
+import { Composio } from "@composio/core"
 
 // Get Composio configuration from environment variables
 const configId = process.env.COMPOSIO_MCP_CONFIG_ID
@@ -33,8 +34,7 @@ if (configId && userId) {
     description:
       "AI Data analyst specialized in querying, analyzing, and understanding data stored in Supabase/PostgreSQL databases",
     instructions: DATA_ANALYST_INSTRUCTIONS,
-    // model: "openai/o4-mini",
-    model: "zai-coding-plan/glm-4.5",
+    model: DEFAULT_MODEL_ID,
     tools: await mcpClient.listTools(),
     memory: dataAnalystMemory,
   })

@@ -1,11 +1,12 @@
 import { Agent } from "@mastra/core/agent"
+import { DEFAULT_MODEL_ID } from "../config/models.js"
 import { casualChatMemory } from "../memory"
 import { chartTools } from "../tools/charts"
 
 /**
  * Chart Rendering Agent
  * Specialized agent for creating chart visualizations from data
- * Uses zai-coding-plan/glm-4.5 model
+ * Uses MiniMax model
  */
 export const chartAgent = new Agent({
   id: "chart-agent",
@@ -45,7 +46,7 @@ When user wants ANY chart or SEMBARANG chart, use sample-chart:
 
 Response Format:
 For sample charts, simply call the tool. The frontend will render it automatically.`,
-  model: "zai-coding-plan/glm-4.5",
+  model: DEFAULT_MODEL_ID,
   memory: casualChatMemory,
   tools: chartTools,
 })

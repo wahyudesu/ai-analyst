@@ -8,7 +8,7 @@
 export interface ModelConfig {
   id: string
   name: string
-  provider: "zai" | "openai" | "anthropic"
+  provider: "zai" | "openai" | "anthropic" | "minimax"
   enabled: boolean
 }
 
@@ -22,17 +22,11 @@ export interface ModelRouting {
  * Available models
  */
 export const AVAILABLE_MODELS: Record<string, ModelConfig> = {
-  // ZAI Models (primary - cost effective)
-  "zai-coding-plan/glm-4.5": {
-    id: "zai-coding-plan/glm-4.5",
-    name: "ZAI GLM 4.5",
-    provider: "zai",
-    enabled: true,
-  },
-  "zai-coding-plan/glm-4.5-flash": {
-    id: "zai-coding-plan/glm-4.5-flash",
-    name: "ZAI GLM 4.5 Flash",
-    provider: "zai",
+  // MiniMax Models (primary)
+  "minimax/MiniMax-M2.7": {
+    id: "minimax/MiniMax-M2.7",
+    name: "MiniMax M2.7",
+    provider: "minimax",
     enabled: true,
   },
 
@@ -62,14 +56,14 @@ export const AVAILABLE_MODELS: Record<string, ModelConfig> = {
  * Can be overridden via DEFAULT_MODEL_ID env var
  */
 export const DEFAULT_MODEL_ID =
-  process.env.DEFAULT_MODEL_ID || "zai-coding-plan/glm-4.5"
+  process.env.DEFAULT_MODEL_ID || "minimax/MiniMax-M2.7"
 
 /**
  * Model fallback chain
  * Used when primary model fails
  */
 export const MODEL_FALLBACK = [
-  "zai-coding-plan/glm-4.5",
+  "minimax/MiniMax-M2.7",
   "openai/gpt-4o-mini",
   "openai/gpt-4o",
 ]
@@ -79,8 +73,8 @@ export const MODEL_FALLBACK = [
  * Agents can use this to select appropriate models
  */
 export const MODEL_ROUTING: ModelRouting = {
-  simple: "zai-coding-plan/glm-4.5-flash",
-  standard: "zai-coding-plan/glm-4.5",
+  simple: "minimax/MiniMax-M2.7",
+  standard: "minimax/MiniMax-M2.7",
   complex: "openai/gpt-4o",
 }
 
