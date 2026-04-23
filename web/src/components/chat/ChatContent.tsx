@@ -92,16 +92,7 @@ const ChartBarIcon = ({ className }: { className?: string }) => (
 )
 
 const MODEL_OPTIONS: ModelOption[] = [
-  {
-    id: "zai-coding-plan/glm-4.5",
-    name: "GLM 4.5",
-    provider: "zai-coding-plan",
-  },
-  {
-    id: "zai-coding-plan/glm-4.5-flash",
-    name: "GLM 4.5 Flash",
-    provider: "zai-coding-plan",
-  },
+  { id: "minimax/MiniMax-M2.7", name: "MiniMax M2.7", provider: "minimax" },
   { id: "openai/gpt-4o-mini", name: "GPT-4o Mini", provider: "openai" },
   { id: "openai/gpt-4o", name: "GPT-4o", provider: "openai" },
 ] as const

@@ -86,12 +86,7 @@ const DEFAULT_AGENT_ID = "data-analyst"
 
 // Model options - fetched from API, with fallback defaults
 const FALLBACK_MODEL_OPTIONS: ModelOption[] = [
-  { id: "zai-coding-plan/glm-4.5", name: "ZAI GLM 4.5", provider: "zai" },
-  {
-    id: "zai-coding-plan/glm-4.5-flash",
-    name: "ZAI GLM 4.5 Flash",
-    provider: "zai",
-  },
+  { id: "minimax/MiniMax-M2.7", name: "MiniMax M2.7", provider: "minimax" },
   { id: "openai/gpt-4o-mini", name: "GPT-4o Mini", provider: "openai" },
   { id: "openai/gpt-4o", name: "GPT-4o", provider: "openai" },
   { id: "openai/o1-mini", name: "O1 Mini", provider: "openai" },

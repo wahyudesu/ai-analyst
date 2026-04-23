@@ -35,12 +35,11 @@ import { DefaultChatTransport } from "ai"
 
 // Constants
 const DEFAULT_AGENT_ID = "data-analyst"
-const DEFAULT_MODEL_ID = "zai-coding-plan/glm-4.5"
+const DEFAULT_MODEL_ID = "minimax/MiniMax-M2.7"
 const CHAT_SESSIONS_KEY = "chat-sessions"
 
 const MODEL_OPTIONS = [
-  { id: "zai-coding-plan/glm-4.5", name: "GLM 4.5" },
-  { id: "zai-coding-plan/glm-4.5-flash", name: "GLM 4.5 Flash" },
+  { id: "minimax/MiniMax-M2.7", name: "MiniMax M2.7" },
   { id: "openai/gpt-4o-mini", name: "GPT-4o Mini" },
   { id: "openai/gpt-4o", name: "GPT-4o" },
 ]
